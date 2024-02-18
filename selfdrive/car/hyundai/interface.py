@@ -280,6 +280,10 @@ class CarInterface(CarInterfaceBase):
       ret.mass = 2258.
       ret.wheelbase = 2.95
       ret.steerRatio = 14.14
+    elif candidate == CAR.GENESIS_EGV70:
+      ret.mass = 2230
+      ret.wheelbase = 2.87
+      ret.steerRatio = 14.6
 
     elif candidate == CAR.TUCSON_TL_SCC:
       ret.mass = 1594. #1730
