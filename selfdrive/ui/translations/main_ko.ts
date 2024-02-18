@@ -111,6 +111,87 @@
     </message>
 </context>
 <context>
+    <name>CarrotPanel</name>
+    <message>
+        <source>Cruise</source>
+        <translation type="unfinished">크루즈</translation>
+    </message>
+    <message>
+        <source>Tuning</source>
+        <translation type="unfinished">튜닝</translation>
+    </message>
+    <message>
+        <source>Disp</source>
+        <translation type="unfinished">화면</translation>
+    </message>
+    <message>
+        <source>Path</source>
+        <translation type="unfinished">패쓰</translation>
+    </message>
+    <message>
+        <source>Start</source>
+        <translation type="unfinished">시작</translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation type="unfinished">속도</translation>
+    </message>
+    <message>
+        <source>SpeedCameraControl(1)</source>
+        <translation type="unfinished">과속카메라작동방법(1)</translation>
+    </message>
+</context>
+<context>
+    <name>CarsPanel</name>
+    <message>
+        <source>Common</source>
+        <translation>공통</translation>
+    </message>
+    <message>
+        <source>Hyundai</source>
+        <translation>현대</translation>
+    </message>
+    <message>
+        <source>GM</source>
+        <translation>지엠</translation>
+    </message>
+    <message>
+        <source>Toyota</source>
+        <translation>도요타</translation>
+    </message>
+    <message>
+        <source>Select your car</source>
+        <translation>차종선택</translation>
+    </message>
+</context>
+<context>
+    <name>CommunityPanel</name>
+    <message>
+        <source>SpeedCameraControl(1)</source>
+        <translation type="vanished">과속카메라작동방법(1)</translation>
+    </message>
+    <message>
+        <source>0:Not used, 1:NDA</source>
+        <translation type="vanished">0:사용안함, 1:NDA</translation>
+    </message>
+    <message>
+        <source>SpeedCameraDecelStart(22s)</source>
+        <translation type="vanished">과속카메라감속 시작 시간(22초)</translation>
+    </message>
+    <message>
+        <source>SpeedCameraDecelEnd(6s)</source>
+        <translation type="vanished">과속카메라감속 완료 시간(6초)</translation>
+    </message>
+    <message>
+        <source>CRUISE READY</source>
+        <translation type="vanished">크루즈준비</translation>
+    </message>
+    <message>
+        <source>SIGN DETECTED</source>
+        <translation type="vanished">신호감지</translation>
+    </message>
+</context>
+<context>
     <name>ConfirmationDialog</name>
     <message>
         <source>Ok</source>
@@ -293,6 +374,97 @@
         <source>Review</source>
         <translation>다시보기</translation>
     </message>
+    <message>
+        <source>Set to default(for ajouatom)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>DEFAULT</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Are you sure you want to set to default?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Execute</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>DrawApilot</name>
+    <message>
+        <source>MANUAL</source>
+        <translation>수동운전</translation>
+    </message>
+    <message>
+        <source>CRUISE</source>
+        <translation>정속주행</translation>
+    </message>
+    <message>
+        <source>E2ECRUISE</source>
+        <translation>E2E주행</translation>
+    </message>
+    <message>
+        <source>CRUISE READY</source>
+        <translation>크루즈준비</translation>
+    </message>
+    <message>
+        <source>SIGN DETECTED</source>
+        <translation>신호감지</translation>
+    </message>
+    <message>
+        <source>ECO</source>
+        <translation>연비</translation>
+    </message>
+    <message>
+        <source>SAFE</source>
+        <translation>안전</translation>
+    </message>
+    <message>
+        <source>NORM</source>
+        <translation>일반</translation>
+    </message>
+    <message>
+        <source>HIGH</source>
+        <translation>고속</translation>
+    </message>
+    <message>
+        <source>Start</source>
+        <translation type="vanished">시작</translation>
+    </message>
+    <message>
+        <source>Cruise</source>
+        <translation type="vanished">크루즈</translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation type="vanished">속도</translation>
+    </message>
+    <message>
+        <source>Tuning</source>
+        <translation type="vanished">튜닝</translation>
+    </message>
+    <message>
+        <source>Disp</source>
+        <translation type="vanished">화면</translation>
+    </message>
+    <message>
+        <source>Path</source>
+        <translation type="vanished">패쓰</translation>
+    </message>
+    <message>
+        <source>Lane Follow</source>
+        <translation>레인모드</translation>
+    </message>
+    <message>
+        <source>Laneless</source>
+        <translation>레인리스</translation>
+    </message>
+    <message>
+        <source>ERRM</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>DriverViewWindow</name>
@@ -356,6 +528,10 @@
     <message>
         <source>Manage at connect.comma.ai</source>
         <translation>connect.comma.ai에서 관리하세요</translation>
+    </message>
+    <message>
+        <source>Manage at %1</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -638,6 +814,17 @@ This may take up to a minute.</source>
     </message>
 </context>
 <context>
+    <name>SelectCar</name>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished">뒤로</translation>
+    </message>
+    <message>
+        <source>[ Not selected ]</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>SettingsWindow</name>
     <message>
         <source>×</source>
@@ -660,35 +847,12 @@ This may take up to a minute.</source>
         <translation>소프트웨어</translation>
     </message>
     <message>
-      <source>Carrot</source>
-      <translation>당근메뉴</translation>
+        <source>Carrot</source>
+        <translation>당근메뉴</translation>
     </message>
     <message>
-      <source>Cars</source>
-      <translation>차량</translation>
-    </message>
-</context>
-<context>
-    <name>CarsPanel</name>
-    <message>
-      <source>Common</source>
-      <translation>공통</translation>
-    </message>
-    <message>
-      <source>Hyundai</source>
-      <translation>현대</translation>
-    </message>
-    <message>
-      <source>GM</source>
-      <translation>지엠</translation>
-    </message>
-    <message>
-      <source>Toyota</source>
-      <translation>도요타</translation>
-    </message>
-    <message>
-      <source>Select your car</source>
-      <translation>차종선택</translation>
+        <source>Cars</source>
+        <translation>차량</translation>
     </message>
 </context>
 <context>
@@ -1150,6 +1314,18 @@ This may take up to a minute.</source>
         <source>The driving visualization will transition to the road-facing wide-angle camera at low speeds to better show some turns. The Experimental mode logo will also be shown in the top right corner. When a navigation destination is set and the driving model is using it as input, the driving path on the map will turn green.</source>
         <translation>주행 시각화는 저속으로 주행 시 도로를 향한 광각 카메라로 자동 전환되어 일부 곡선 경로를 더 잘 보여줍니다. 실험 모드 로고는 우측 상단에 표시됩니다. 내비게이션 목적지가 설정되고 주행 모델에 입력되면 지도의 주행 경로가 녹색으로 바뀝니다.</translation>
     </message>
+    <message>
+        <source>Always on Lateral</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>WARNING: Always on lateral has not been tested on all cars. You may receive cruise faults when disabling longitudinal control if this is not compatible with your car. Please test in a safe environment before using on road.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>When enabled lateral control will remain engaged after longitudinal is disengaged. Main cruise button toggles lateral control off.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>Updater</name>
@@ -1232,102 +1408,4 @@ This may take up to a minute.</source>
         <translation>삭제</translation>
     </message>
 </context>
-  <context>
-    <name>DrawApilot</name>
-    <message>
-      <source>MANUAL</source>
-      <translation>수동운전</translation>
-    </message>
-    <message>
-      <source>CRUISE</source>
-      <translation>정속주행</translation>
-    </message>
-    <message>
-      <source>E2ECRUISE</source>
-      <translation>E2E주행</translation>
-    </message>
-    <message>
-      <source>CRUISE READY</source>
-      <translation>크루즈준비</translation>
-    </message>
-    <message>
-      <source>SIGN DETECTED</source>
-      <translation>신호감지</translation>
-    </message>
-    <message>
-      <source>ECO</source>
-      <translation>연비</translation>
-    </message>
-    <message>
-      <source>SAFE</source>
-      <translation>안전</translation>
-    </message>
-    <message>
-      <source>NORM</source>
-      <translation>일반</translation>
-    </message>
-    <message>
-      <source>HIGH</source>
-      <translation>고속</translation>
-    </message>
-    <message>
-      <source>Start</source>
-      <translation>시작</translation>
-    </message>
-    <message>
-      <source>Cruise</source>
-      <translation>크루즈</translation>
-    </message>
-    <message>
-      <source>Speed</source>
-      <translation>속도</translation>
-    </message>
-    <message>
-      <source>Tuning</source>
-      <translation>튜닝</translation>
-    </message>
-    <message>
-      <source>Disp</source>
-      <translation>화면</translation>
-    </message>
-    <message>
-      <source>Path</source>
-      <translation>패쓰</translation>
-    </message>
-    <message>
-      <source>Lane Follow</source>
-      <translation>레인모드</translation>
-    </message>
-    <message>
-      <source>Laneless</source>
-      <translation>레인리스</translation>
-    </message>
-  </context>
-  <context>
-    <name>CommunityPanel</name>
-    <message>
-      <source>SpeedCameraControl(1)</source>
-      <translation>과속카메라작동방법(1)</translation>
-    </message>
-    <message>
-      <source>0:Not used, 1:NDA</source>
-      <translation>0:사용안함, 1:NDA</translation>
-    </message>
-    <message>
-      <source>SpeedCameraDecelStart(22s)</source>
-      <translation>과속카메라감속 시작 시간(22초)</translation>
-    </message>
-    <message>
-      <source>SpeedCameraDecelEnd(6s)</source>
-      <translation>과속카메라감속 완료 시간(6초)</translation>
-    </message>
-    <message>
-      <source>CRUISE READY</source>
-      <translation>크루즈준비</translation>
-    </message>
-    <message>
-      <source>SIGN DETECTED</source>
-      <translation>신호감지</translation>
-    </message>
-  </context>
 </TS>

@@ -111,6 +111,60 @@
     </message>
 </context>
 <context>
+    <name>CarrotPanel</name>
+    <message>
+        <source>Cruise</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Tuning</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disp</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Path</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Start</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Speed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>SpeedCameraControl(1)</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>CarsPanel</name>
+    <message>
+        <source>Select your car</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Common</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hyundai</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GM</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Toyota</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>ConfirmationDialog</name>
     <message>
         <source>Ok</source>
@@ -293,6 +347,73 @@
         <source>Review</source>
         <translation>回顧</translation>
     </message>
+    <message>
+        <source>Set to default(for ajouatom)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>DEFAULT</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Are you sure you want to set to default?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Execute</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>DrawApilot</name>
+    <message>
+        <source>SIGN DETECTED</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>E2ECRUISE</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>CRUISE</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>CRUISE READY</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>MANUAL</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>ECO</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>SAFE</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>NORM</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>HIGH</source>
+        <translation type="unfinished">偏高</translation>
+    </message>
+    <message>
+        <source>ERRM</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Lane Follow</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Laneless</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>DriverViewWindow</name>
@@ -356,6 +477,10 @@
     <message>
         <source>Manage at connect.comma.ai</source>
         <translation>請在 connect.comma.ai 上管理</translation>
+    </message>
+    <message>
+        <source>Manage at %1</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -638,6 +763,17 @@ This may take up to a minute.</source>
     </message>
 </context>
 <context>
+    <name>SelectCar</name>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished">回上頁</translation>
+    </message>
+    <message>
+        <source>[ Not selected ]</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>SettingsWindow</name>
     <message>
         <source>×</source>
@@ -658,6 +794,14 @@ This may take up to a minute.</source>
     <message>
         <source>Software</source>
         <translation>軟體</translation>
+    </message>
+    <message>
+        <source>Carrot</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cars</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -1118,6 +1262,18 @@ This may take up to a minute.</source>
     <message>
         <source>The driving visualization will transition to the road-facing wide-angle camera at low speeds to better show some turns. The Experimental mode logo will also be shown in the top right corner. When a navigation destination is set and the driving model is using it as input, the driving path on the map will turn green.</source>
         <translation>行駛畫面將在低速時切換至道路朝向的廣角鏡頭，以更好地顯示一些轉彎。實驗模式圖示也將顯示在右上角。當設定了導航目的地並且行駛模型正在將其作為輸入時，地圖上的行駛路徑將變為綠色。</translation>
+    </message>
+    <message>
+        <source>Always on Lateral</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>WARNING: Always on lateral has not been tested on all cars. You may receive cruise faults when disabling longitudinal control if this is not compatible with your car. Please test in a safe environment before using on road.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>When enabled lateral control will remain engaged after longitudinal is disengaged. Main cruise button toggles lateral control off.</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
