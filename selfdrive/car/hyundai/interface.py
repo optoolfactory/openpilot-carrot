@@ -36,35 +36,47 @@ class CarInterface(CarInterfaceBase):
     CAN = CanBus(None, hda2, fingerprint)
 
     if candidate in CANFD_CAR:
+      print("$$$$CANFD_CAR")
       # detect if car is hybrid
       if 0x105 in fingerprint[CAN.ECAN]: # 0x105(261): ACCELERATOR_ALT
         ret.flags |= HyundaiFlags.HYBRID.value
+        print("$$$CANFD Hybrid")
       elif candidate in EV_CAR:
+        print("$$$CANFD EV")
         ret.flags |= HyundaiFlags.EV.value
 
       # detect HDA2 with ADAS Driving ECU
       if hda2:
+        print("$$$CANFD HDA2")
         ret.flags |= HyundaiFlags.CANFD_HDA2.value
         if 0x110 in fingerprint[CAN.CAM]: # 0x110(272): LKAS_ALT
           ret.flags |= HyundaiFlags.CANFD_HDA2_ALT_STEERING.value
+          print("$$$CANFD ALT_STEERING")
         ## carrot_todo: sorento
         if 0x2a4 not in fingerprint[CAN.CAM]: # 0x2a4(676): CAM_0x2a4
           ret.flags |= HyundaiFlags.CANFD_HDA2_ALT_STEERING.value
+          print("$$$CANFD ALT_STEERING")
         ## carrot: canival 4th, no 0x1cf
         if 0x1cf not in fingerprint[CAN.ECAN]: # 0x1cf(463): CRUISE_BUTTONS
           ret.flags |= HyundaiFlags.CANFD_ALT_BUTTONS.value
+          print("$$$CANFD ALT_BUTTONS")
       else:
         # non-HDA2
+        print("$$$CANFD non HDA2")
         if 0x1cf not in fingerprint[CAN.ECAN]:  # 0x1cf(463): CRUISE_BUTTONS
           ret.flags |= HyundaiFlags.CANFD_ALT_BUTTONS.value
+          print("$$$CANFD ALT_BUTTONS")
         # ICE cars do not have 0x130; GEARS message on 0x40 or 0x70 instead
         if 0x130 not in fingerprint[CAN.ECAN]: # 0x130(304): GEAR_SHIFTER
           if 0x40 not in fingerprint[CAN.ECAN]: # 0x40(64): GEAR_ALT
             ret.flags |= HyundaiFlags.CANFD_ALT_GEARS_2.value
+            print("$$$CANFD ALT_GEARS_2")
           else:
             ret.flags |= HyundaiFlags.CANFD_ALT_GEARS.value
+            print("$$$CANFD ALT_GEARS")
         if candidate not in CANFD_RADAR_SCC_CAR:
           ret.flags |= HyundaiFlags.CANFD_CAMERA_SCC.value
+          print("$$$CANFD CAMERA_SCC")
     else:
       # TODO: detect EV and hybrid
       if candidate in HYBRID_CAR:
@@ -336,17 +348,12 @@ class CarInterface(CarInterfaceBase):
       ret.longitudinalTuning.kiV = [0.0]
       ret.experimentalLongitudinalAvailable = candidate not in (CANFD_UNSUPPORTED_LONGITUDINAL_CAR | CANFD_RADAR_SCC_CAR)
       ret.experimentalLongitudinalAvailable = True # carrot: 비전 롱컨이라도 되도록... 될까?
+
+       
     else:
       ret.longitudinalTuning.kpV = [0.5]
       ret.longitudinalTuning.kiV = [0.0]
       ret.experimentalLongitudinalAvailable = candidate not in (UNSUPPORTED_LONGITUDINAL_CAR | CAMERA_SCC_CAR)
-
-      if 1348 in fingerprint[0]:
-        ret.flags |= HyundaiFlags.NAVI_CLUSTER.value
-      if 1157 in fingerprint[0] or 1157 in fingerprint[2]:
-        ret.flags |= HyundaiFlags.HAS_LFAHDA.value
-      if 913 in fingerprint[0]:
-        ret.flags |= HyundaiFlags.HAS_LFA_BUTTON.value
        
       if Params().get_bool("SccConnectedBus2"):
         ret.flags |= HyundaiFlags.SCC_BUS2.value
@@ -376,8 +383,24 @@ class CarInterface(CarInterfaceBase):
     # *** feature detection ***
     if candidate in CANFD_CAR:
       ret.enableBsm = 0x1e5 in fingerprint[CAN.ECAN]
+      print(f"$$$$$ CanFD ECAN = {CAN.ECAN}")
+      if 0x1fa in fingerprint[CAN.ECAN]:
+        ret.flags |= HyundaiFlags.NAVI_CLUSTER.value
+        print("$$$$ NaviCluster = True")
+      else:
+        print("$$$$ NaviCluster = False")
     else:
       ret.enableBsm = 0x58b in fingerprint[0]
+
+      if 1348 in fingerprint[0]:
+        ret.flags |= HyundaiFlags.NAVI_CLUSTER.value
+        print("$$$$ NaviCluster = True")
+      if 1157 in fingerprint[0] or 1157 in fingerprint[2]:
+        ret.flags |= HyundaiFlags.HAS_LFAHDA.value
+      if 913 in fingerprint[0]:
+        ret.flags |= HyundaiFlags.HAS_LFA_BUTTON.value
+
+    print(f"$$$$ enableBsm = {ret.enableBsm}")
 
     # *** panda safety config ***
     if candidate in CANFD_CAR:
@@ -387,12 +410,16 @@ class CarInterface(CarInterfaceBase):
       ret.safetyConfigs = cfgs
 
       if ret.flags & HyundaiFlags.CANFD_HDA2:
+        print("!!!!!!!!!Panda: FLAG_HYUNDAI_CANFD_HDA2")
         ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_CANFD_HDA2
         if ret.flags & HyundaiFlags.CANFD_HDA2_ALT_STEERING:
+          print("!!!!!!!!!Panda: FLAG_HYUNDAI_CANFD_HDA2_ALT_STEERING")
           ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_CANFD_HDA2_ALT_STEERING
       if ret.flags & HyundaiFlags.CANFD_ALT_BUTTONS:
+        print("!!!!!!!!!Panda: FLAG_HYUNDAI_CANFD_ALT_BUTTONS")
         ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_CANFD_ALT_BUTTONS
       if ret.flags & HyundaiFlags.CANFD_CAMERA_SCC:
+        print("!!!!!!!!!Panda: FLAG_HYUNDAI_CAMERA_SCC")
         ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_CAMERA_SCC
     else:
       if candidate in LEGACY_SAFETY_MODE_CAR:
@@ -408,7 +435,8 @@ class CarInterface(CarInterfaceBase):
       ret.openpilotLongitudinalControl = True
       ret.radarUnavailable = False
       ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.hyundaiLegacy)]
-    
+
+    print(f"$$$$ LongitudinalControl = {ret.openpilotLongitudinalControl}")
     if ret.openpilotLongitudinalControl:
       ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_LONG
     if ret.flags & HyundaiFlags.HYBRID:
@@ -427,9 +455,10 @@ class CarInterface(CarInterfaceBase):
   @staticmethod
   def init(CP, logcan, sendcan):
     if CP.openpilotLongitudinalControl and not (CP.flags & HyundaiFlags.CANFD_CAMERA_SCC.value) and not (CP.flags & HyundaiFlags.SCC_BUS2.value):
-      addr, bus = 0x7d0, 0
+      addr, bus = 0x7d0, CanBus(CP).ECAN if CP.carFingerprint in CANFD_CAR else 0
       if CP.flags & HyundaiFlags.CANFD_HDA2.value:
         addr, bus = 0x730, CanBus(CP).ECAN
+      print(f"$$$$$$ Disable ECU : addr={addr}, bus={bus}")
       disable_ecu(logcan, sendcan, bus=bus, addr=addr, com_cont_req=b'\x28\x83\x01')
     if Params().get_bool("EnableRadarTracks"): #ajouatom
       enable_radar_tracks(CP, logcan, sendcan) 
@@ -440,6 +469,7 @@ class CarInterface(CarInterfaceBase):
 
     if Params().get_bool("EnableAVM"): #ajouatom
       enable_avm(logcan, sendcan)
+      print("$$$$ Enable AVM = True")
 
   def _update(self, c):
     ret = self.CS.update(self.cp, self.cp_cam)

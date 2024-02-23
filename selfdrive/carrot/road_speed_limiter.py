@@ -192,7 +192,7 @@ class RoadLimitSpeedServer:
 
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
       try:
-        #sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  ## test.. carrot
         while True:
 
           try:
@@ -210,7 +210,7 @@ class RoadLimitSpeedServer:
                 address = (socket.inet_ntoa(new_ip), Port.BROADCAST_PORT)
                 sock.sendto(msg.encode(), address)
           except Exception as e:
-            print("Ex: " + str(e))
+            print("$$$$$$RoadSpeedLimiter Exception: " + str(e))
             pass
 
           time.sleep(5.)
@@ -223,6 +223,7 @@ class RoadLimitSpeedServer:
     msg = {}
     msg['Carrot'] = Params().get("Version").decode('utf-8')
     msg['IsOnroad'] = Params().get_bool("IsOnroad")
+    msg['CarrotRouteActive'] = Params().get_bool("CarrotRouteActive")
     return json.dumps(msg)
 
 
@@ -844,7 +845,7 @@ def main():
     except Exception as e:
       print(e)
       server.last_exception = e
-
+      Params().put_bool("CarrotException", True)
 
 
 if __name__ == "__main__":

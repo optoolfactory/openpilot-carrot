@@ -73,6 +73,7 @@ def manager_init() -> None:
     ("ShowDmInfo", "1"),
     ("ShowRadarInfo", "1"),
     ("MixRadarInfo", "0"),
+    ("VisionAccelRatio", "100"),
     ("ShowZOffset", "122"),
     ("ShowPathMode", "9"),
     ("ShowPathColor", "13"),
@@ -162,6 +163,7 @@ def manager_init() -> None:
     ("SteerActuatorDelay", "30"),       
     ("CruiseOnDist", "0"),
     ("EnableOSM", "0"),
+    ("NoLogging", "0"),
     ("HotspotOnBoot", "0"),
   ]
   if not PC:
