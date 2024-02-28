@@ -2024,7 +2024,6 @@ void DrawApilot::drawDebugText(UIState* s, bool show) {
     y += dy;
     ui_draw_text(s, text_x, y, str, 35, COLOR_WHITE, BOLD, 0.0f, 0.0f);
 #endif
-#if 0
     //p.drawText(text_x, y + 160, QString::fromStdString(controls_state.getDebugText2().cStr()));
     //p.drawText(text_x, y + 240, QString::fromStdString(controls_state.getDebugText1().cStr()));
 
@@ -2032,7 +2031,6 @@ void DrawApilot::drawDebugText(UIState* s, bool show) {
     qstr = QString::fromStdString(car_control.getDebugTextCC().cStr());
     y += dy;
     ui_draw_text(s, text_x, y, qstr.toStdString().c_str(), 35, COLOR_WHITE, BOLD, 0.0f, 0.0f);
-#endif
 }
 DrawApilot::DrawApilot() {
 
