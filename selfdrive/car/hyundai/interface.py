@@ -213,6 +213,15 @@ class CarInterface(CarInterfaceBase):
       ret.mass = 1700.
       ret.wheelbase = 2.895
       ret.steerRatio = 14.2
+    elif candidate == CAR.SANTA_FE_MX5_2024:
+      ret.mass = 1970.
+      ret.wheelbase = 2.815
+      ret.steerRatio = 13.7
+    elif candidate == CAR.SANTA_FE_MX5_HEV_2024:
+      ret.mass = 1970.
+      ret.wheelbase = 2.815
+      ret.steerRatio = 13.7
+
       
     # Kia
     elif candidate == CAR.KIA_SORENTO:
