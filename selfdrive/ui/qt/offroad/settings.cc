@@ -233,7 +233,7 @@ DevicePanel::DevicePanel(SettingsWindow *parent) : ListWidget(parent) {
     if (ConfirmationDialog::confirm(tr("Are you sure you want to reset calibration and live params?"), tr("Reset"), this)) {
       Params().remove("CalibrationParams");
       Params().remove("LiveParameters");
-      emit closeSettings();
+      //emit closeSettings();
       QTimer::singleShot(100, []() {
         Hardware::reboot();
       });
