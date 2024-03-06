@@ -216,12 +216,29 @@ DevicePanel::DevicePanel(SettingsWindow *parent) : ListWidget(parent) {
   addItem(new LabelControl(tr("Dongle ID"), getDongleId().value_or(tr("N/A"))));
   addItem(new LabelControl(tr("Serial"), params.get("HardwareSerial").c_str()));
 
-  // offroad-only buttons
+  // offroad-only buttons neo
 
   auto dcamBtn = new ButtonControl(tr("Driver Camera"), tr("PREVIEW"),
                                    tr("Preview the driver facing camera to ensure that driver monitoring has good visibility. (vehicle must be off)"));
   connect(dcamBtn, &ButtonControl::clicked, [=]() { emit showDriverView(); });
   addItem(dcamBtn);
+
+    // reset calibration button
+  QPushButton *reset_calib_btn = new QPushButton(tr("Reset Calibration"));
+  reset_calib_btn->setStyleSheet("height: 120px;border-radius: 15px;background-color: #393939;");
+  reset_layout->addWidget(reset_calib_btn);
+  QObject::connect(reset_calib_btn, &QPushButton::released, [=]() {
+    if (ConfirmationDialog::confirm(tr("Are you sure you want to reset calibration and live params?"), tr("Reset"), this)) {
+      Params().remove("CalibrationParams");
+      Params().remove("LiveParameters");
+      emit closeSettings();
+      QTimer::singleShot(100, []() {
+        Hardware::reboot();
+      });
+    }
+  });
+
+  addItem(reset_layout);
 
   auto resetCalibBtn = new ButtonControl(tr("Reset Calibration"), tr("RESET"), "");
   connect(resetCalibBtn, &ButtonControl::showDescriptionEvent, this, &DevicePanel::updateCalibDescription);
