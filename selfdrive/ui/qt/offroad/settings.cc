@@ -223,7 +223,9 @@ DevicePanel::DevicePanel(SettingsWindow *parent) : ListWidget(parent) {
   connect(dcamBtn, &ButtonControl::clicked, [=]() { emit showDriverView(); });
   addItem(dcamBtn);
 
-    // reset calibration button
+    // reset calibration button neo
+  QHBoxLayout *reset_layout = new QHBoxLayout();
+  
   QPushButton *reset_calib_btn = new QPushButton(tr("Reset Calibration"));
   reset_calib_btn->setStyleSheet("height: 120px;border-radius: 15px;background-color: #393939;");
   reset_layout->addWidget(reset_calib_btn);
