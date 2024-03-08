@@ -335,7 +335,8 @@ DevicePanel::DevicePanel(SettingsWindow *parent) : ListWidget(parent) {
   const QVector<DefaultSetting> settings = {
       {"TM_HEV_SCC2", "TM_HEV_2022, scc2, radarTracks, radar Long", "apilot_default_tm_hev_scc2.json"},
       {"EV6_VLONG", "EV6 vision Long", "apilot_default_ev6_vlong.json"},
-      {"IONIQ5_VLONG", "IONIQ5 vision Long", "apilot_default_ioniq5_vlong.json"}
+      {"IONIQ5_VLONG", "IONIQ5 vision Long", "apilot_default_ioniq5_vlong.json"},
+      {"GM_VOLT", "GM VOLT radar Long", "apilot_default_volt_ev.json"}
   };
 
   for (const auto& setting : settings) {
@@ -455,7 +456,7 @@ SettingsWindow::SettingsWindow(QWidget *parent) : QFrame(parent) {
     {tr("Network"), new Networking(this)},
     {tr("Toggles"), toggles},
     {tr("Software"), new SoftwarePanel(this)},
-    {tr("Navigation"), new FrogPilotNavigationPanel(this)},
+    {tr("Map"), new FrogPilotNavigationPanel(this)},
     {tr("Carrot"), new CarrotPanel(this)},
     {tr("Cars"), new CarsPanel(this)},
   };
@@ -610,7 +611,7 @@ CarrotPanel::CarrotPanel(QWidget* parent) : QWidget(parent) {
 
     dispToggles = new ListWidget(this);
     dispToggles->addItem(new CValueControl("ShowHudMode", "DISP:Display Mode", "0:Frog,1:APilot,2:Bottom,3:Top,4:Left,5:Left-Bottom", "../assets/offroad/icon_shell.png", 0, 5, 1));
-    dispToggles->addItem(new ParamControl("ShowDebugUI", "DISP:Debug Info", "", "../assets/offroad/icon_shell.png", this));
+    dispToggles->addItem(new CValueControl("ShowDebugUI", "DISP:Debug Info", "", "../assets/offroad/icon_shell.png", 0, 2, 1));
     dispToggles->addItem(new CValueControl("ShowDateTime", "DISP:Time Info", "0:None,1:Time/Date,2:Time,3:Date", "../assets/offroad/icon_shell.png", 0, 3, 1));
     dispToggles->addItem(new CValueControl("ShowSteerRotate", "DISP:Handle rotate", "0:None,1:Rotate", "../assets/offroad/icon_shell.png", 0, 1, 1));
     dispToggles->addItem(new CValueControl("ShowPathEnd", "DISP:Path End", "0:None,1:Display", "../assets/offroad/icon_shell.png", 0, 2, 1));
@@ -779,6 +780,7 @@ CarsPanel::CarsPanel(QWidget* parent) : QWidget(parent) {
     hyundaiToggles->addItem(new CValueControl("AutoCruiseControl", "(HKG) Auto Cruise control", "Softhold, Auto Cruise ON/OFF control", "../assets/offroad/icon_road.png", 0, 3, 1));
     hyundaiToggles->addItem(new CValueControl("CruiseOnDist", "CRUISE: Auto ON distance(0cm)", "When GAS/Brake is OFF, Cruise ON when the lead car gets closer or warning (- value).", "../assets/offroad/icon_road.png", -500, 500, 50));
     hyundaiToggles->addItem(new ParamControl("SccConnectedBus2", "(HKG) SCC Module connected BUS2", "", "../assets/offroad/icon_warning.png", this));
+    hyundaiToggles->addItem(new ParamControl("CanfdHDA2", "(HKG) CANFD HDA2 support", "", "../assets/offroad/icon_warning.png", this));
     hyundaiToggles->addItem(new ParamControl("EnableRadarTracks", "(HKG) EnableRadarTracks", "Activate Radartracks at startup", "../assets/offroad/icon_warning.png", this));
     hyundaiToggles->addItem(new CValueControl("MaxAngleFrames", "MaxAngleFrames(89)", "89:기본, 스티어계기판에러시 85~87", "../assets/offroad/icon_road.png", 80, 100, 1));
     hyundaiToggles->addItem(new CValueControl("HapticFeedbackWhenSpeedCamera", "Haptic handle function", "0:사용안함,1:진동,2:계기판,3:HUD표시", "../assets/offroad/icon_road.png", 0, 3, 1));
