@@ -141,6 +141,7 @@ class CAR(StrEnum):
   SANTA_CRUZ_1ST_GEN = "HYUNDAI SANTA CRUZ 1ST GEN"
   CUSTIN_1ST_GEN = "HYUNDAI CUSTIN 1ST GEN"
   NEXO = "HYUNDAI NEXO"
+  CASPER = "HTUNDAI CASPER (AX1)"
 
   # Kia
   KIA_FORTE = "KIA FORTE E 2018 & GT 2021"
@@ -703,6 +704,7 @@ DBC = {
   CAR.GRANDEUR_GN7_HYBRID: dbc_dict('hyundai_canfd', None),  
   CAR.SANTA_FE_MX5_HEV_2024: dbc_dict('hyundai_canfd', None),  
   CAR.SANTA_FE_MX5_2024: dbc_dict('hyundai_canfd', None),  
+  CAR.CASPER: dbc_dict('hyundai_kia_generic', None),
 }
 
 
