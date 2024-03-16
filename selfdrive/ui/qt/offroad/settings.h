@@ -12,6 +12,7 @@
 #include <QStackedLayout>
 
 
+#include "selfdrive/ui/ui.h"
 #include "selfdrive/ui/qt/util.h"
 #include "selfdrive/ui/qt/widgets/controls.h"
 
@@ -64,6 +65,9 @@ public:
 
 public slots:
   void expandToggleDescription(const QString &param);
+
+private slots:
+  void updateState(const UIState &s);
 
 private:
   Params params;
