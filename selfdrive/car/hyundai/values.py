@@ -706,12 +706,6 @@ class CAR(Platforms):
     CarSpecs(mass=2075, wheelbase=3.15, steerRatio=14.5, tireStiffnessFactor=0.7),
     flags=HyundaiFlags.LEGACY,
   )
-  GENESIS_GV80 = HyundaiCanFDPlatformConfig(
-    "GENESIS GV80 2023",
-    HyundaiCarInfo("Genesis GV80 2023", "All", car_parts=CarParts.common([CarHarness.hyundai_m])),
-    CarSpecs(mass=2258, wheelbase=2.95, steerRatio=14.14),
-    flags=HyundaiFlags.RADAR_SCC,
-  )
   GRANDEUR_GN7 = HyundaiCanFDPlatformConfig(
     "HYNDAI GRANDEUR_GN7 2023",
     HyundaiCarInfo("Hyundai GRANDEUR_GN7 2023", "All", car_parts=CarParts.common([CarHarness.hyundai_m])),
