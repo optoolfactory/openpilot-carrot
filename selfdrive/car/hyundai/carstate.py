@@ -335,9 +335,9 @@ class CarState(CarStateBase):
     #ret.leftBlinker, ret.rightBlinker = self.update_blinker_from_lamp(50, cp.vl["BLINKERS"][left_blinker_sig],
     #                                                                  cp.vl["BLINKERS"][right_blinker_sig])
     if self.CP.enableBsm:
-      cp_ = cp_cam if (self.CP.extFlags & HyundaiExtFlags.SCC_BUS2 and self.CP.flags & HyundaiFlags.CANFD_HDA2) else cp
-      ret.leftBlindspot = cp_.vl["BLINDSPOTS_REAR_CORNERS"]["FL_INDICATOR"] != 0
-      ret.rightBlindspot = cp_.vl["BLINDSPOTS_REAR_CORNERS"]["FR_INDICATOR"] != 0
+      #cp_ = cp_cam if (self.CP.extFlags & HyundaiExtFlags.SCC_BUS2 and self.CP.flags & HyundaiFlags.CANFD_HDA2 and not self.CP.extFlags & HyundaiExtFlags.BSM_NO_ADAS.value) else cp
+      ret.leftBlindspot = cp.vl["BLINDSPOTS_REAR_CORNERS"]["FL_INDICATOR"] != 0
+      ret.rightBlindspot = cp.vl["BLINDSPOTS_REAR_CORNERS"]["FR_INDICATOR"] != 0
 
     # cruise state
     # CAN FD cars enable on main button press, set available if no TCS faults preventing engagement
@@ -405,7 +405,12 @@ class CarState(CarStateBase):
                                           else cp_cam.vl["CAM_0x2a4"])
 
     # 측정값을 그냥 넣음... test
-    ret.vCluRatio = 0.945
+    #ret.vCluRatio = 0.945
+    speed_conv = CV.KPH_TO_MS if self.is_metric else CV.MPH_TO_MS
+    cluSpeed = cp.vl["CRUISE_BUTTONS_ALT"]["CLU_SPEED"]
+    ret.vEgoCluster = cluSpeed * speed_conv
+    vEgoClu, aEgoClu = self.update_clu_speed_kf(ret.vEgoCluster)
+    ret.vCluRatio = (ret.vEgo / vEgoClu) if (vEgoClu > 3. and ret.vEgo > 3.) else 1.0
     
     
     self.totalDistance += ret.vEgo * DT_CTRL 
@@ -567,7 +572,10 @@ class CarState(CarStateBase):
         ("CRUISE_BUTTONS", 50)
       ]
 
-    if CP.enableBsm and not (CP.extFlags & HyundaiExtFlags.SCC_BUS2.value and CP.flags & HyundaiFlags.CANFD_HDA2):
+    ## BSM신호가 ADAS인경우 BUS2로 개조되고, 독립인경우 ECAN에서 들어옴.
+    # 개조, 독립 EV6: 1, 1 => True, inADAS: 1, 0 => False
+    # 비개조, 0, 0 => True
+    if CP.enableBsm: # and (not CP.extFlags & HyundaiExtFlags.SCC_BUS2.value or CP.extFlags & HyundaiExtFlags.BSM_NO_ADAS.value):
       messages += [
         ("BLINDSPOTS_REAR_CORNERS", 20),
       ]
@@ -600,9 +608,12 @@ class CarState(CarStateBase):
     #if not (CP.flags & HyundaiFlags.CANFD_HDA2) and CP.extFlags & HyundaiExtFlags.NAVI_CLUSTER.value and (CP.extFlags & HyundaiExtFlags.SCC_BUS2.value) :
     #  messages.append(("CLUSTER_SPEED_LIMIT", 10))
 
-    if CP.enableBsm and (CP.extFlags & HyundaiExtFlags.SCC_BUS2.value and CP.flags & HyundaiFlags.CANFD_HDA2):
-      messages += [
-        ("BLINDSPOTS_REAR_CORNERS", 20),
-      ]
+    ## BSM신호가 ADAS인경우 BUS2로 개조되고, 독립인경우 ECAN에서 들어옴.
+    # 개조, 독립 EV6: 1, 1 => False, inADAS: 1, 0 => True
+    # 비개조, 0, 0 => False
+    #if CP.enableBsm and CP.extFlags & HyundaiExtFlags.SCC_BUS2.value and not CP.extFlags & HyundaiExtFlags.BSM_NO_ADAS.value:
+    #  messages += [
+    #    ("BLINDSPOTS_REAR_CORNERS", 20),
+    #  ]
 
     return CANParser(DBC[CP.carFingerprint]["pt"], messages, CanBus(CP).CAM)
