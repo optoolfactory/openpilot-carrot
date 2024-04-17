@@ -710,16 +710,16 @@ class CAR(Platforms):
     flags=HyundaiFlags.LEGACY,
   )
   GRANDEUR_GN7 = HyundaiCanFDPlatformConfig(
-    "HYNDAI GRANDEUR_GN7 2023",
+    "HYUNDAI GRANDEUR_GN7 2023",
     HyundaiCarInfo("Hyundai GRANDEUR_GN7 2023", "All", car_parts=CarParts.common([CarHarness.hyundai_m])),
     CarSpecs(mass=1620, wheelbase=2.895, steerRatio=14.2),
     flags=HyundaiFlags.RADAR_SCC,
   )
   GRANDEUR_GN7_HEV = HyundaiCanFDPlatformConfig(
-    "HYNDAI GRANDEUR_GN7 HEV 2023",
+    "HYUNDAI GRANDEUR_GN7 HEV 2023",
     HyundaiCarInfo("Hyundai GRANDEUR_GN7 HEV 2023", "All", car_parts=CarParts.common([CarHarness.hyundai_m])),
     CarSpecs(mass=1700, wheelbase=2.895, steerRatio=14.2),
-    flags=HyundaiFlags.RADAR_SCC,
+    flags=HyundaiFlags.HYBRID | HyundaiFlags.RADAR_SCC,
   )
   K7_YG_2020 = HyundaiPlatformConfig(
     "KIA K7 2020(YG)",
