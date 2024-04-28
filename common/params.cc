@@ -209,7 +209,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"Version", PERSISTENT},
     {"VisionRadarToggle", PERSISTENT},
     {"WheeledBody", PERSISTENT},
-    {"CarSelected", PERSISTENT},
+    {"CarSelected2", PERSISTENT},
     {"SupportedCars", PERSISTENT},
     {"SupportedCars_gm", PERSISTENT},
     { "ShowDebugUI", PERSISTENT },
@@ -262,10 +262,10 @@ std::unordered_map<std::string, uint32_t> keys = {
     { "StoppingAccel", PERSISTENT },
     { "StartAccelApply", PERSISTENT },
     { "AutoSpeedUptoRoadSpeedLimit", PERSISTENT },
-    { "ApplyLongDynamicCost", PERSISTENT },
     { "StopDistanceCarrot", PERSISTENT },
-    { "ALeadTau", PERSISTENT },
-    { "ALeadTauStart", PERSISTENT },
+    { "ALeadTauPos", PERSISTENT },
+    { "ALeadTauNeg", PERSISTENT },
+    { "ALeadTauThreshold", PERSISTENT },
     { "CruiseButtonMode", PERSISTENT },
     { "CruiseButtonTest1", PERSISTENT },
     { "CruiseButtonTest2", PERSISTENT },
@@ -299,6 +299,8 @@ std::unordered_map<std::string, uint32_t> keys = {
     { "StopRecord", PERSISTENT },
     { "TFollowSpeedAdd", PERSISTENT },
     { "TFollowSpeedAddM", PERSISTENT },
+    { "TFollowLeadCarSpeed", PERSISTENT },
+    { "TFollowLeadCarAccel", PERSISTENT },
     { "TFollowGap1", PERSISTENT },
     { "TFollowGap2", PERSISTENT },
     { "TFollowGap3", PERSISTENT },
@@ -308,6 +310,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     { "UseLaneLineSpeedApply", PERSISTENT },
     { "AdjustLaneOffset", PERSISTENT },
     { "AdjustCurveOffset", PERSISTENT },
+    { "AdjustLaneTime", PERSISTENT },
     { "PathOffset", PERSISTENT },
     { "MaxAngleFrames", PERSISTENT },
     { "SoftHoldMode", PERSISTENT },
@@ -325,10 +328,6 @@ std::unordered_map<std::string, uint32_t> keys = {
     { "CarrotException", CLEAR_ON_MANAGER_START },
     { "CarrotRouteActive", CLEAR_ON_MANAGER_START },
     { "CarName", CLEAR_ON_MANAGER_START },
-    { "LatPathCost", PERSISTENT },
-    { "LatMotionCost", PERSISTENT },
-    { "LatAccelCost", PERSISTENT },
-    { "LatSteerRateCost", PERSISTENT },
 
     { "AlwaysOnLateralEnabled", PERSISTENT},
     { "GMapKey", PERSISTENT},
@@ -342,9 +341,6 @@ std::unordered_map<std::string, uint32_t> keys = {
     { "MuteSeatbelt", PERSISTENT },
     { "LongPitch", PERSISTENT },
     { "EVTable", PERSISTENT },
-    { "GasRegenCmd", PERSISTENT },
-    { "LockDoors", PERSISTENT },
-    { "SNGHack", PERSISTENT },
     { "TSS2Tune", PERSISTENT },
     {"LastMapsUpdate", PERSISTENT},
     {"MapsSelected", PERSISTENT},
@@ -357,7 +353,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"MTSCCurvatureCheck", PERSISTENT},
     {"MTSCEnabled", PERSISTENT},
     {"NNFF", PERSISTENT},
-    {"NNFFModelFuzzyMatch", PERSISTENT},
+    {"NNFFLite", PERSISTENT},
     {"NNFFModelName", PERSISTENT},
     {"OSMDownloadLocations", PERSISTENT},
     {"OSMDownloadProgress", CLEAR_ON_MANAGER_START},
@@ -365,7 +361,6 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"RoadName", PERSISTENT},
     {"RoadNameUI", PERSISTENT},
     {"SchedulePending", PERSISTENT},
-    {"UseLateralJerk", PERSISTENT},
 };
 
 } // namespace
@@ -432,7 +427,9 @@ int Params::put(const char* key, const char* value, size_t value_size) {
   } while (false);
 
   close(tmp_fd);
-  ::unlink(tmp_path.c_str());
+  if (result != 0) {
+    ::unlink(tmp_path.c_str());
+  }
   return result;
 }
 

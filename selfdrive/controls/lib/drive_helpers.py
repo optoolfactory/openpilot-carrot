@@ -110,13 +110,17 @@ class VCruiseHelper:
     self.cruiseEcoControl = self.params.get_int("CruiseEcoControl")
     self.cruiseSpeedUnit = self.params.get_int("CruiseSpeedUnit")
 
-    self.params.put_int("UseLaneLineSpeedApply", self.params.get_int("UseLaneLineSpeed"))
+    self.useLaneLineSpeed = self.params.get_int("UseLaneLineSpeed")
+    self.params.put_int("UseLaneLineSpeedApply", self.useLaneLineSpeed)
 
   def _params_update(self, controls):
     self.frame += 1
     self.params_count += 1
     if self.params_count == 10:
-      pass
+      useLaneLineSpeed = self.params.get_int("UseLaneLineSpeed")
+      if self.useLaneLineSpeed != useLaneLineSpeed:
+        self.params.put_int("UseLaneLineSpeedApply", useLaneLineSpeed)
+      self.useLaneLineSpeed = useLaneLineSpeed
     elif self.params_count == 20:
       self.autoResumeFromGasSpeed = self.params.get_int("AutoResumeFromGasSpeed")
       self.autoCancelFromGasMode = self.params.get_int("AutoCancelFromGasMode")
@@ -307,7 +311,10 @@ class VCruiseHelper:
       controls.events.add(EventName.audioPrompt)
       self._add_log_auto_cruise("autoCruise activated.")
 
-    self.autoCruiseCancelTimer = max(self.autoCruiseCancelTimer - 1, 0)
+    if self.v_cruise_kph_set > 20:
+      self.autoCruiseCancelTimer = max(self.autoCruiseCancelTimer - 5, 0)
+    else:
+      self.autoCruiseCancelTimer = max(self.autoCruiseCancelTimer - 1, 0)
 
     self._update_lead(controls)
     self.v_ego_kph_set = int(CS.vEgoCluster * CV.MS_TO_KPH + 0.5)
@@ -425,7 +432,7 @@ class VCruiseHelper:
     elif self.v_ego_kph_set > self.autoResumeFromGasSpeed > 0:
       if self.cruiseActivate <= 0:
         if self.gas_pressed_value > 0.6 or self.gas_pressed_count_prev > 3.0 / DT_CTRL:
-          if self.autoCruiseCancelTimer > 0:
+          if True: #self.autoCruiseCancelTimer > 0: # 간혹, 저속으로 길게누를때... 기존속도로 resume되면... 브레이크를 밟게됨.
             v_cruise_kph = self.v_ego_kph_set
             self.autoCruiseCancelTimer = 0
           self._add_log_auto_cruise("Cruise Activate from gas(deep/long pressed)")          
@@ -525,7 +532,7 @@ class VCruiseHelper:
           self.params.put_int_nonblocking("MyDrivingMode", self.params.get_int("MyDrivingMode") % 4 + 1) # 1,2,3,4 (1:eco, 2:safe, 3:normal, 4:high speed)
         elif button_type == ButtonType.lfaButton:
           self._add_log("Button long lkas pressed ..")
-          useLaneLineSpeed = max(1, self.params.get_int("UseLaneLineSpeed"))
+          useLaneLineSpeed = max(1, self.useLaneLineSpeed)
           self.params.put_int_nonblocking("UseLaneLineSpeedApply", useLaneLineSpeed if self.params.get_int("UseLaneLineSpeedApply") == 0 else 0)
       else:
         if button_type == ButtonType.accelCruise:
@@ -556,7 +563,7 @@ class VCruiseHelper:
           self._add_log("Button gap pressed ..")
           controls.personality = (controls.personality - 1) % 3
           self.params.put_nonblocking('LongitudinalPersonality', str(controls.personality))
-          personality_events = [EventName.personalityAggressive, EventName.personalityStandard, EventName.personalityRelaxed, EventName.personalityRelaxed2]
+          personality_events = [EventName.personalityAggressive, EventName.personalityStandard, EventName.personalityRelaxed]
           controls.events.add(personality_events[controls.personality])
          
         elif button_type == ButtonType.lfaButton:
@@ -616,7 +623,7 @@ class VCruiseHelper:
       self.gas_pressed_value = max(CS.gas, self.gas_pressed_value)
       self.gas_pressed_count_prev = self.gas_pressed_count
     else:
-      gas_tok = True if 0 < self.gas_pressed_count < 60 else False
+      gas_tok = True if 0 < self.gas_pressed_count < 0.4 / DT_CTRL else False  ## gas_tok: 0.4 seconds
       self.gas_pressed_count = min(-1, self.gas_pressed_count - 1)
       if self.gas_pressed_count < -1:
         self.gas_pressed_max = 0

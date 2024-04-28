@@ -148,7 +148,7 @@ class CarInterface(CarInterfaceBase):
     ret.stoppingControl = True
     ret.startingState = False # apilot: True
     ret.vEgoStarting = 0.1
-    ret.vEgoStopping = 0.25
+    ret.vEgoStopping = 0.1 #0.25
     ret.startAccel = 2.0
     ret.stoppingDecelRate = 1.2 # brake_travel/s while trying to stop
     ret.longitudinalActuatorDelayLowerBound = 0.5
@@ -163,10 +163,8 @@ class CarInterface(CarInterfaceBase):
     # *** feature detection ***
     if candidate in CANFD_CAR:
       ret.enableBsm = 0x1e5 in fingerprint[CAN.ECAN]
-      if candidate in (CAR.KIA_CARNIVAL_4TH_GEN) and hda2:
-        ret.enableBsm = False
-      if not (candidate in (CAR.KIA_CARNIVAL_4TH_GEN) and hda2):
-        ret.extFlags |= HyundaiExtFlags.BSM_NO_ADAS.value
+      if candidate in (CAR.KIA_CARNIVAL_4TH_GEN) and hda2: ##카니발4th & hda2 인경우에만 BSM이 ADAS에서 나옴.
+        ret.extFlags |= HyundaiExtFlags.BSM_IN_ADAS.value
       print(f"$$$$$ CanFD ECAN = {CAN.ECAN}")
       if 0x1fa in fingerprint[CAN.ECAN]:
         ret.extFlags |= HyundaiExtFlags.NAVI_CLUSTER.value
@@ -232,7 +230,7 @@ class CarInterface(CarInterfaceBase):
     elif ret.flags & HyundaiFlags.EV:
       ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_EV_GAS
 
-    if candidate in (CAR.KONA, CAR.KONA_EV, CAR.KONA_HEV, CAR.KONA_EV_2022):
+    if candidate in (CAR.HYUNDAI_KONA, CAR.HYUNDAI_KONA_EV, CAR.HYUNDAI_KONA_HEV, CAR.HYUNDAI_KONA_EV_2022):
       ret.flags |= HyundaiFlags.ALT_LIMITS.value
       ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_ALT_LIMITS
 
@@ -284,9 +282,6 @@ class CarInterface(CarInterfaceBase):
     ret.events = events.to_msg()
 
     return ret
-
-  def apply(self, c, now_nanos):
-    return self.CC.update(c, self.CS, now_nanos)
 
 #ajouatom: Enable Radar tracks
 def enable_radar_tracks(CP, logcan, sendcan):
