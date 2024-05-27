@@ -136,15 +136,13 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     turningLeft @134;
     turningRight @135;
 
+    pedalInterceptorNoBrake @136;
 
-    torqueNNLoad @136;
-
-    pedalInterceptorNoBrake @137;
-
-    personalityRelaxed @138;
-    personalityStandard @139;
-    personalityAggressive @140;
-    personalityRelaxed2 @141;
+    personalityRelaxed @137;
+    personalityStandard @138;
+    personalityAggressive @139;
+    personalityMoreRelaxed @140;
+    torqueNNLoad @141;
 
     radarCanErrorDEPRECATED @15;
     communityFeatureDisallowedDEPRECATED @62;
@@ -248,16 +246,14 @@ struct CarState {
   charging @43 :Bool;
 
 
-  cruiseGap @53 : Int32;
   tpms @48 : Tpms;
-  # neokii
   vCluRatio @49 :Float32;
   driverOverride @50 : Int32; #0: Normal, 1:Gas, 2:Brake
   chargeMeter @51 : Float32;
   motorRpm @52 : Float32;
-  totalDistance @54 : Float32;
-  speedLimit @55 : Int32;
-  speedLimitDistance @56 : Float32;
+  totalDistance @53 : Float32;
+  speedLimit @54 : Int32;
+  speedLimitDistance @55 : Float32;
 
   struct Tpms {
     fl @0 :Float32;
@@ -315,6 +311,7 @@ struct CarState {
       setCruise @9;
       resumeCruise @10;
       gapAdjustCruise @11;
+      lfaButton @12;
     }
   }
 
@@ -370,19 +367,19 @@ struct CarControl {
   # Actuator commands as computed by controlsd
   actuators @6 :Actuators;
 
+  # moved to CarOutput
+  actuatorsOutputDEPRECATED @10 :Actuators;
+
   leftBlinker @15: Bool;
   rightBlinker @16: Bool;
-
-  # Any car specific rate limits or quirks applied by
-  # the CarController are reflected in actuatorsOutput
-  # and matches what is sent to the car
-  actuatorsOutput @10 :Actuators;
 
   orientationNED @13 :List(Float32);
   angularVelocity @14 :List(Float32);
 
   cruiseControl @4 :CruiseControl;
   hudControl @5 :HUDControl;
+
+  debugTextCC @17: Text;
 
   struct Actuators {
     # range from 0.0 - 1.0
@@ -429,7 +426,7 @@ struct CarControl {
     leftLaneVisible @7: Bool;
     rightLaneDepart @8: Bool;
     leftLaneDepart @9: Bool;
-    cruiseGap @10: Int32;
+    leadDistanceBars @10: Int8;  # 1-3: 1 is closest, 3 is farthest. some ports may utilize 2-4 bars instead
     objDist @11: Int32;
     objRelSpd @12: Float32;
     softHold @13: Int32;
@@ -478,7 +475,7 @@ struct CarControl {
       speedDown @21;
       stopStop @22;
       audioTurn @9;
-      
+      reverseGear @23;
     }
   }
 
@@ -488,6 +485,13 @@ struct CarControl {
   activeDEPRECATED @7 :Bool;
   rollDEPRECATED @8 :Float32;
   pitchDEPRECATED @9 :Float32;
+}
+
+struct CarOutput {
+  # Any car specific rate limits or quirks applied by
+  # the CarController are reflected in actuatorsOutput
+  # and matches what is sent to the car
+  actuatorsOutput @0 :CarControl.Actuators;
 }
 
 # ****** car param ******
@@ -504,6 +508,7 @@ struct CarParams {
   enableDsu @5 :Bool;        # driving support unit
   enableBsm @56 :Bool;       # blind spot monitoring
   flags @64 :UInt32;         # flags for car specific quirks
+  extFlags @74 :UInt32;     # carrot ext car flags
   experimentalLongitudinalAvailable @71 :Bool;
 
   minEnableSpeed @7 :Float32;
@@ -595,8 +600,6 @@ struct CarParams {
     steeringAngleDeadzoneDeg @5 :Float32;
     latAccelFactor @6 :Float32;
     latAccelOffset @7 :Float32;
-    nnModelName @8 :Text;
-    nnModelFuzzyMatch @9 :Bool;
   }
 
   struct LongitudinalPIDTuning {
@@ -670,12 +673,15 @@ struct CarParams {
     body @27;
     hyundaiCanfd @28;
     volkswagenMqbEvo @29;
+    chryslerCusw @30;
+    psa @31;
   }
 
   enum SteerControlType {
     torque @0;
     angle @1;
-    curvature @2;
+
+    curvatureDEPRECATED @2;
   }
 
   enum TransmissionType {

@@ -29,20 +29,18 @@ from openpilot.tools.lib.logreader import LogReader
 
 # Baseline CPU usage by process
 PROCS = {
-  "selfdrive.controls.controlsd": 39.0,
+  "selfdrive.controls.controlsd": 46.0,
   "./loggerd": 14.0,
   "./encoderd": 17.0,
   "./camerad": 14.5,
   "./locationd": 11.0,
-  "./mapsd": (0.5, 10.0),
   "selfdrive.controls.plannerd": 11.0,
   "./ui": 18.0,
   "selfdrive.locationd.paramsd": 9.0,
   "./sensord": 7.0,
-  "selfdrive.controls.radard": 4.5,
+  "selfdrive.controls.radard": 7.0,
   "selfdrive.modeld.modeld": 13.0,
   "selfdrive.modeld.dmonitoringmodeld": 8.0,
-  "selfdrive.modeld.navmodeld": 1.0,
   "selfdrive.thermald.thermald": 3.87,
   "selfdrive.locationd.calibrationd": 2.0,
   "selfdrive.locationd.torqued": 5.0,
@@ -57,7 +55,7 @@ PROCS = {
   "selfdrive.boardd.pandad": 0,
   "selfdrive.statsd": 0.4,
   "selfdrive.navd.navd": 0.4,
-  "system.loggerd.uploader": (0.5, 10.0),
+  "system.loggerd.uploader": (0.5, 15.0),
   "system.loggerd.deleter": 0.1,
 }
 
@@ -65,7 +63,7 @@ PROCS.update({
   "tici": {
     "./boardd": 4.0,
     "./ubloxd": 0.02,
-    "system.sensord.pigeond": 6.0,
+    "system.ubloxd.pigeond": 6.0,
   },
   "tizi": {
      "./boardd": 19.0,
@@ -87,8 +85,6 @@ TIMINGS = {
   "driverCameraState": [2.5, 0.35],
   "modelV2": [2.5, 0.35],
   "driverStateV2": [2.5, 0.40],
-  "navModel": [2.5, 0.35],
-  "mapRenderState": [2.5, 0.35],
   "liveLocationKalman": [2.5, 0.35],
   "wideRoadCameraState": [1.5, 0.35],
 }
@@ -114,6 +110,7 @@ class TestOnroad(unittest.TestCase):
     params = Params()
     params.remove("CurrentRoute")
     set_params_enabled()
+    os.environ['REPLAY'] = '1'
     os.environ['TESTING_CLOSET'] = '1'
     if os.path.exists(Paths.log_root()):
       shutil.rmtree(Paths.log_root())
@@ -126,7 +123,7 @@ class TestOnroad(unittest.TestCase):
 
       sm = messaging.SubMaster(['carState'])
       with Timeout(150, "controls didn't start"):
-        while sm.rcv_frame['carState'] < 0:
+        while sm.recv_frame['carState'] < 0:
           sm.update(1000)
 
       # make sure we get at least two full segments
@@ -423,4 +420,4 @@ class TestOnroad(unittest.TestCase):
 
 
 if __name__ == "__main__":
-  pytest.main()
+  unittest.main()

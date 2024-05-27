@@ -1,7 +1,7 @@
 import time
 import numpy as np
 from openpilot.common.realtime import DT_MDL
-from openpilot.common.numpy_fast import interp
+from openpilot.common.numpy_fast import interp, clip
 from openpilot.common.swaglog import cloudlog
 from openpilot.selfdrive.controls.lib.lateral_mpc_lib.lat_mpc import LateralMpc
 from openpilot.selfdrive.controls.lib.lateral_mpc_lib.lat_mpc import N as LAT_MPC_N
@@ -50,6 +50,8 @@ class LateralPlanner:
 
     self.debug_mode = debug
 
+    self.params = Params()
+
     self.latDebugText = ""
     # lane_mode
     self.LP = LanePlanner()
@@ -57,8 +59,8 @@ class LateralPlanner:
     self.lanelines_active = False
     self.lanelines_active_tmp = False
 
-    self.pathOffset = float(int(Params().get("PathOffset", encoding="utf8")))*0.01
-    self.useLaneLineSpeed = float(int(Params().get("UseLaneLineSpeed", encoding="utf8")))
+    self.useLaneLineSpeeApply = self.params.get_int("UseLaneLineSpeedApply")
+    self.pathOffset = float(self.params.get_int("PathOffset")) * 0.01
     self.useLaneLineMode = False
     self.plan_yaw = np.zeros((TRAJECTORY_SIZE,))
     self.plan_yaw_rate = np.zeros((TRAJECTORY_SIZE,))
@@ -76,17 +78,17 @@ class LateralPlanner:
     self.x0 = x0
     self.lat_mpc.reset(x0=self.x0)
 
-  def update(self, sm):
+  def update(self, sm, carrot_planner):
     self.readParams -= 1
     if self.readParams <= 0:
       self.readParams = 100
-      self.useLaneLineSpeed = float(int(Params().get("UseLaneLineSpeed", encoding="utf8")))
-      self.pathOffset = float(int(Params().get("PathOffset", encoding="utf8")))*0.01
+      self.useLaneLineSpeedApply = self.params.get_int("UseLaneLineSpeedApply")
+      self.pathOffset = float(self.params.get_int("PathOffset")) * 0.01
 
     # clip speed , lateral planning is not possible at 0 speed
     measured_curvature = sm['controlsState'].curvature
     v_ego_car = sm['carState'].vEgo
-    self.curve_speed = sm['controlsState'].curveSpeed
+    self.curve_speed = carrot_planner.curveSpeed
 
     # Parse model predictions
     md = sm['modelV2']
@@ -105,11 +107,11 @@ class LateralPlanner:
     #lane_change_prob = self.LP.l_lane_change_prob + self.LP.r_lane_change_prob
     #self.DH.update(sm['carState'], md, sm['carControl'].latActive, lane_change_prob, sm)
 
-    if self.useLaneLineSpeed == 0:
+    if self.useLaneLineSpeedApply == 0:
       self.useLaneLineMode = False
-    elif self.v_ego*3.6 >= self.useLaneLineSpeed + 2:
+    elif self.v_ego*3.6 >= self.useLaneLineSpeedApply + 2:
       self.useLaneLineMode = True
-    elif self.v_ego*3.6 < self.useLaneLineSpeed - 2:
+    elif self.v_ego*3.6 < self.useLaneLineSpeedApply - 2:
       self.useLaneLineMode = False
 
     # Turn off lanes during lane change
@@ -204,10 +206,15 @@ class LateralPlanner:
     
     self.x_sol = self.lat_mpc.x_sol
 
-    debugText = "{} | {:.1f}m | {:.1f}m | {:.1f}m | {}".format(
+    debugText = "{} {:.1f} | {:.1f}m |{:.1f} {:.1f}m {:.1f}| {:.1f}m | {}".format(
       "lanemode" if self.lanelines_active else "laneless",
-      self.LP.lane_width_left, self.LP.lane_width, self.LP.lane_width_right,
-      "offset={:.1f}cm turn={:.0f}km/h".format(self.LP.offset_total*100.0, self.curve_speed) if self.lanelines_active else "")
+      self.LP.d_prob,
+      self.LP.lane_width_left,
+      self.LP.l_prob,
+      self.LP.lane_width,
+      self.LP.r_prob,
+      self.LP.lane_width_right,
+      "offset={:.1f}cm turn={:.0f}km/h".format(self.LP.offset_total*100.0, clip(self.curve_speed, -200, 200)) if self.lanelines_active else "")
 
     lateralPlan.latDebugText = debugText
     #lateralPlan.latDebugText = self.latDebugText

@@ -3,7 +3,6 @@ import numpy as np
 import time
 import wave
 
-from typing import Dict, Optional, Tuple
 
 from cereal import car, messaging
 from openpilot.common.basedir import BASEDIR
@@ -28,7 +27,7 @@ DB_SCALE = 30 # AMBIENT_DB + DB_SCALE is where MAX_VOLUME is applied
 AudibleAlert = car.CarControl.HUDControl.AudibleAlert
 
 
-sound_list: Dict[int, Tuple[str, Optional[int], float]] = {
+sound_list: dict[int, tuple[str, int | None, float]] = {
   # AudibleAlert, file name, play count (none for infinite)
   AudibleAlert.engage: ("engage.wav", 1, float(Params().get_int("SoundVolumeAdjustEngage"))/100.),
   AudibleAlert.disengage: ("disengage.wav", 1, float(Params().get_int("SoundVolumeAdjustEngage"))/100.),
@@ -55,6 +54,7 @@ sound_list: Dict[int, Tuple[str, Optional[int], float]] = {
   AudibleAlert.disengage2:  ("audio_disengage.wav", None, MAX_VOLUME),
   AudibleAlert.speedDown:  ("audio_speed_down.wav", None, MAX_VOLUME),
   AudibleAlert.audioTurn: ("audio_turn.wav", None, MAX_VOLUME),
+  AudibleAlert.reverseGear: ("reverse_gear.wav", 1, float(Params().get_int("SoundVolumeAdjustEngage"))/100.),
 }
 
 def check_controls_timeout_alert(sm):
@@ -108,7 +108,7 @@ class Soundd:
     self.spl_filter_weighted = FirstOrderFilter(0, 2.5, FILTER_DT, initialized=False)
 
   def load_sounds(self):
-    self.loaded_sounds: Dict[int, np.ndarray] = {}
+    self.loaded_sounds: dict[int, np.ndarray] = {}
 
     # Load all sounds
     for sound in sound_list:

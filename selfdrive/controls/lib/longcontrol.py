@@ -93,8 +93,7 @@ class LongControl:
         self.pid.k_f = self.longitudinalTuningKf
         #self.pid._k_i = ([0, 2.0, 200], [self.longitudinalTuningKiV, 0.0, 0.0]) # 정지때만.... i를 적용해보자... 시험..
     elif self.readParamCount == 30:
-      self.CP.longitudinalActuatorDelayLowerBound = float(Params().get_int("LongitudinalActuatorDelayLowerBound")) * 0.01
-      self.CP.longitudinalActuatorDelayUpperBound = float(Params().get_int("LongitudinalActuatorDelayUpperBound")) * 0.01
+      pass
     elif self.readParamCount == 40:
       self.startAccelApply = float(Params().get_int("StartAccelApply")) * 0.01
       self.stopAccelApply = float(Params().get_int("StopAccelApply")) * 0.01
@@ -106,7 +105,7 @@ class LongControl:
     if len(speeds) == CONTROL_N:
       v_target_now = interp(t_since_plan, ModelConstants.T_IDXS[:CONTROL_N], speeds)
       a_target_now = interp(t_since_plan, ModelConstants.T_IDXS[:CONTROL_N], long_plan.accels)
-      j_target = long_plan.jerks[0]
+      j_target = interp(t_since_plan + 0.2, ModelConstants.T_IDXS[:CONTROL_N], long_plan.jerks)
 
       v_target_lower = interp(self.CP.longitudinalActuatorDelayLowerBound + t_since_plan, ModelConstants.T_IDXS[:CONTROL_N], speeds)
       a_target_lower = 2 * (v_target_lower - v_target_now) / self.CP.longitudinalActuatorDelayLowerBound - a_target_now

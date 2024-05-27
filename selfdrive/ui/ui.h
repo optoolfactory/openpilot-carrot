@@ -170,7 +170,7 @@ typedef struct UIScene {
   float driver_pose_coss[3];
   vec3 face_kpts_draw[std::size(default_face_kpts_3d)];
 
-  bool navigate_on_openpilot = false;
+  cereal::LongitudinalPersonality personality;
 
   float light_sensor;
   bool started, ignition, is_metric, map_on_left, longitudinal_control;
@@ -204,7 +204,7 @@ public:
   QString language;
 
   QTransform car_space_transform;
-  bool show_debug = false;
+  int  show_debug = false;
   int show_datetime = 1;
   bool show_tpms = true;
   int show_accel = 2;
@@ -219,7 +219,6 @@ public:
   int show_dm_info = -1;
   int show_radar_info = 0;
   int show_mode = 1;
-  float show_z_offset = 1.22;
   int show_path_mode = 0;
   int show_path_color = 14;
   int show_path_mode_cruise_off = 0;

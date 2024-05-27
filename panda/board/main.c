@@ -3,7 +3,6 @@
 
 #include "drivers/pwm.h"
 #include "drivers/usb.h"
-#include "drivers/gmlan_alt.h"
 #include "drivers/simple_watchdog.h"
 #include "drivers/bootkick.h"
 
@@ -34,7 +33,6 @@
 
 bool check_started(void) {
   bool started = current_board->check_ignition() || ignition_can;
-  ignition_seen |= started;
   return started;
 }
 
@@ -86,6 +84,7 @@ void set_safety_mode(uint16_t mode, uint16_t param) {
         current_board->set_can_mode(CAN_MODE_NORMAL);
       }
       can_silent = ALL_CAN_SILENT;
+      print("safety mode SILENT\n");
       break;
     case SAFETY_NOOUTPUT:
       set_intercept_relay(false, false);
@@ -93,6 +92,7 @@ void set_safety_mode(uint16_t mode, uint16_t param) {
         current_board->set_can_mode(CAN_MODE_NORMAL);
       }
       can_silent = ALL_CAN_LIVE;
+      print("safety mode NOOUTPUT\n");
       break;
     case SAFETY_ELM327:
       set_intercept_relay(false, false);
@@ -105,9 +105,12 @@ void set_safety_mode(uint16_t mode, uint16_t param) {
           current_board->set_can_mode(CAN_MODE_NORMAL);
         }
       }
+      print("safety mode SELM327\n");
       can_silent = ALL_CAN_LIVE;
       break;
     default:
+      print("safety mode other.... relay ON\n");
+      //if (lkas_acan_panda_mode) harness.status = HARNESS_STATUS_NORMAL;
       set_intercept_relay(true, false);
       heartbeat_counter = 0U;
       heartbeat_lost = false;
@@ -145,8 +148,10 @@ void __attribute__ ((noinline)) enable_fpu(void) {
 
 // called at 8Hz
 uint8_t loop_counter = 0U;
+uint8_t prev_harness_status = HARNESS_STATUS_NC;
 void tick_handler(void) {
-  if (TICK_TIMER->SR != 0) {
+  if (TICK_TIMER->SR != 0U) {
+
     // siren
     current_board->set_siren((loop_counter & 1U) && (siren_enabled || (siren_countdown > 0U)));
 
@@ -155,6 +160,17 @@ void tick_handler(void) {
     usb_tick();
     harness_tick();
     simple_watchdog_kick();
+
+    // re-init everything that uses harness status
+    if (harness.status != prev_harness_status) {
+      prev_harness_status = harness.status;
+      can_set_orientation(harness.status == HARNESS_STATUS_FLIPPED);
+
+      // re-init everything that uses harness status
+      can_init_all();
+      set_safety_mode(current_safety_mode, current_safety_param);
+      set_power_save_state(power_save_status);
+    }
 
     // decimated to 1Hz
     if (loop_counter == 0U) {
@@ -187,7 +203,7 @@ void tick_handler(void) {
       bootkick_tick(check_started(), recent_heartbeat);
 
       // increase heartbeat counter and cap it at the uint32 limit
-      if (heartbeat_counter < __UINT32_MAX__) {
+      if (heartbeat_counter < UINT32_MAX) {
         heartbeat_counter += 1U;
       }
 
@@ -279,38 +295,6 @@ void tick_handler(void) {
   }
   TICK_TIMER->SR = 0;
 }
-
-void EXTI_IRQ_Handler(void) {
-  if (check_exti_irq()) {
-    exti_irq_clear();
-    clock_init();
-
-    set_power_save_state(POWER_SAVE_STATUS_DISABLED);
-    deepsleep_allowed = false;
-    heartbeat_counter = 0U;
-    usb_soft_disconnect(false);
-
-    NVIC_EnableIRQ(TICK_TIMER_IRQ);
-  }
-}
-
-uint8_t rtc_counter = 0;
-void RTC_WKUP_IRQ_Handler(void) {
-  exti_irq_clear();
-  clock_init();
-
-  rtc_counter++;
-  if ((rtc_counter % 2U) == 0U) {
-    current_board->set_led(LED_BLUE, false);
-  } else {
-    current_board->set_led(LED_BLUE, true);
-  }
-
-  if (rtc_counter == __UINT8_MAX__) {
-    rtc_counter = 1U;
-  }
-}
-
 
 int main(void) {
   // Init interrupt table
@@ -413,22 +397,6 @@ int main(void) {
         }
       #endif
     } else {
-      if (deepsleep_allowed && !usb_enumerated && !check_started() && ignition_seen && (heartbeat_counter > 20U)) {
-        usb_soft_disconnect(true);
-        fan_set_power(0U);
-        NVIC_DisableIRQ(TICK_TIMER_IRQ);
-        delay(512000U);
-
-        // Init IRQs for CAN transceiver and ignition line
-        exti_irq_init();
-
-        // Init RTC Wakeup event on EXTI22
-        REGISTER_INTERRUPT(RTC_WKUP_IRQn, RTC_WKUP_IRQ_Handler, 10U, FAULT_INTERRUPT_RATE_EXTI)
-        rtc_wakeup_init();
-
-        // STOP mode
-        SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
-      }
       __WFI();
       SCB->SCR &= ~SCB_SCR_SLEEPDEEP_Msk;
     }

@@ -56,6 +56,7 @@ uint16_t current_safety_mode = SAFETY_SILENT;
 uint16_t current_safety_param = 0;
 const safety_hooks *current_hooks = &nooutput_hooks;
 safety_config current_safety_config;
+uint8_t to_push_data_len_code = 0;  // carrot
 
 bool safety_rx_hook(const CANPacket_t *to_push) {
   bool controls_allowed_prev = controls_allowed;
@@ -117,8 +118,8 @@ bool get_longitudinal_allowed(void) {
 // Given a CRC-8 poly, generate a static lookup table to use with a fast CRC-8
 // algorithm. Called at init time for safety modes using CRC-8.
 void gen_crc_lookup_table_8(uint8_t poly, uint8_t crc_lut[]) {
-  for (int i = 0; i < 256; i++) {
-    uint8_t crc = i;
+  for (uint16_t i = 0U; i <= 0xFFU; i++) {
+    uint8_t crc = (uint8_t)i;
     for (int j = 0; j < 8; j++) {
       if ((crc & 0x80U) != 0U) {
         crc = (uint8_t)((crc << 1) ^ poly);
@@ -298,7 +299,7 @@ void generic_rx_checks(bool stock_ecu_detected) {
   regen_braking_prev = regen_braking;
 
   // check if stock ECU is on bus broken by car harness
-  if ((safety_mode_cnt > RELAY_TRNS_TIMEOUT) && stock_ecu_detected) {
+  if ((safety_mode_cnt > RELAY_TRNS_TIMEOUT) && stock_ecu_detected && !gm_skip_relay_check) {
     relay_malfunction_set();
   }
 }
@@ -569,7 +570,6 @@ bool longitudinal_brake_checks(int desired_brake, const LongitudinalLimits limit
 bool longitudinal_interceptor_checks(const CANPacket_t *to_send) {
   return (!get_longitudinal_allowed() || brake_pressed_prev) && (GET_BYTE(to_send, 0) || GET_BYTE(to_send, 1));
 }
-
 // Safety checks for torque-based steering commands
 bool steer_torque_cmd_checks(int desired_torque, int steer_req, const SteeringLimits limits) {
   bool violation = false;

@@ -24,8 +24,6 @@ TEMP_STEER_FAULTS = (0, 9, 11, 21, 25)
 # - prolonged high driver torque: 17 (permanent)
 PERM_STEER_FAULTS = (3, 17)
 
-ZSS_THRESHOLD = 4.0
-ZSS_THRESHOLD_COUNT = 10
 
 class CarState(CarStateBase):
   def __init__(self, CP):
@@ -42,18 +40,14 @@ class CarState(CarStateBase):
     self.accurate_steer_angle_seen = False
     self.angle_offset = FirstOrderFilter(None, 60.0, DT_CTRL, initialized=False)
 
+    self.prev_distance_button = 0
+    self.distance_button = 0
+
+    self.pcm_follow_distance = 0
+
     self.low_speed_lockout = False
     self.acc_type = 1
     self.lkas_hud = {}
-
-    # FrogPilot variables
-    self.zss_compute = False
-    self.zss_cruise_active_last = False
-
-    self.zss_angle_offset = 0
-    self.zss_threshold_count = 0
-
-    self.traffic_signals = {}
 
   def update(self, cp, cp_cam):
     ret = car.CarState.new_message()
@@ -65,12 +59,8 @@ class CarState(CarStateBase):
 
     ret.brakePressed = cp.vl["BRAKE_MODULE"]["BRAKE_PRESSED"] != 0
     ret.brakeHoldActive = cp.vl["ESP_CONTROL"]["BRAKE_HOLD_ACTIVE"] == 1
-    if self.CP.enableGasInterceptor:
-      ret.gas = (cp.vl["GAS_SENSOR"]["INTERCEPTOR_GAS"] + cp.vl["GAS_SENSOR"]["INTERCEPTOR_GAS2"]) // 2
-      ret.gasPressed = ret.gas > 805
-    else:
-      # TODO: find a common gas pedal percentage signal
-      ret.gasPressed = cp.vl["PCM_CRUISE"]["GAS_RELEASED"] == 0
+
+    ret.gasPressed = cp.vl["PCM_CRUISE"]["GAS_RELEASED"] == 0
 
     ret.wheelSpeeds = self.get_wheel_speeds(
       cp.vl["WHEEL_SPEEDS"]["WHEEL_SPEED_FL"],
@@ -80,8 +70,9 @@ class CarState(CarStateBase):
     )
     ret.vEgoRaw = mean([ret.wheelSpeeds.fl, ret.wheelSpeeds.fr, ret.wheelSpeeds.rl, ret.wheelSpeeds.rr])
     ret.vEgo, ret.aEgo = self.update_speed_kf(ret.vEgoRaw)
-    ret.vEgoCluster = ret.vEgo * 1.025  # minimum of all the cars
+    ret.vEgoCluster = ret.vEgo * 1.015  # minimum of all the cars
 
+    # carrot
     ret.vCluRatio = 0.96
 
     ret.standstill = abs(ret.vEgoRaw) < 1e-3
@@ -107,6 +98,9 @@ class CarState(CarStateBase):
     ret.gearShifter = self.parse_gear_shifter(self.shifter_values.get(can_gear, None))
     ret.leftBlinker = cp.vl["BLINKERS_STATE"]["TURN_SIGNALS"] == 1
     ret.rightBlinker = cp.vl["BLINKERS_STATE"]["TURN_SIGNALS"] == 2
+
+    if self.CP.carFingerprint != CAR.TOYOTA_MIRAI:
+      ret.engineRpm = cp.vl["ENGINE_RPM"]["RPM"]
 
     ret.steeringTorque = cp.vl["STEER_TORQUE_SENSOR"]["STEER_TORQUE_DRIVER"]
     ret.steeringTorqueEps = cp.vl["STEER_TORQUE_SENSOR"]["STEER_TORQUE_EPS"] * self.eps_torque_scale
@@ -170,22 +164,19 @@ class CarState(CarStateBase):
       ret.leftBlindspot = (cp.vl["BSM"]["L_ADJACENT"] == 1) or (cp.vl["BSM"]["L_APPROACHING"] == 1)
       ret.rightBlindspot = (cp.vl["BSM"]["R_ADJACENT"] == 1) or (cp.vl["BSM"]["R_APPROACHING"] == 1)
 
-    if self.CP.carFingerprint != CAR.PRIUS_V:
+    if self.CP.carFingerprint != CAR.TOYOTA_PRIUS_V:
       self.lkas_hud = copy.copy(cp_cam.vl["LKAS_HUD"])
-      
-      
-    self.pcm_personality = cp.vl["PCM_CRUISE_SM"]["DISTANCE_LINES"] - 1  
-    #distance_buttons
-    if self.CP.carFingerprint in (TSS2_CAR - RADAR_ACC_CAR):
-      # KRKeegan - Add support for toyota distance button
-      self.distance_button_pressed = cp_cam.vl["ACC_CONTROL"]["DISTANCE"]
 
-    elif self.CP.carFingerprint in RADAR_ACC_CAR:
-      # These cars have the acc_control on car can
-      self.distance_button_pressed = cp.vl["ACC_CONTROL"]["DISTANCE"]
+    if self.CP.carFingerprint not in UNSUPPORTED_DSU_CAR:
+      self.pcm_follow_distance = cp.vl["PCM_CRUISE_2"]["PCM_FOLLOW_DISTANCE"]
 
-    elif self.CP.flags & ToyotaFlags.SMART_DSU:
-      self.distance_button_pressed = cp.vl["SDSU"]["FD_BUTTON"]
+    if self.CP.carFingerprint in (TSS2_CAR - RADAR_ACC_CAR) or (self.CP.flags & ToyotaFlags.SMART_DSU and not self.CP.flags & ToyotaFlags.RADAR_CAN_FILTER):
+      # distance button is wired to the ACC module (camera or radar)
+      self.prev_distance_button = self.distance_button
+      if self.CP.carFingerprint in (TSS2_CAR - RADAR_ACC_CAR):
+        self.distance_button = cp_acc.vl["ACC_CONTROL"]["DISTANCE"]
+      else:
+        self.distance_button = cp.vl["SDSU"]["FD_BUTTON"]
 
     return ret
 
@@ -207,15 +198,14 @@ class CarState(CarStateBase):
       ("STEER_TORQUE_SENSOR", 50),
     ]
 
+    if CP.carFingerprint != CAR.TOYOTA_MIRAI:
+      messages.append(("ENGINE_RPM", 42))
+
     if CP.carFingerprint in UNSUPPORTED_DSU_CAR:
       messages.append(("DSU_CRUISE", 5))
       messages.append(("PCM_CRUISE_ALT", 1))
     else:
       messages.append(("PCM_CRUISE_2", 33))
-
-    # add gas interceptor reading if we are using it
-    if CP.enableGasInterceptor:
-      messages.append(("GAS_SENSOR", 50))
 
     if CP.enableBsm:
       messages.append(("BSM", 1))
@@ -234,10 +224,10 @@ class CarState(CarStateBase):
         ("PRE_COLLISION", 33),
       ]
 
-    if CP.flags & ToyotaFlags.SMART_DSU:
-      messages.append(("SDSU", 33))
-
-    messages += [("SECONDARY_STEER_ANGLE", 0)]
+    if CP.flags & ToyotaFlags.SMART_DSU and not CP.flags & ToyotaFlags.RADAR_CAN_FILTER:
+      messages += [
+        ("SDSU", 100),
+      ]
 
     return CANParser(DBC[CP.carFingerprint]["pt"], messages, 0)
 
@@ -245,12 +235,7 @@ class CarState(CarStateBase):
   def get_cam_can_parser(CP):
     messages = []
 
-    messages += [
-      ("RSA1", 0),
-      ("RSA2", 0),
-    ]
-
-    if CP.carFingerprint != CAR.PRIUS_V:
+    if CP.carFingerprint != CAR.TOYOTA_PRIUS_V:
       messages += [
         ("LKAS_HUD", 1),
       ]

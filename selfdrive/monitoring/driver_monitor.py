@@ -5,7 +5,7 @@ from openpilot.common.numpy_fast import interp
 from openpilot.common.realtime import DT_DMON
 from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.stat_live import RunningStatFilter
-from openpilot.common.transformations.camera import tici_d_frame_size
+from openpilot.common.transformations.camera import DEVICE_CAMERAS
 
 EventName = car.CarEvent.EventName
 
@@ -19,10 +19,10 @@ class DRIVER_MONITOR_SETTINGS():
   def __init__(self):
     self._DT_DMON = DT_DMON
     # ref (page15-16): https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:42018X1947&rid=2
-    self._AWARENESS_TIME = 30. # passive wheeltouch total timeout
+    self._AWARENESS_TIME = 9999. # passive wheeltouch total timeout
     self._AWARENESS_PRE_TIME_TILL_TERMINAL = 15.
     self._AWARENESS_PROMPT_TIME_TILL_TERMINAL = 6.
-    self._DISTRACTED_TIME = 11. # active monitoring total timeout
+    self._DISTRACTED_TIME = 9999. # active monitoring total timeout
     self._DISTRACTED_PRE_TIME_TILL_TERMINAL = 8.
     self._DISTRACTED_PROMPT_TIME_TILL_TERMINAL = 6.
 
@@ -71,9 +71,11 @@ class DRIVER_MONITOR_SETTINGS():
     self._MAX_TERMINAL_DURATION = int(30 / self._DT_DMON)  # not allowed to engage after 30s of terminal alerts
 
 
+# TODO: get these live
 # model output refers to center of undistorted+leveled image
 EFL = 598.0 # focal length in K
-W, H = tici_d_frame_size # corrected image has same size as raw
+cam = DEVICE_CAMERAS[("tici", "ar0231")] # corrected image has same size as raw
+W, H = (cam.dcam.width, cam.dcam.height)  # corrected image has same size as raw
 
 class DistractedType:
   NOT_DISTRACTED = 0

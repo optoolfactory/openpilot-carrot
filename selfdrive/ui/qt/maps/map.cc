@@ -9,6 +9,7 @@
 #include "selfdrive/ui/qt/util.h"
 #include "selfdrive/ui/ui.h"
 
+#include "common/params.h"
 
 const int INTERACTION_TIMEOUT = 100;
 
@@ -74,7 +75,7 @@ void MapWindow::initLayers() {
 
     QVariantMap transition;
     transition["duration"] = 400;  // ms
-    m_map->setPaintProperty("navLayer", "line-color", getNavPathColor(uiState()->scene.navigate_on_openpilot));
+    m_map->setPaintProperty("navLayer", "line-color", QColor("#31a1ee"));
     m_map->setPaintProperty("navLayer", "line-color-transition", transition);
     m_map->setPaintProperty("navLayer", "line-width", 7.5);
     m_map->setLayoutProperty("navLayer", "line-cap", "round");
@@ -162,22 +163,6 @@ void MapWindow::updateState(const UIState &s) {
   const SubMaster &sm = *(s.sm);
   update();
 
-  if (sm.updated("modelV2")) {
-    // set path color on change, and show map on rising edge of navigate on openpilot
-      //bool nav_enabled = sm["modelV2"].getModelV2().getNavEnabled() &&
-      //    sm["controlsState"].getControlsState().getEnabled();
-      bool nav_enabled = sm["modelV2"].getModelV2().getNavEnabled();
-      if (nav_enabled != uiState()->scene.navigate_on_openpilot) {
-      if (loaded_once) {
-        m_map->setPaintProperty("navLayer", "line-color", getNavPathColor(nav_enabled));
-      }
-      if (nav_enabled) {
-        emit requestVisible(true);
-      }
-    }
-    uiState()->scene.navigate_on_openpilot = nav_enabled;
-  }
-
   if (sm.updated("liveLocationKalman")) {
     auto locationd_location = sm["liveLocationKalman"].getLiveLocationKalman();
     auto locationd_pos = locationd_location.getPositionGeodetic();
@@ -196,6 +181,21 @@ void MapWindow::updateState(const UIState &s) {
       velocity_filter.update(std::max(10.0, locationd_velocity.getValue()[0]));
     }
   }
+  auto roadLimitSpeed = sm["roadLimitSpeed"].getRoadLimitSpeed();
+  float lat = roadLimitSpeed.getXPosLat();
+  float lon = roadLimitSpeed.getXPosLon();
+  float angle = roadLimitSpeed.getXPosAngle();
+  float speed = roadLimitSpeed.getXPosSpeed();
+
+  int validCount = roadLimitSpeed.getXPosValidCount();
+  if (validCount > 0) {
+      locationd_valid = true;
+      float bearing = (angle > 180) ? angle - 360 : angle;
+
+      last_position = QMapLibre::Coordinate(lat, lon);
+      last_bearing = bearing;
+      velocity_filter.update(std::max(10.0, (double)speed / 3.6));
+  }
 
   bool allow_open = false;  // carrot
   if (sm.updated("navRoute") && sm["navRoute"].getNavRoute().getCoordinates().size()) {
@@ -204,16 +204,17 @@ void MapWindow::updateState(const UIState &s) {
     bool allow_open = std::exchange(last_valid_nav_dest, nav_dest) != nav_dest &&
         nav_dest && !isVisible();
 #else
-    // carrot: ¿Ö? °æ·Î°¡ ¹Ù²î¾ú´Âµ¥ ¸ñÀûÁö¸¸ ºñ±³? navRoute°¡ ¼ö½ÅµÇ¸é ¹«Á¶°Ç ÇØ¾ßÁö.. º¸³»´Â°÷Àº ¸¸µé¾î¼­ º¸³Â´Âµ¥..
+    // carrot: ì™œ? ê²½ë¡œê°€ ë°”ë€Œì—ˆëŠ”ë° ëª©ì ì§€ë§Œ ë¹„êµ? navRouteê°€ ìˆ˜ì‹ ë˜ë©´ ë¬´ì¡°ê±´ í•´ì•¼ì§€.. ë³´ë‚´ëŠ”ê³³ì€ ë§Œë“¤ì–´ì„œ ë³´ëƒˆëŠ”ë°..
     std::exchange(last_valid_nav_dest, nav_dest);
     allow_open = nav_dest && !isVisible();
 #endif
 
-    allow_open = true; // carrot : ¿Ö? °æ·Î°¡ ¹Ù²î¾ú´Âµ¥?
+    allow_open = true; // carrot : ì™œ? ê²½ë¡œê°€ ë°”ë€Œì—ˆëŠ”ë°?
     qWarning() << "Got new navRoute from navd. Opening map:" << allow_open;
 
     // Show map on destination set/change
-    if (allow_open) {
+    if (allow_open && (params.getInt("AutoTurnMapChange") > 0)) {
+        printf("###########MapWindow : requestVisible\n");
       emit requestSettings(false);
       emit requestVisible(true);
 
@@ -442,7 +443,6 @@ void MapWindow::pinchTriggered(QPinchGesture *gesture) {
 void MapWindow::offroadTransition(bool offroad) {
   if (offroad) {
     clearRoute();
-    uiState()->scene.navigate_on_openpilot = false;
     routing_problem = false;
   } else {
     auto dest = coordinate_from_param("NavDestination");

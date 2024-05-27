@@ -19,7 +19,6 @@ enum {
 };
 
 int lat_active_count = 0; // carrot
-int _carrot_prepare_engage = 0; // carrot
 
 // common state
 bool hyundai_ev_gas_signal = false;
@@ -48,14 +47,15 @@ void hyundai_common_init(uint16_t param) {
 #endif
 }
 
-void hyundai_common_cruise_state_check(const int cruise_engaged) {
+void hyundai_common_cruise_state_check(const bool cruise_engaged) {
   // some newer HKG models can re-enable after spamming cancel button,
   // so keep track of user button presses to deny engagement if no interaction
 
   // enter controls on rising edge of ACC and recent user button press, exit controls when ACC off
   if (!hyundai_longitudinal) {
       hyundai_last_button_interaction = 0U; // carrot
-    if (cruise_engaged && !cruise_engaged_prev && (hyundai_last_button_interaction < HYUNDAI_PREV_BUTTON_SAMPLES)) {
+    //if (cruise_engaged && !cruise_engaged_prev && (hyundai_last_button_interaction < HYUNDAI_PREV_BUTTON_SAMPLES)) {
+    if (cruise_engaged) {
       controls_allowed = true;
     }
 
@@ -66,15 +66,15 @@ void hyundai_common_cruise_state_check(const int cruise_engaged) {
   }
 }
 
-void hyundai_common_cruise_buttons_check(const int cruise_button, const int main_button) {
+void hyundai_common_cruise_buttons_check(const int cruise_button, const bool main_button) {
   // PFEIFER - AOL {{
-  if(main_button != 0 && main_button != cruise_main_prev) {
+  if(main_button && main_button != cruise_main_prev) {
     acc_main_on = !acc_main_on;
   }
   cruise_main_prev = main_button;
   // }} PFEIFER - AOL
   if ((cruise_button == HYUNDAI_BTN_RESUME) || (cruise_button == HYUNDAI_BTN_SET) || (cruise_button == HYUNDAI_BTN_CANCEL) ||
-      (main_button != 0)) {
+      (main_button)) {
     hyundai_last_button_interaction = 0U;
   } else {
     hyundai_last_button_interaction = MIN(hyundai_last_button_interaction + 1U, HYUNDAI_PREV_BUTTON_SAMPLES);

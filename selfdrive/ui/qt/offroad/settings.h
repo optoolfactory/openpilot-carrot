@@ -9,8 +9,9 @@
 #include <QPushButton>
 #include <QStackedWidget>
 #include <QWidget>
+#include <QStackedLayout>
 
-
+#include "selfdrive/ui/ui.h"
 #include "selfdrive/ui/qt/util.h"
 #include "selfdrive/ui/qt/widgets/controls.h"
 
@@ -63,6 +64,9 @@ public:
 
 public slots:
   void expandToggleDescription(const QString &param);
+
+private slots:
+  void updateState(const UIState &s);
 
 private:
   Params params;
@@ -172,4 +176,21 @@ private:
     int     m_unit;
 
     void refresh();
+};
+class CarrotParamsControl : public AbstractControl {
+    Q_OBJECT
+
+public:
+    CarrotParamsControl(int mode, const QString& title, const QString& desc, const QString& icon, bool disp_no=true);
+
+private:
+    void showEvent(QShowEvent* event) override;
+    QPushButton btnYes;
+    QPushButton btnNo;
+    QLabel label;
+
+    int     m_pressed;
+
+    void refresh();
+    void SetParams(int mode);
 };

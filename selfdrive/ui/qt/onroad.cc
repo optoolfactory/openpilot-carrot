@@ -31,10 +31,58 @@ static void drawIcon(QPainter &p, const QPoint &center, const QPixmap &img, cons
 
 OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   QVBoxLayout *main_layout  = new QVBoxLayout(this);
-  main_layout->setMargin(UI_BORDER_SIZE);
+  //main_layout->setMargin(UI_BORDER_SIZE);
+  main_layout->setContentsMargins(UI_BORDER_SIZE, 0, UI_BORDER_SIZE, 0);
+
+  QFont font;
+  font.setPixelSize(27);
+  font.setWeight(QFont::DemiBold);
+  QHBoxLayout* topLayout = new QHBoxLayout();
+  topLeftLabel = new QLabel("", this);
+  topLeftLabel->setFixedHeight(27); // 높이를 30 픽셀로 설정
+  topLeftLabel->setAlignment(Qt::AlignLeft);
+  topLeftLabel->setFont(font);
+  topLeftLabel->setStyleSheet("QLabel { color : white; }");
+  topLayout->addWidget(topLeftLabel);
+  topLabel = new QLabel("", this);
+  topLabel->setFixedHeight(27); // 높이를 30 픽셀로 설정
+  topLabel->setAlignment(Qt::AlignCenter);
+  topLabel->setFont(font);
+  topLabel->setStyleSheet("QLabel { color : white; }");
+  topLayout->addWidget(topLabel);
+  topRightLabel = new QLabel("", this);
+  topRightLabel->setFixedHeight(27); // 높이를 30 픽셀로 설정
+  topRightLabel->setAlignment(Qt::AlignRight);
+  topRightLabel->setFont(font);
+  topRightLabel->setStyleSheet("QLabel { color : white; }");
+  topLayout->addWidget(topRightLabel);
+  main_layout->addLayout(topLayout);
+
   QStackedLayout *stacked_layout = new QStackedLayout;
   stacked_layout->setStackingMode(QStackedLayout::StackAll);
   main_layout->addLayout(stacked_layout);
+
+  QHBoxLayout* bottomLayout = new QHBoxLayout();
+  bottomLeftLabel = new QLabel("", this);
+  bottomLeftLabel->setFixedHeight(27); // 높이를 30 픽셀로 설정
+  bottomLeftLabel->setAlignment(Qt::AlignLeft);
+  bottomLeftLabel->setFont(font);
+  bottomLeftLabel->setStyleSheet("QLabel { color : white; }");
+  bottomLayout->addWidget(bottomLeftLabel);
+  bottomLabel = new QLabel("", this);
+  bottomLabel->setFixedHeight(27); // 높이를 30 픽셀로 설정
+  bottomLabel->setAlignment(Qt::AlignCenter);
+  bottomLabel->setFont(font);
+  bottomLabel->setStyleSheet("QLabel { color : white; }");
+  bottomLayout->addWidget(bottomLabel);
+  bottomRightLabel = new QLabel("", this);
+  bottomRightLabel->setFixedHeight(27); // 높이를 30 픽셀로 설정
+  bottomRightLabel->setAlignment(Qt::AlignRight);
+  bottomRightLabel->setFont(font);
+  bottomRightLabel->setStyleSheet("QLabel { color : white; }");
+  bottomLayout->addWidget(bottomRightLabel);
+  main_layout->addLayout(bottomLayout);
+
 
   nvg = new AnnotatedCameraWidget(VISION_STREAM_ROAD, this);
 
@@ -100,6 +148,9 @@ void OnroadWindow::updateState(const UIState &s) {
     bg = bgColor;
     update();
   }
+  else {
+      updateStateText();
+  }
 
   Params params = Params();
   static int updateSeq = 0;
@@ -155,8 +206,9 @@ void OnroadWindow::updateState(const UIState &s) {
           if (map == nullptr) _current_carrot_display = 1;
           else {
               map->setVisible(true);
-              map->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-              map->setFixedWidth(topWidget(this)->width() - UI_BORDER_SIZE);
+              //map->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+              //map->setFixedWidth(topWidget(this)->width() - UI_BORDER_SIZE);
+              map->setFixedWidth(width());
           }
           break;
       }
@@ -222,6 +274,63 @@ void OnroadWindow::primeChanged(bool prime) {
 void OnroadWindow::paintEvent(QPaintEvent *event) {
   QPainter p(this);
   p.fillRect(rect(), QColor(bg.red(), bg.green(), bg.blue(), 255));
+
+}
+
+void OnroadWindow::updateStateText() {
+    //QPainter p(this);
+    //QColor text_color = QColor(0, 0, 0, 0xff);
+    //QColor text_color = QColor(0xff, 0xff, 0xff, 0xff);
+    //QRect rect_top(0, 0, rect().width(), 29);
+    //QRect rect_bottom(0, rect().height() - UI_BORDER_SIZE - 1, rect().width(), 29);
+
+    //p.setFont(InterFont(28, QFont::DemiBold));
+    //p.setPen(text_color);
+
+    UIState* s = uiState();
+    const SubMaster& sm = *(s->sm);
+    auto meta = sm["modelV2"].getModelV2().getMeta();
+    QString debugModelV2 = QString::fromStdString(meta.getDebugText().cStr());
+    auto controls_state = sm["controlsState"].getControlsState();
+    QString debugControlsState = QString::fromStdString(controls_state.getDebugText1().cStr());
+    const auto lp = sm["longitudinalPlan"].getLongitudinalPlan();
+    //QString debugLong2 = QString::fromStdString(lp.getDebugLongText2().cStr());
+    const auto live_params = sm["liveParameters"].getLiveParameters();
+    float   liveSteerRatio = live_params.getSteerRatio();
+
+    QString top = "";
+
+    if (debugControlsState.length() > 2) {
+        top = debugControlsState;
+    }
+    else if (debugModelV2.length() > 2) {
+        top = debugModelV2;
+    }
+    //else if (debugLong2.length() > 2) {
+    //    top = debugLong2;
+    //}
+    else top = QString::fromStdString(lp.getDebugLongText().cStr()) + (" LiveSR:" + QString::number(liveSteerRatio, 'f', 2));
+    //p.drawText(rect_top, Qt::AlignBottom | Qt::AlignHCenter, top);
+    topLabel->setText(top);
+
+    extern int g_fps;
+    const auto cp = sm["carParams"].getCarParams();
+    top.sprintf("%s Long, FPS: %d", hasLongitudinalControl(cp)?"OP":"Stock", g_fps);
+    topRightLabel->setText(top);
+
+    Params params = Params();
+    QString carName = QString::fromStdString(params.get("CarName"));
+    topLeftLabel->setText(carName);
+
+    const auto lat_plan = sm["lateralPlan"].getLateralPlan();
+    //p.drawText(rect_bottom, Qt::AlignBottom | Qt::AlignHCenter, lat_plan.getLatDebugText().cStr());
+    bottomLabel->setText(lat_plan.getLatDebugText().cStr());
+
+    extern char ip_address[];
+    extern QString gitBranch;
+    bottomRightLabel->setText(QString(ip_address));
+    bottomLeftLabel->setText(gitBranch);
+
 }
 
 // ***** onroad widgets *****
@@ -382,7 +491,7 @@ void AnnotatedCameraWidget::updateState(const UIState &s) {
   const auto nav_instruction = sm["navInstruction"].getNavInstruction();
 
   // Handle older routes where vCruiseCluster is not set
-  float v_cruise =  cs.getVCruiseCluster() == 0.0 ? cs.getVCruise() : cs.getVCruiseCluster();
+  float v_cruise = cs.getVCruiseCluster() == 0.0 ? cs.getVCruise() : cs.getVCruiseCluster();
   setSpeed = cs_alive ? v_cruise : SET_SPEED_NA;
   is_cruise_set = setSpeed > 0 && (int)setSpeed != SET_SPEED_NA;
   if (is_cruise_set && !s.scene.is_metric) {
@@ -704,6 +813,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   QPainter painter(this);
   const double start_draw_t = millis_since_boot();
   const cereal::ModelDataV2::Reader &model = sm["modelV2"].getModelV2();
+  const float v_ego = sm["carState"].getCarState().getVEgo();
 
   // draw camera frame
   {
@@ -725,7 +835,6 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
     // Wide or narrow cam dependent on speed
     bool has_wide_cam = available_streams.count(VISION_STREAM_WIDE_ROAD);
     if (has_wide_cam) {
-      float v_ego = sm["carState"].getCarState().getVEgo();
       if ((v_ego < 10) || available_streams.size() == 1) {
         wide_cam_requested = true;
       } else if (v_ego > 15) {
@@ -793,7 +902,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   extern int g_fps;
   g_fps = fps;
   if (fps < 15) {
-    LOGW("slow frame rate: %.2f fps", fps);
+    //LOGW("slow frame rate: %.2f fps", fps);
   }
   prev_draw_t = cur_draw_t;
 

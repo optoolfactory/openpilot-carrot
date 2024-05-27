@@ -6,7 +6,8 @@ from opendbc.can.packer import CANPacker
 from openpilot.selfdrive.car import apply_driver_steer_torque_limits, common_fault_avoidance
 from openpilot.selfdrive.car.hyundai import hyundaicanfd, hyundaican
 from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
-from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CANFD_CAR, CAR, LEGACY_SAFETY_MODE_CAR
+from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CANFD_CAR, CAR, LEGACY_SAFETY_MODE_CAR, CAN_GEARS, HyundaiExtFlags
+from openpilot.selfdrive.car.interfaces import CarControllerBase
 import random
 from random import randint
 from openpilot.common.params import Params
@@ -45,7 +46,7 @@ def process_hud_alert(enabled, fingerprint, hud_control):
   return sys_warning, sys_state, left_lane_warning, right_lane_warning
 
 
-class CarController:
+class CarController(CarControllerBase):
   def __init__(self, dbc_name, CP, VM):
     self.CP = CP
     self.CAN = CanBus(CP)
@@ -67,6 +68,10 @@ class CarController:
     self.blinking_signal = False #아이콘 깜박이용 1Hz
     self.blinking_frame = int(1.0 / DT_CTRL)
     self.jerk_count = 0
+    self.jerk_u = 0
+    self.jerk_l = 0
+    self.cb_lower = 0
+    self.cb_upper = 0
     self.activateCruise = 0
     self.button_wait = 12
     self.resume_cnt = 0
@@ -81,6 +86,9 @@ class CarController:
     self.prev_clu_speed = 0
     self.button_spam1 = 8
     self.button_spam2 = 30
+    self.button_spam3 = 1
+
+    self.suppress_lfa_counter = 0
 
   def update(self, CC, CS, now_nanos):
     actuators = CC.actuators
@@ -98,7 +106,16 @@ class CarController:
 
       self.button_spam1 = self.params.get_int("CruiseButtonTest1")
       self.button_spam2 = self.params.get_int("CruiseButtonTest2")
+      self.button_spam3 = self.params.get_int("CruiseButtonTest3")
 
+
+    #self.cc_params.STEER_DRIVER_ALLOWANCE = 50
+    steerMax = self.params.get_int("CustomSteerMax")
+    steerDeltaUp = self.params.get_int("CustomSteerDeltaUp")
+    steerDeltaDown = self.params.get_int("CustomSteerDeltaDown")
+    self.cc_params.STEER_MAX = self.cc_params.STEER_MAX if steerMax <= 0 else steerMax
+    self.cc_params.STEER_DELTA_UP = self.cc_params.STEER_DELTA_UP if steerDeltaUp <= 0 else steerDeltaUp
+    self.cc_params.STEER_DELTA_DOWN = self.cc_params.STEER_DELTA_DOWN if steerDeltaDown <= 0 else steerDeltaDown
 
     # steering torque
     new_steer = int(round(actuators.steer * self.cc_params.STEER_MAX))
@@ -149,7 +166,7 @@ class CarController:
       self.hapticFeedbackWhenSpeedCamera = int(self.params.get_int("HapticFeedbackWhenSpeedCamera"))
 
     # tester present - w/ no response (keeps relevant ECU disabled)
-    if self.frame % 100 == 0 and not (self.CP.flags & HyundaiFlags.CANFD_CAMERA_SCC.value) and self.CP.openpilotLongitudinalControl:
+    if self.frame % 100 == 0 and not (self.CP.flags & HyundaiFlags.CANFD_CAMERA_SCC.value) and self.CP.openpilotLongitudinalControl and not (self.CP.extFlags & HyundaiExtFlags.SCC_BUS2.value):
       # for longitudinal control, either radar or ADAS driving ECU
       addr, bus = 0x7d0, self.CAN.ECAN if self.CP.carFingerprint in CANFD_CAR else 0
       if self.CP.flags & HyundaiFlags.CANFD_HDA2.value:
@@ -189,10 +206,21 @@ class CarController:
       # steering control
       can_sends.extend(hyundaicanfd.create_steering_messages(self.packer, self.CP, self.CAN, CC.enabled, apply_steer_req, apply_steer))
 
+      ## carrot 기존데이터를 복사하니.. mdps에러가 뜨는것 같음...
+      #if self.CP.extFlags & HyundaiExtFlags.SCC_BUS2.value:  
+      #  can_sends.append(hyundaicanfd.create_steering_messages_scc2(self.packer, self.CP, self.CAN, CC.enabled, apply_steer_req, apply_steer, CS.lfa_info))
+      #else:
+      #  can_sends.extend(hyundaicanfd.create_steering_messages(self.packer, self.CP, self.CAN, CC.enabled, apply_steer_req, apply_steer))
+
       # prevent LFA from activating on HDA2 by sending "no lane lines detected" to ADAS ECU
+      #if self.frame % 5 == 0 and hda2 and CS.hda2_lfa_block_msg is not None and (not (self.CP.extFlags & HyundaiExtFlags.SCC_BUS2.value) or self.CP.extFlags & HyundaiExtFlags.ACAN_PANDA.value): # SCC_BUS2의 경우 ACAN이 bus1에 있어서 보낼수가 없음..
       if self.frame % 5 == 0 and hda2:
-        can_sends.append(hyundaicanfd.create_suppress_lfa(self.packer, self.CAN, CS.hda2_lfa_block_msg,
-                                                          self.CP.flags & HyundaiFlags.CANFD_HDA2_ALT_STEERING))
+        if self.CP.extFlags & HyundaiExtFlags.ACAN_PANDA.value:
+          self.suppress_lfa_counter += 1
+          can_sends.append(hyundaicanfd.create_suppress_lfa_scc2(self.packer, self.CAN, self.CP.flags & HyundaiFlags.CANFD_HDA2_ALT_STEERING, self.suppress_lfa_counter))
+        elif not (self.CP.extFlags & HyundaiExtFlags.SCC_BUS2.value):
+          can_sends.append(hyundaicanfd.create_suppress_lfa(self.packer, self.CAN, CS.hda2_lfa_block_msg,
+                                                            self.CP.flags & HyundaiFlags.CANFD_HDA2_ALT_STEERING))
 
       # LFA and HDA icons
       if self.frame % 5 == 0 and (not hda2 or hda2_long):
@@ -203,13 +231,20 @@ class CarController:
         can_sends.extend(hyundaicanfd.create_spas_messages(self.packer, self.CAN, self.frame, CC.leftBlinker, CC.rightBlinker))
 
       if self.CP.openpilotLongitudinalControl:
-        if hda2:
-          can_sends.extend(hyundaicanfd.create_adrv_messages(self.packer, self.CAN, self.frame))
-        else:
-          can_sends.extend(hyundaicanfd.create_fca_warning_light(self.packer, self.CAN, self.frame))
+        self.make_jerk(CS, accel, actuators, hud_control)
+
+        if not (self.CP.extFlags & HyundaiExtFlags.SCC_BUS2.value):
+          if hda2:
+            can_sends.extend(hyundaicanfd.create_adrv_messages(self.CP, self.packer, self.CAN, self.frame))
+          else:
+            can_sends.extend(hyundaicanfd.create_fca_warning_light(self.packer, self.CAN, self.frame))
         if self.frame % 2 == 0:
-          can_sends.append(hyundaicanfd.create_acc_control(self.packer, self.CAN, CC.enabled, self.accel_last, accel, stopping, CC.cruiseControl.override,
-                                                           set_speed_in_units, CS.longitudinal_personality))
+          if False: #self.CP.extFlags & HyundaiExtFlags.SCC_BUS2.value:
+            can_sends.append(hyundaicanfd.create_acc_control_scc2(self.packer, self.CAN, CC.enabled, self.accel_last, accel, stopping, CC.cruiseControl.override,
+                                                             set_speed_in_units, hud_control, self.jerk_u, self.jerk_l, CS.cruise_info))
+          else:
+            can_sends.append(hyundaicanfd.create_acc_control(self.packer, self.CAN, CC.enabled, self.accel_last, accel, stopping, CC.cruiseControl.override,
+                                                             set_speed_in_units, hud_control, self.jerk_u, self.jerk_l))
           self.accel_last = accel
 
         ### for LongControl auto activate...
@@ -217,15 +252,15 @@ class CarController:
           self.activateCruise = 0
         if CC.cruiseControl.activate and self.activateCruise == 0: ## ajouatom: send command to panda via Button spam(RES_ACCEL), for auto engage
           self.activateCruise = 1
-          #can_sends.append(hyundaican.create_clu11(self.packer, self.frame, CS.clu11, Buttons.RES_ACCEL, self.CP.carFingerprint))
+          #can_sends.append(hyundaican.create_clu11(self.packer, self.frame, CS.clu11, Buttons.RES_ACCEL, self.CP))
           can_sends.append(hyundaicanfd.create_buttons(self.packer, self.CP, self.CAN, CS.buttons_counter+1, Buttons.RES_ACCEL))
-          print("SendActivateCanData#######")
+          #print("SendActivateCanData#######")
 
       else:
         # button presses
         can_sends.extend(self.create_button_messages(CC, CS, use_clu11=False))
     else:
-      can_sends.append(hyundaican.create_lkas11(self.packer, self.frame, self.car_fingerprint, apply_steer, apply_steer_req,
+      can_sends.append(hyundaican.create_lkas11(self.packer, self.frame, self.CP, apply_steer, apply_steer_req,
                                                 torque_fault, CS.lkas11, sys_warning, sys_state, CC.enabled,
                                                 hud_control.leftLaneVisible, hud_control.rightLaneVisible,
                                                 left_lane_warning, right_lane_warning))
@@ -239,35 +274,15 @@ class CarController:
         ### for LongControl auto activate...
         if CC.cruiseControl.activate and self.activateCruise == 0: ## ajouatom: send command to panda via Button spam(RES_ACCEL), for auto engage
           self.activateCruise = 1
-          can_sends.append(hyundaican.create_clu11(self.packer, self.frame, CS.clu11, Buttons.RES_ACCEL, self.CP.carFingerprint))
-          print("SendActivateCanData#######")
+          can_sends.append(hyundaican.create_clu11(self.packer, self.frame, CS.clu11, Buttons.RES_ACCEL, self.CP))
+          #print("SendActivateCanData#######")
 
-      if self.CP.carFingerprint in (CAR.GENESIS_G90_2019, CAR.GENESIS_G90, CAR.K7):
+      if self.CP.carFingerprint in CAN_GEARS["send_mdps12"]:  # send mdps12 to LKAS to prevent LKAS error
         can_sends.append(hyundaican.create_mdps12(self.packer, self.frame, CS.mdps12))
 
       if self.frame % 2 == 0 and self.CP.openpilotLongitudinalControl:
-        # ajouatom: calculate jerk, cb : reverse engineer from KONA EV
-        jerk = actuators.jerk
-        startingJerk = self.jerkStartLimit
-        jerkLimit = 5.0
-        self.jerk_count += DT_CTRL
-        jerk_max = interp(self.jerk_count, [0, 1.5, 2.5], [startingJerk, startingJerk, jerkLimit])
-        cb_upper = cb_lower = 0
-        if actuators.longControlState == LongCtrlState.off:
-          jerk_u = jerkLimit
-          jerk_l = jerkLimit          
-          self.jerk_count = 0
-        elif actuators.longControlState == LongCtrlState.stopping or hud_control.softHold > 0:
-          jerk_u = 0.5
-          jerk_l = 1.0 #jerkLimit
-          self.jerk_count = 0
-        else:
-          jerk_u = min(max(0.5, jerk * 2.0), jerk_max)
-          #jerk_l = min(max(1.0, -jerk * 2.0), jerk_max)
-          jerk_l = min(max(1.2, -jerk * 2.0), jerkLimit) ## 1.0으로 하니 덜감속, 1.5로하니 너무감속, 1.2로 한번해보자(231228)
-          cb_upper = clip(0.9 + accel * 0.2, 0, 1.2)
-          cb_lower = clip(0.8 + accel * 0.2, 0, 1.2)
-        
+        self.make_jerk(CS, accel, actuators, hud_control)
+
         # TODO: unclear if this is needed
         #jerk = 3.0 if actuators.longControlState == LongCtrlState.pid else 1.0
         #use_fca = self.CP.flags & HyundaiFlags.USE_FCA.value
@@ -275,15 +290,15 @@ class CarController:
         #                                                hud_control.leadVisible, set_speed_in_units, stopping,
         #                                                CC.cruiseControl.override, use_fca, CS.out.cruiseState.available))
 
-        can_sends.extend(hyundaican.create_acc_commands_mix_scc(self.CP, self.packer, CC.enabled, accel, jerk_u, jerk_l, int(self.frame / 2),
-                                                      hud_control, set_speed_in_units, stopping, CC, CS, self.softHoldMode, cb_upper, cb_lower, CS.out.cruiseState.available))
+        can_sends.extend(hyundaican.create_acc_commands_mix_scc(self.CP, self.packer, CC.enabled, accel, self.jerk_u, self.jerk_l, int(self.frame / 2),
+                                                      hud_control, set_speed_in_units, stopping, CC, CS, self.softHoldMode, self.cb_upper, self.cb_lower, CS.out.cruiseState.available))
         self.accel_last = accel
 
       # 20 Hz LFA MFA message
       if self.frame % 5 == 0 and self.CP.flags & HyundaiFlags.SEND_LFA.value:
         can_sends.append(hyundaican.create_lfahda_mfc(self.packer, CC, self.blinking_signal))
 
-      sccBus = 2 if self.CP.flags & HyundaiFlags.SCC_BUS2.value else 0
+      sccBus = 2 if self.CP.extFlags & HyundaiExtFlags.SCC_BUS2.value else 0
       # 5 Hz ACC options
       if self.frame % 20 == 0 and self.CP.openpilotLongitudinalControl: 
         if sccBus == 0:
@@ -305,28 +320,28 @@ class CarController:
 
   def create_button_messages(self, CC: car.CarControl, CS: car.CarState, use_clu11: bool):
     can_sends = []
-    if CS.out.brakePressed:
+    if CS.out.brakePressed or CS.out.brakeHoldActive:
       return can_sends
     hud_control = CC.hudControl
     if use_clu11:
       #if CC.cruiseControl.cancel:
-      #  can_sends.append(hyundaican.create_clu11(self.packer, self.frame, CS.clu11, Buttons.CANCEL, self.CP.carFingerprint))
+      #  can_sends.append(hyundaican.create_clu11(self.packer, self.frame, CS.clu11, Buttons.CANCEL, self.CP))
       #elif CC.cruiseControl.resume:
       #  # send resume at a max freq of 10Hz
       #  if (self.frame - self.last_button_frame) * DT_CTRL > 0.1:
       #    # send 25 messages at a time to increases the likelihood of resume being accepted
-      #    can_sends.extend([hyundaican.create_clu11(self.packer, self.frame, CS.clu11, Buttons.RES_ACCEL, self.CP.carFingerprint)] * 25)
+      #    can_sends.extend([hyundaican.create_clu11(self.packer, self.frame, CS.clu11, Buttons.RES_ACCEL, self.CP)] * 25)
       #    if (self.frame - self.last_button_frame) * DT_CTRL >= 0.15:
       #      self.last_button_frame = self.frame
       if CC.cruiseControl.cancel:
         print("cruiseControl.cancel")
-        can_sends.append(hyundaican.create_clu11(self.packer, self.frame, CS.clu11, Buttons.CANCEL, self.CP.carFingerprint))
-      elif CC.cruiseControl.resume:
+        can_sends.append(hyundaican.create_clu11(self.packer, self.frame, CS.clu11, Buttons.CANCEL, self.CP))
+      elif False: #CC.cruiseControl.resume:
         if self.CP.carFingerprint in LEGACY_SAFETY_MODE_CAR:            
           if self.resume_wait_timer > 0:
             self.resume_wait_timer -= 1
           else:
-            can_sends.append(hyundaican.create_clu11_button(self.packer, self.frame, CS.clu11, Buttons.RES_ACCEL, self.CP.carFingerprint))
+            can_sends.append(hyundaican.create_clu11_button(self.packer, self.frame, CS.clu11, Buttons.RES_ACCEL, self.CP))
             self.resume_cnt += 1
             if self.resume_cnt >= int(randint(4, 5) * 2):
               self.resume_cnt = 0
@@ -336,15 +351,14 @@ class CarController:
           # send resume at a max freq of 10Hz
           if (self.frame - self.last_button_frame) * DT_CTRL > 0.1:
             # send 25 messages at a time to increases the likelihood of resume being accepted
-            #can_sends.extend([hyundaican.create_clu11(self.packer, self.frame, CS.clu11, Buttons.RES_ACCEL, self.CP.carFingerprint)] * 25)
-            can_sends.append(hyundaican.create_clu11_button(self.packer, self.frame, CS.clu11, Buttons.RES_ACCEL, self.CP.carFingerprint))
+            #can_sends.extend([hyundaican.create_clu11(self.packer, self.frame, CS.clu11, Buttons.RES_ACCEL, self.CP)] * 25)
+            can_sends.append(hyundaican.create_clu11_button(self.packer, self.frame, CS.clu11, Buttons.RES_ACCEL, self.CP))
             self.last_button_frame = self.frame
-      else:
-        self.resume_wait_timer = 0
-        self.resume_cnt = 0
+
+      if self.last_button_frame != self.frame:
         send_button = self.make_spam_button(CC, CS)
         if send_button > 0:
-          can_sends.append(hyundaican.create_clu11_button(self.packer, self.frame, CS.clu11, send_button, self.CP.carFingerprint))
+          can_sends.append(hyundaican.create_clu11_button(self.packer, self.frame, CS.clu11, send_button, self.CP))
       
     else:
 
@@ -376,7 +390,7 @@ class CarController:
             self.last_button_frame = self.frame
 
         # cruise standstill resume
-        elif CC.cruiseControl.resume:
+        elif False: #CC.cruiseControl.resume:
           if (self.frame - self.last_button_frame) * DT_CTRL > 0.1:
             if self.CP.flags & HyundaiFlags.CANFD_ALT_BUTTONS:
               # TODO: resume for alt button cars
@@ -394,8 +408,9 @@ class CarController:
       if self.last_button_frame != self.frame:
         dat = self.canfd_speed_control_pcm(CC, CS, self.cruise_buttons_msg_values)
         if dat is not None:
-          can_sends.append(dat)
-        self.cruise_buttons_msg_cnt += 1
+          for _ in range(self.button_spam3):
+            can_sends.append(dat)
+          self.cruise_buttons_msg_cnt += 1
 
     return can_sends
 
@@ -429,6 +444,8 @@ class CarController:
       if not CS.out.cruiseState.enabled:
         if (hud_control.leadVisible or current > 10.0):
           send_button = Buttons.RES_ACCEL
+      elif CC.cruiseControl.resume:
+        send_button = Buttons.RES_ACCEL
       elif target < current and current>= 31 and self.params.get_int("SpeedFromPCM") != 1:
         send_button = Buttons.SET_DECEL
       elif target > current and current < 160 and self.params.get_int("SpeedFromPCM") != 1:
@@ -456,8 +473,9 @@ class CarController:
 
     self.prev_clu_speed = current
     send_button_allowed = (self.frame - self.last_button_frame) > self.button_wait
-    #print("{} speed_diff={:.1f},{:.0f}/{:.0f}, send_button={}, button_wait={}, count={}".format(
-    #  send_button_allowed, speed_diff, target, current, send_button, self.button_wait, self.button_spamming_count))
+    CC.debugTextCC = "{} speed_diff={:.1f},{:.0f}/{:.0f}, button={}, button_wait={}, count={}".format(
+      send_button_allowed, speed_diff, target, current, send_button, self.button_wait, self.button_spamming_count)
+    
     if send_button_allowed:
       self.button_spamming_count = self.button_spamming_count + 1 if Buttons.RES_ACCEL else self.button_spamming_count - 1
       return send_button
@@ -465,3 +483,58 @@ class CarController:
       self.button_spamming_count = 0
     return 0
 
+  def make_jerk(self, CS, accel, actuators, hud_control):
+    if False: 
+      required_jerk = min(3, abs(accel - CS.out.aEgo) * 50)
+      self.jerk_l = required_jerk
+      self.jerk_u = required_jerk
+      self.cb_upper = self.cb_lower = 0
+
+      if CS.out.aEgo < accel:
+        self.jerk_l = 0
+      else:
+        self.jerk_u = 0
+
+      self.jerk_u = max(0.5, min(3.0, self.jerk_u))
+      self.jerk_l = max(1.2, self.jerk_l) #max(0.05, self.jerk_l)
+
+    else:
+      # ajouatom: calculate jerk, cb : reverse engineer from KONA EV
+      if self.CP.carFingerprint in CANFD_CAR:
+        jerk = actuators.jerk
+        startingJerk = 0.5 #self.jerkStartLimit
+        jerkLimit = 5.0
+        self.jerk_count += DT_CTRL
+        jerk_max = interp(self.jerk_count, [0, 1.5, 2.5], [startingJerk, startingJerk, jerkLimit])
+        if actuators.longControlState == LongCtrlState.off:
+          self.jerk_u = jerkLimit
+          self.jerk_l = jerkLimit          
+          self.jerk_count = 0
+        elif actuators.longControlState == LongCtrlState.stopping or hud_control.softHold > 0:
+          self.jerk_u += 0.1 if self.jerk_u < 1.5 else -0.1
+          self.jerk_l += 0.1 if self.jerk_l < 1.0 else -0.1
+          self.jerk_count = 0
+        else:
+          self.jerk_u = min(max(2.5, jerk * 2.0), jerk_max)
+          self.jerk_l = min(max(2.0, -jerk * 3.0), jerkLimit) 
+      else:
+        jerk = actuators.jerk
+        startingJerk = self.jerkStartLimit
+        jerkLimit = 5.0
+        self.jerk_count += DT_CTRL
+        jerk_max = interp(self.jerk_count, [0, 1.5, 2.5], [startingJerk, startingJerk, jerkLimit])
+        self.cb_upper = self.cb_lower = 0
+        if actuators.longControlState == LongCtrlState.off:
+          self.jerk_u = jerkLimit
+          self.jerk_l = jerkLimit          
+          self.jerk_count = 0
+        elif actuators.longControlState == LongCtrlState.stopping or hud_control.softHold > 0:
+          self.jerk_u += 0.1 if self.jerk_u < 0.5 else -0.1
+          self.jerk_l += 0.1 if self.jerk_l < 1.0 else -0.1
+          self.jerk_count = 0
+        else:
+          self.jerk_u = min(max(0.5, jerk * 2.0), jerk_max)
+          #self.jerk_l = min(max(1.0, -jerk * 2.0), jerk_max)
+          self.jerk_l = min(max(1.2, -jerk * 2.0), jerkLimit) ## 1.0으로 하니 덜감속, 1.5로하니 너무감속, 1.2로 한번해보자(231228)
+          self.cb_upper = clip(0.9 + accel * 0.2, 0, 1.2)
+          self.cb_lower = clip(0.8 + accel * 0.2, 0, 1.2)

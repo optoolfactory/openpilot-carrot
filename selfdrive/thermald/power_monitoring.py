@@ -1,6 +1,5 @@
 import time
 import threading
-from typing import Optional
 
 from openpilot.common.params import Params
 from openpilot.system.hardware import HARDWARE
@@ -38,7 +37,7 @@ class PowerMonitoring:
     self.car_battery_capacity_uWh = max((CAR_BATTERY_CAPACITY_uWh / 10), int(car_battery_capacity_uWh))
 
   # Calculation tick
-  def calculate(self, voltage: Optional[int], ignition: bool):
+  def calculate(self, voltage: int | None, ignition: bool):
     try:
       now = time.monotonic()
 
@@ -108,7 +107,7 @@ class PowerMonitoring:
     return int(self.car_battery_capacity_uWh)
 
   # See if we need to shutdown
-  def should_shutdown(self, ignition: bool, in_car: bool, offroad_timestamp: Optional[float], started_seen: bool):
+  def should_shutdown(self, ignition: bool, in_car: bool, offroad_timestamp: float | None, started_seen: bool):
     if offroad_timestamp is None:
       return False
 
@@ -117,6 +116,7 @@ class PowerMonitoring:
     offroad_time = (now - offroad_timestamp)
     low_voltage_shutdown = (self.car_voltage_mV < (VBATT_PAUSE_CHARGING * 1e3) and
                             offroad_time > VOLTAGE_SHUTDOWN_MIN_OFFROAD_TIME_S)
+    MAX_TIME_OFFROAD_S = Params().get_int("MaxTimeOffroadMin") * 60
     should_shutdown |= offroad_time > MAX_TIME_OFFROAD_S
     should_shutdown |= low_voltage_shutdown
     should_shutdown |= (self.car_battery_capacity_uWh <= 0)

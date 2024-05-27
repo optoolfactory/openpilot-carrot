@@ -6,7 +6,6 @@ import subprocess
 import sys
 import traceback
 from multiprocessing import Process
-from typing import List, Tuple, Union
 
 from cereal import log
 import cereal.messaging as messaging
@@ -20,23 +19,10 @@ from openpilot.selfdrive.manager.process import ensure_running, launcher
 from openpilot.selfdrive.manager.process_config import managed_processes
 from openpilot.selfdrive.athena.registration import register, UNREGISTERED_DONGLE_ID
 from openpilot.common.swaglog import cloudlog, add_file_handler
-from openpilot.system.version import is_dirty, get_commit, get_version, get_origin, get_short_branch, \
-                           get_normalized_origin, terms_version, training_version, \
-                           is_tested_branch, is_release_branch, get_commit_date
+from openpilot.system.version import get_build_metadata, terms_version, training_version
 
-
-
-def manager_init() -> None:
-  save_bootlog()
-
-  params = Params()
-  params.clear_all(ParamKeyType.CLEAR_ON_MANAGER_START)
-  params.clear_all(ParamKeyType.CLEAR_ON_ONROAD_TRANSITION)
-  params.clear_all(ParamKeyType.CLEAR_ON_OFFROAD_TRANSITION)
-  if is_release_branch():
-    params.clear_all(ParamKeyType.DEVELOPMENT_ONLY)
-
-  default_params: List[Tuple[str, Union[str, bytes]]] = [
+def get_default_params():
+  default_params : list[tuple[str, str | bytes]] = [
     ("CompletedTrainingVersion", "0"),
     ("DisengageOnAccelerator", "0"),
     ("GsmMetered", "1"),
@@ -44,18 +30,15 @@ def manager_init() -> None:
     ("LanguageSetting", "main_en"),
     ("OpenpilotEnabledToggle", "1"),
     ("LongitudinalPersonality", str(log.LongitudinalPersonality.standard)),
+    ("LongitudinalPersonalityMax", "3"),
     ("AlwaysOnLateralEnabled", "1"),
     ("SearchInput", "0"),
     ("GMapKey", "0"),
     ("SteerRatio", "0"),
-    ("NNFF", "0"),
     ("MuteDoor", "0"),
     ("MuteSeatbelt", "0"),
     ("LongPitch", "0"),
     ("EVTable", "0"),
-    ("GasRegenCmd", "0"),
-    ("LockDoors", "0"),
-    ("SNGHack", "0"),
     ("TSS2Tune", "0"),
     ("ShowDebugUI", "0"),
     ("ShowDateTime", "1"),
@@ -73,8 +56,7 @@ def manager_init() -> None:
     ("ShowDmInfo", "1"),
     ("ShowRadarInfo", "1"),
     ("MixRadarInfo", "0"),
-    ("VisionAccelRatio", "100"),
-    ("ShowZOffset", "122"),
+    ("CarrotTest3", "0"),
     ("ShowPathMode", "9"),
     ("ShowPathColor", "13"),
     ("ShowPathModeCruiseOff", "0"),
@@ -83,40 +65,51 @@ def manager_init() -> None:
     ("ShowPathColorLane", "13"),
     ("ShowPathWidth", "100"),
     ("ShowPlotMode", "0"),
-    ("AutoResumeFromGasSpeed", "0"),
-    ("AutoCancelFromGasMode", "0"),    
-    ("AutoCruiseControl", "0"),    
+
+    ("AutoCruiseControl", "2"),    
+    ("AutoResumeFromGasSpeed", "30"),
+    ("AutoCancelFromGasMode", "2"),    
+    ("AutoResumeFromBrakeReleaseTrafficSign", "0"),
+    ("SoftHoldMode", "0"),       
+
+    ("AutoSpeedUptoRoadSpeedLimit", "100"),
+
     ("MapboxStyle", "0"),    
-    ("AutoCurveSpeedCtrlUse", "1"),
+
+    ("AutoCurveSpeedLowerLimit", "30"),
     ("AutoCurveSpeedFactor", "120"),
-    ("AutoCurveSpeedFactorIn", "70"),
+    ("AutoCurveSpeedAggressiveness", "100"),
+
     ("AutoTurnControl", "0"),
+
+    ("AutoLaneChangeSpeed", "20"),
+    ("LaneChangeNeedTorque", "0"),
+
     ("AutoTurnControlSpeedLaneChange", "60"),
     ("AutoTurnControlSpeedTurn", "20"),
     ("AutoTurnControlTurnEnd", "6"),
     ("AutoTurnMapChange", "0"),
+
     ("AutoNaviSpeedCtrl", "1"),
-    ("AutoNaviSpeedCtrlEnd", "6"),
+    ("AutoNaviSpeedCtrlEnd", "7"),
     ("AutoNaviSpeedBumpTime", "1"),
     ("AutoNaviSpeedBumpSpeed", "35"),
     ("AutoNaviSpeedSafetyFactor", "105"),
-    ("AutoNaviSpeedDecelRate", "120"),
-    ("AutoResumeFromBrakeReleaseTrafficSign", "0"),
+    ("AutoNaviSpeedDecelRate", "200"),
+
     ("StartAccelApply", "0"),
-    ("StopAccelApply", "50"),
-    ("StoppingAccel", "-80"),
-    ("AutoSpeedUptoRoadSpeedLimit", "100"),
-    ("ApplyLongDynamicCost", "0"), 
-    ("AChangeCost", "200"), 
-    ("AChangeCostStart", "40"), 
-    ("StopDistanceCarrot", "600"), 
-    ("ALeadTau", "120"), 
-    ("ALeadTauStart", "30"), 
-    ("TrafficStopMode", "1"),         
+    ("StopAccelApply", "0"),
+    ("StoppingAccel", "-40"),
+
+    ("StopDistanceCarrot", "550"), 
+    ("ALeadTauPos", "120"), 
+    ("ALeadTauNeg", "60"), 
+    ("ALeadTauThreshold", "40"), 
     ("CruiseButtonMode", "0"),      
     ("CruiseButtonTest1", "8"),      
     ("CruiseButtonTest2", "30"),      
-    ("CruiseSpeedUnit", "10"),      
+    ("CruiseButtonTest3", "1"),      
+    ("CruiseSpeedUnit", "10"),
     ("MyDrivingMode", "3"),      
     ("MySafeModeFactor", "80"),      
     ("MyEcoModeFactor", "90"),  
@@ -131,28 +124,29 @@ def manager_init() -> None:
     ("LongitudinalTuningKpV", "100"),     
     ("LongitudinalTuningKiV", "0"),     
     ("LongitudinalTuningKf", "100"),     
-    ("LongitudinalActuatorDelayUpperBound", "50"),     
-    ("LongitudinalActuatorDelayLowerBound", "50"),     
     ("EnableRadarTracks", "0"),      
     ("EnableAVM", "0"),      
     ("SccConnectedBus2", "0"),
+    ("CanfdHDA2", "0"),
     ("SoundVolumeAdjust", "100"),
     ("SoundVolumeAdjustEngage", "10"),
     ("StartRecord", "0"),
     ("StopRecord", "0"),
     ("TFollowSpeedAdd", "10"),
     ("TFollowSpeedAddM", "0"),
+    ("TFollowLeadCarSpeed", "0"),
+    ("TFollowLeadCarAccel", "0"),
     ("TFollowGap1", "110"),
     ("TFollowGap2", "120"),
     ("TFollowGap3", "140"),
     ("TFollowGap4", "160"),
     ("HapticFeedbackWhenSpeedCamera", "0"),       
-    ("SoftHoldMode", "0"),       
     ("CruiseEcoControl", "2"),
     ("UseLaneLineSpeed", "0"),    
-    ("UseLaneLineDebug", "10"),    
+    ("UseLaneLineSpeedApply", "0"),    
     ("AdjustLaneOffset", "0"),    
     ("AdjustCurveOffset", "0"),    
+    ("AdjustLaneTime", "13"),    
     ("PathOffset", "0"),  
     ("MaxAngleFrames", "89"),       
     ("LateralTorqueCustom", "0"),       
@@ -161,13 +155,50 @@ def manager_init() -> None:
     ("CustomSteerMax", "0"),       
     ("CustomSteerDeltaUp", "0"),       
     ("CustomSteerDeltaDown", "0"),       
-    ("SpeedFromPCM", "1"),       
-    ("SteerActuatorDelay", "30"),       
+    ("SpeedFromPCM", "2"),       
+    ("MaxTimeOffroadMin", "60"),       
+    ("SteerActuatorDelay", "50"),       
     ("CruiseOnDist", "0"),
-    ("EnableOSM", "0"),
+    ("MSLCEnabled", "0"),
     ("NoLogging", "0"),
     ("HotspotOnBoot", "0"),
+
+    ("MTSCAggressiveness", "100"),
+    ("MTSCCurvatureCheck", "1"),
+    ("MTSCEnabled", "0"),
+    ("NNFF", "0"),
+    ("NNFFLite", "0"),
   ]
+  return default_params
+
+def set_default_params():
+  params = Params()
+  default_params = get_default_params()
+  try:
+    default_params.remove(("GMapKey", "0"))
+    defulat_params.remove(("CompletedTrainingVersion", "0"))
+    default_params.remove(("LanguageSetting", "main_en"))
+    default_params.remove(("GsmMetered", "1"))
+  except ValueError:
+    pass
+  for k, v in default_params:
+    params.put(k, v)
+    print(f"SetToDefault[{k}]={v}")
+
+def manager_init() -> None:
+  save_bootlog()
+
+  build_metadata = get_build_metadata()
+
+  params = Params()
+  params.clear_all(ParamKeyType.CLEAR_ON_MANAGER_START)
+  params.clear_all(ParamKeyType.CLEAR_ON_ONROAD_TRANSITION)
+  params.clear_all(ParamKeyType.CLEAR_ON_OFFROAD_TRANSITION)
+  if build_metadata.release_channel:
+    params.clear_all(ParamKeyType.DEVELOPMENT_ONLY)
+
+  default_params = get_default_params()
+
   if not PC:
     default_params.append(("LastUpdateTime", datetime.datetime.utcnow().isoformat().encode('utf8')))
 
@@ -188,15 +219,15 @@ def manager_init() -> None:
     print("WARNING: failed to make /dev/shm")
 
   # set version params
-  params.put("Version", get_version())
+  params.put("Version", build_metadata.openpilot.version)
   params.put("TermsVersion", terms_version)
   params.put("TrainingVersion", training_version)
-  params.put("GitCommit", get_commit())
-  params.put("GitCommitDate", get_commit_date())
-  params.put("GitBranch", get_short_branch())
-  params.put("GitRemote", get_origin())
-  params.put_bool("IsTestedBranch", is_tested_branch())
-  params.put_bool("IsReleaseBranch", is_release_branch())
+  params.put("GitCommit", build_metadata.openpilot.git_commit)
+  params.put("GitCommitDate", build_metadata.openpilot.git_commit_date)
+  params.put("GitBranch", build_metadata.channel)
+  params.put("GitRemote", build_metadata.openpilot.git_origin)
+  params.put_bool("IsTestedBranch", build_metadata.tested_channel)
+  params.put_bool("IsReleaseBranch", build_metadata.release_channel)
 
   # set dongle id
   reg_res = register(show_spinner=True)
@@ -206,21 +237,21 @@ def manager_init() -> None:
     serial = params.get("HardwareSerial")
     raise Exception(f"Registration failed for device {serial}")
   os.environ['DONGLE_ID'] = dongle_id  # Needed for swaglog
-  os.environ['GIT_ORIGIN'] = get_normalized_origin() # Needed for swaglog
-  os.environ['GIT_BRANCH'] = get_short_branch() # Needed for swaglog
-  os.environ['GIT_COMMIT'] = get_commit() # Needed for swaglog
+  os.environ['GIT_ORIGIN'] = build_metadata.openpilot.git_normalized_origin # Needed for swaglog
+  os.environ['GIT_BRANCH'] = build_metadata.channel # Needed for swaglog
+  os.environ['GIT_COMMIT'] = build_metadata.openpilot.git_commit # Needed for swaglog
 
-  if not is_dirty():
+  if not build_metadata.openpilot.is_dirty:
     os.environ['CLEAN'] = '1'
 
   # init logging
   sentry.init(sentry.SentryProject.SELFDRIVE)
   cloudlog.bind_global(dongle_id=dongle_id,
-                       version=get_version(),
-                       origin=get_normalized_origin(),
-                       branch=get_short_branch(),
-                       commit=get_commit(),
-                       dirty=is_dirty(),
+                       version=build_metadata.openpilot.version,
+                       origin=build_metadata.openpilot.git_normalized_origin,
+                       branch=build_metadata.channel,
+                       commit=build_metadata.openpilot.git_commit,
+                       dirty=build_metadata.openpilot.is_dirty,
                        device=HARDWARE.get_device_type())
 
   # preimport all processes
@@ -254,7 +285,7 @@ def manager_thread() -> None:
 
   params = Params()
 
-  ignore: List[str] = []
+  ignore: list[str] = []
   if params.get("DongleId", encoding='utf8') in (None, UNREGISTERED_DONGLE_ID):
     ignore += ["manage_athenad", "uploader"]
   if os.getenv("NOBOARD") is not None:
@@ -289,7 +320,7 @@ def manager_thread() -> None:
 
     ensure_running(managed_processes.values(), started, params=params, CP=sm['carParams'], not_run=ignore)
 
-    running = ' '.join("%s%s\u001b[0m" % ("\u001b[32m" if p.proc.is_alive() else "\u001b[31m", p.name)
+    running = ' '.join("{}{}\u001b[0m".format("\u001b[32m" if p.proc.is_alive() else "\u001b[31m", p.name)
                        for p in managed_processes.values() if p.proc)
     print_timer = (print_timer + 1)%10
     if print_timer == 0:
