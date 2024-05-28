@@ -28,7 +28,10 @@ class CarState(CarStateBase):
     self.main_buttons = deque([Buttons.NONE] * PREV_BUTTON_SAMPLES, maxlen=PREV_BUTTON_SAMPLES)
 
     # carrot for eGV70
-
+    self.gear_msg_canfd = "ACCELERATOR" if CP.extFlags & HyundaiExtFlags.CANFD_GEARS_NONE else \
+                          "GEAR_ALT" if CP.flags & HyundaiFlags.CANFD_ALT_GEARS else \
+                          "GEAR_ALT_2" if CP.flags & HyundaiFlags.CANFD_ALT_GEARS_2 else \
+                          "GEAR_SHIFTER"
     if CP.carFingerprint in CANFD_CAR:
       self.shifter_values = can_define.dv[self.gear_msg_canfd]["GEAR"]
     elif self.CP.carFingerprint in CAN_GEARS["use_cluster_gears"]:
