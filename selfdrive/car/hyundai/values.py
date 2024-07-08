@@ -356,6 +356,7 @@ class CAR(Platforms):
   HYUNDAI_CASPER = HyundaiPlatformConfig(
     [HyundaiCarDocs("Hyundai Casper 2023", "All", car_parts=CarParts.common([CarHarness.hyundai_k]))],
     CarSpecs(mass=1690, wheelbase=3.055, steerRatio=17),  # mass: from https://www.hyundai-motor.com.tw/clicktobuy/custin#spec_0, steerRatio: from learner
+    flags=HyundaiFlags.CAMERA_SCC
   )
   
 
@@ -858,7 +859,7 @@ CAN_GEARS = {
   # which message has the gear. hybrid and EV use ELECT_GEAR
   "use_cluster_gears": CAR.with_flags(HyundaiFlags.CLUSTER_GEARS),
   "use_tcu_gears": CAR.with_flags(HyundaiFlags.TCU_GEARS),
-  "send_mdps12": {CAR.GENESIS_G90, CAR.GENESIS_G90_2019, CAR.KIA_K9, CAR.HYUNDAI_CASPER },
+  "send_mdps12": {CAR.GENESIS_G90, CAR.GENESIS_G90_2019, CAR.KIA_K9},
 }
 
 CANFD_CAR = CAR.with_flags(HyundaiFlags.CANFD)
