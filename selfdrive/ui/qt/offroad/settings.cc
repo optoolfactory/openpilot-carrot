@@ -292,13 +292,13 @@ DevicePanel::DevicePanel(SettingsWindow* parent) : ListWidget(parent) {
         }
         });
     addItem(translateBtn);
-
+    /*
     QObject::connect(uiState(), &UIState::offroadTransition, [=](bool offroad) {
         for (auto btn : findChildren<ButtonControl*>()) {
             btn->setEnabled(offroad);
         }
         });
-
+    */
     //addItem(horizontal_line());
     addItem(new CarrotParamsControl(0, "기본값설정", "모든설정을 기본값으로", "../assets/offroad/icon_shell.png", false));
     addItem(new CarrotParamsControl(10, "롱컨배선개조 (HKG)", "레이더롱컨이 되도록 배선을 개조하였음", "../assets/offroad/icon_shell.png"));
