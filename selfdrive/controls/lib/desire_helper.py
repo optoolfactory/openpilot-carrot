@@ -289,6 +289,7 @@ class DesireHelper:
             self.noo_active = NooActive.road_edge_detected
           elif self.noo_active.value < 10 and self.lane_available_prev and lane_available: #차선이 계속있음.
             self.noo_active = NooActive.no_new_lane_detected
+
           #else: #if not edge_available: #에지가 가까움.
           #  self.noo_active = 4
         else:
@@ -302,12 +303,16 @@ class DesireHelper:
           self._add_log("Lane change blocked. need torque")
         elif self.noo_active == NooActive.no_new_lane_detected:
           self._add_log("Lane change blocked. not end lane")
+          #self.lane_change_state = LaneChangeState.off
+          #self.lane_change_direction = LaneChangeDirection.none
         elif self.lane_change_completed:
           self._add_log("Lane change need torque to start")
         elif self.lane_change_wait_timer < self.lane_change_delay:
           self._add_log("Lane change waiting timer. {:.1f}s".format(self.lane_change_wait_timer))
         elif blindspot_detected:
           self._add_log("Blindspot detected")
+          self.lane_change_state = LaneChangeState.off
+          self.lane_change_direction = LaneChangeDirection.none
         else:
         #if not object_detected and not need_torque and lane_available and not self.lane_change_completed and self.lane_change_wait_timer >= self.lane_change_delay:          
           torque_applied = True
