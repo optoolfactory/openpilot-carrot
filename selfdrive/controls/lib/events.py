@@ -256,14 +256,6 @@ def calibration_incomplete_alert(CP: car.CarParams, CS: car.CarState, sm: messag
     Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2)
 
 
-def no_gps_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
-  return Alert(
-    "GPS 수신불량",
-    "Hardware malfunctioning if sky is visible",
-    AlertStatus.normal, AlertSize.mid,
-    Priority.LOWER, VisualAlert.none, AudibleAlert.none, .2, creation_delay=300.)
-
-
 def torque_nn_load_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int) -> Alert:
   model_name = Params().get("NNFFModelName", encoding='utf-8')
   if model_name == "":
@@ -358,6 +350,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   # ********** events with no alerts **********
 
   EventName.stockFcw: {},
+  EventName.actuatorsApiUnavailable: {},
 
   # ********** events only containing alerts displayed in all states **********
 
@@ -579,12 +572,6 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.SOFT_DISABLE: soft_disable_alert("카메라 프레임 레이트가 낮습니다."),
     ET.NO_ENTRY: NoEntryAlert("카메라 프레임 레이트가 낮습니다. : 재부팅 하세요"),
   },
-
-  # Unused
-  EventName.gpsMalfunction: {
-    ET.PERMANENT: NormalPermanentAlert("GPS 작동 오류", "하드웨어를 점검하세요"),
-  },
-
   EventName.locationdTemporaryError: {
     ET.NO_ENTRY: NoEntryAlert("locationd Temporary Error"),
     ET.SOFT_DISABLE: soft_disable_alert("locationd Temporary Error"),
@@ -718,7 +705,11 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.noGps: {
-    ET.PERMANENT: no_gps_alert,
+    ET.PERMANENT: Alert(
+      "Poor GPS reception",
+      "Ensure device has a clear view of the sky",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.LOWER, VisualAlert.none, AudibleAlert.none, .2, creation_delay=600.)
   },
 
   EventName.soundsUnavailable: {
