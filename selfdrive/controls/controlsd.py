@@ -109,6 +109,7 @@ class Controls:
 
     self.always_on_lateral = self.params.get_bool("AlwaysOnLateralEnabled")
     self.lateral_allowed = False
+    self.lateral_allowed_carrot = True
     #if self.always_on_lateral:
     #  self.CP.alternativeExperience |= ALTERNATIVE_EXPERIENCE.ENABLE_ALWAYS_ON_LATERAL
     self.carrot_plan_event = -1
@@ -650,6 +651,10 @@ class Controls:
     if self.active:
       self.current_alert_types.append(ET.WARNING)
 
+    if self.enabled:
+      self.lateral_allowed_carrot = True
+
+
     self.v_cruise_helper.cruiseActivate = 0
     if not self.enabled and not self.CP.pcmCruise:
       if self.carrotCruiseActivate > 0:
@@ -696,7 +701,7 @@ class Controls:
         self.lateral_allowed = lateral_allowed
       
       
-      lateral_enabled = self.lateral_allowed and driving_gear
+      lateral_enabled = self.lateral_allowed and driving_gear and self.lateral_allowed_carrot
 
     manualSteeringOverride = self.params.get_int("ManualSteeringOverride")
     if CS.steeringPressed:
