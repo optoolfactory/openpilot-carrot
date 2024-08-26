@@ -677,6 +677,16 @@ class CAR(Platforms):
     CarSpecs(mass=1930, wheelbase=2.815, steerRatio=14.26, tireStiffnessFactor=0.65),
     flags=HyundaiFlags.HYBRID,
   )
+  GENESIS_G80_RG3 = HyundaiCanFDPlatformConfig(
+    [HyundaiCarDocs("Genesis G80 RG3 2023", "All", car_parts=CarParts.common([CarHarness.hyundai_m]))],
+    CarSpecs(mass=1785, wheelbase=3.01, steerRatio=16.5),
+    flags=HyundaiFlags.RADAR_SCC,
+  )
+  GENESIS_EG80 = HyundaiCanFDPlatformConfig(
+    [HyundaiCarDocs("Genesis EG80 2023", "All", car_parts=CarParts.common([CarHarness.hyundai_m]))],
+    CarSpecs(mass=1785, wheelbase=2.95, steerRatio=14.14),
+    flags=HyundaiFlags.EV,
+  )
 
 
 class Buttons:
