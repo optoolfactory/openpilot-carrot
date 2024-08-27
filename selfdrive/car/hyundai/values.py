@@ -665,14 +665,14 @@ class CAR(Platforms):
   )
   HYUNDAI_SANTA_FE_2024_MX5 = HyundaiCanFDPlatformConfig(
     [
-      HyundaiCarDocs("Hyundai Santa Fe5 (with HDA II) 2024", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_q])),
+      HyundaiCarDocs("Hyundai Santa Fe MX5 (with HDA II) 2024", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_q])),
     ],
     CarSpecs(mass=1915, wheelbase=2.815, steerRatio=14.26, tireStiffnessFactor=0.65),
     flags=HyundaiFlags.HYBRID,
   )
   HYUNDAI_SANTA_FE_2024_HEV_MX5 = HyundaiCanFDPlatformConfig(
     [
-      HyundaiCarDocs("Hyundai Santa Fe5 (with HDA II) 2024", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_q])),
+      HyundaiCarDocs("Hyundai Santa Fe MX5 HEV (with HDA II) 2024", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_q])),
     ],
     CarSpecs(mass=1930, wheelbase=2.815, steerRatio=14.26, tireStiffnessFactor=0.65),
     flags=HyundaiFlags.HYBRID,
