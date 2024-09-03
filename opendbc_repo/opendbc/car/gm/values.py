@@ -167,9 +167,9 @@ class CAR(Platforms):
     [GMCarDocs("Chevrolet Volt 2019", "Adaptive Cruise Control (ACC) & LKAS")],
     GMCarSpecs(mass=1607, wheelbase=2.69, steerRatio=15.7, centerToFrontRatio=0.45),
   )
-  CHEVROLET_TRAVERSE = GMSDGMPlatformConfig(
-    [GMCarDocs("Chevrolet Traverse 2022-23", "RS, Premier, or High Country Trim")],
-    CarSpecs(mass=1955, wheelbase=3.07, steerRatio=17.9, centerToFrontRatio=0.4),
+  CHEVROLET_TRAX = GMPlatformConfig(
+    [GMCarDocs("Chevrolet TRAX 2024")],
+    CarSpecs(mass=1365, wheelbase=2.7, steerRatio=16.1, centerToFrontRatio=0.4),
   )
 
 
@@ -257,3 +257,12 @@ SDGM_CAR = {CAR.CADILLAC_XT4, CAR.CHEVROLET_VOLT_2019, CAR.CHEVROLET_TRAVERSE}
 STEER_THRESHOLD = 1.0
 
 DBC = CAR.create_dbc_map()
+
+if __name__ == "__main__":
+  cars = []
+  for platform in CAR:
+    for doc in platform.config.car_docs:
+      cars.append(doc.name)
+  cars.sort()
+  for c in cars:
+    print(c)
