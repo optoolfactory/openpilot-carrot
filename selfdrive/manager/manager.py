@@ -69,12 +69,12 @@ def get_default_params():
 
     ("AutoCruiseControl", "2"),    
     ("AutoEngage", "0"),    
-    ("AutoResumeFromGasSpeed", "30"),
+    ("AutoResumeFromGasSpeed", "140"),
     ("AutoCancelFromGasMode", "2"),    
     ("AutoResumeFromBrakeReleaseTrafficSign", "0"),
     ("SoftHoldMode", "0"),       
 
-    ("AutoSpeedUptoRoadSpeedLimit", "100"),
+    ("AutoSpeedUptoRoadSpeedLimit", "0"),
 
     ("MapboxStyle", "0"),    
 
@@ -150,7 +150,7 @@ def get_default_params():
     ("TFollowGap4", "160"),
     ("HapticFeedbackWhenSpeedCamera", "0"),       
     ("CruiseEcoControl", "2"),
-    ("UseLaneLineSpeed", "0"),    
+    ("UseLaneLineSpeed", "1"),    
     ("UseLaneLineCurveSpeed", "0"),    
     ("UseLaneLineSpeedApply", "0"),    
     ("AdjustLaneOffset", "0"),    
@@ -167,7 +167,7 @@ def get_default_params():
     ("CustomSteerMax", "0"),       
     ("CustomSteerDeltaUp", "0"),       
     ("CustomSteerDeltaDown", "0"),       
-    ("SpeedFromPCM", "2"),       
+    ("SpeedFromPCM", "1"),       
     ("MaxTimeOffroadMin", "60"),       
     ("SteerActuatorDelay", "50"),       
     ("CruiseOnDist", "0"),
