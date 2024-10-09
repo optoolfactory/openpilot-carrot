@@ -136,7 +136,7 @@ void OnroadWindow::updateState(const UIState &s) {
     //update();
   }
   else {
-      update();
+      update();     // TODO: vg로 이동할수 있을까? cpu점유율이 원래 19%였는데 약27%까지 올라감.    
       updateStateText();
   }
 }
@@ -173,7 +173,7 @@ void OnroadWindow::paintEvent(QPaintEvent *event) {
     a_ego_width = a_ego_width * 0.5 + (width() * std::abs(a_ego) / 4.0) * 0.5;
 
     QRect rect(width() / 2 - a_ego_width, height() - 50, a_ego_width * 2, 50);
-    p.fillRect(rect, (a_ego >= 0) ? QColor(128, 202, 37, 0xf1) : QColor(255, 0, 0, 0xf1));
+    p.fillRect(rect, (a_ego >= 0) ? QColor(128, 202, 37, 0xf1) : QColor(180, 0, 0, 0xf1));
 
     static float steering_angle_pos = 0.0;
     steering_angle_pos = steering_angle_pos * 0.5 + (width() / 2. - width() / 2. * car_state.getSteeringAngleDeg() / 180) * 0.5;
