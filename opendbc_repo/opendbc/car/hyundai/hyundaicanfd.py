@@ -37,18 +37,31 @@ class CanBus(CanBusBase):
   def CAM(self):
     return self._cam
 
-def create_steering_messages_scc2(packer, CP, CAN, enabled, lat_active, apply_steer, lfa_info):
+def create_steering_messages_scc2(packer, CP, CAN, enabled, lat_active, steering_pressed, apply_steer, apply_angle, max_torque, lfa_info):
 
   values = lfa_info
-  values["LKA_MODE"] = 2
+  values["LKA_MODE"] = 0
   values["LKA_ICON"] = 2 if enabled else 1
-  values["TORQUE_REQUEST"] = apply_steer
+  values["TORQUE_REQUEST"] = 0
   values["LKA_ASSIST"] = 0
-  values["STEER_REQ"] = 1 if lat_active else 0
+  values["STEER_REQ"] = 0 #if lat_active else 0
   values["STEER_MODE"] = 0
   values["HAS_LANE_SAFETY"] = 0  # hide LKAS settings
-  values["NEW_SIGNAL_1"] = 0  
+  values["LKA_ACTIVE"] =  3 if lat_active else 0
   values["NEW_SIGNAL_2"] = 0  
+  values["LKAS_ANGLE_CMD"]: -apply_angle,
+  values["LKAS_ANGLE_ACTIVE"]: 2 if lat_active else 1
+    # a torque scale value? ramps up when steering, highest seen is 234
+    # "UNKNOWN": 50 if lat_active and not steering_pressed else 0,
+  values["UNKNOWN"]: max_torque if lat_active else 0
+    # TODO: Commenting these out to see if the fix a regression
+    #"NEW_SIGNAL_1": 10,
+    #"NEW_SIGNAL_3": 9,
+    #"NEW_SIGNAL_4": 1,
+    #"NEW_SIGNAL_5": 1,
+    #"NEW_SIGNAL_6": 1,
+    #"NEW_SIGNAL_7": 1,
+
 
   return packer.make_can_msg("LFA", CAN.ECAN, values)
 
