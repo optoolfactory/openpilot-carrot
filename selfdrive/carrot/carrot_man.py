@@ -1130,9 +1130,11 @@ class CarrotServ:
     pm.send('carrotMan', msg)
     
   def _update_system_time(self, epoch_time_remote):
-    epoch_time = int(time.time())
+    #epoch_time = int(time.time())
     if epoch_time_remote > 0:
-      epoch_time_offset = epoch_time_remote - epoch_time
+      #epoch_time_offset = epoch_time_remote - epoch_time
+      epoch_time_utc = int((datetime.utcnow() - datetime(1970, 1, 1)).total_seconds())
+      epoch_time_offset = epoch_time_remote - epoch_time_utc
       print(f"epoch_time_offset = {epoch_time_offset}")
       if True: #abs(epoch_time_offset) > 60:
         #tz = pytz.timezone(time_zone_remote)
