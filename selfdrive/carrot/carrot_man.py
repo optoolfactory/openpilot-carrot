@@ -1129,21 +1129,14 @@ class CarrotServ:
 
     pm.send('carrotMan', msg)
     
-  def _update_system_time(self, epoch_time_remote):
-    #epoch_time = int(time.time())
+  def _update_system_time(self, epoch_time_remote, timezone_remote):
+    epoch_time = int(time.time())
     if epoch_time_remote > 0:
-      #epoch_time_offset = epoch_time_remote - epoch_time
-      epoch_time_utc = int((datetime.utcnow() - datetime(1970, 1, 1)).total_seconds())
-      epoch_time_offset = epoch_time_remote - epoch_time_utc
+      epoch_time_offset = epoch_time_remote - epoch_time
       print(f"epoch_time_offset = {epoch_time_offset}")
       if True: #abs(epoch_time_offset) > 60:
-        #tz = pytz.timezone(time_zone_remote)
-        #formatted_time = datetime.fromtimestamp(epoch_time_remote, tz).strftime('%Y-%m-%d %H:%M:%S')
-        
-        #formatted_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time_remote))
-        
-        formatted_time = datetime.utcfromtimestamp(epoch_time_remote).strftime('%Y-%m-%d %H:%M:%S')
-
+        os.system(f"sudo timedatectl set-timezone {timezone_remote}")        
+        formatted_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time_remote))
         print(f"Setting system time to: {formatted_time}")
         os.system(f'sudo date -s "{formatted_time}"')
 
@@ -1155,8 +1148,8 @@ class CarrotServ:
       self.carrotIndex = int(json.get("carrotIndex"))
 
     if self.carrotIndex % 10 == 0 and "epochTime" in json:
-      #time_zone_remote = json.get("timezone", "Asia/Seoul")
-      self._update_system_time(int(json.get("epochTime")))
+      timezone_remote = json.get("timezone", "Asia/Seoul")
+      self._update_system_time(int(json.get("epochTime")), timezone_remote)
 
     if "carrotCmd" in json:
       print(json.get("carrotCmd"), json.get("carrotArg"))
