@@ -1128,13 +1128,15 @@ class CarrotServ:
 
     pm.send('carrotMan', msg)
 
-  def _update_system_time(self, epoch_time_remote):
+  def _update_system_time(self, epoch_time_remote, time_zone_remote):
     epoch_time = int(time.time())
     if epoch_time_remote > 0:
       epoch_time_offset = epoch_time_remote - epoch_time
       print(f"epoch_time_offset = {epoch_time_offset}")
       if True: #abs(epoch_time_offset) > 60:
-        formatted_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time_remote))
+        #formatted_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time_remote))
+        formatted_time = datetime.fromtimestamp(epoch_time_remote, time_zone_remote).strftime('%Y-%m-%d %H:%M:%S')
+
         print(f"Setting system time to: {formatted_time}")
         os.system(f'sudo date -s "{formatted_time}"')
 
@@ -1146,7 +1148,8 @@ class CarrotServ:
       self.carrotIndex = int(json.get("carrotIndex"))
 
     if self.carrotIndex % 60 == 0 and "epochTime" in json:
-      self._update_system_time(int(json.get("epochTime")))
+      time_zone_remote = json.get("timezone", "Asia/Seoul")
+      self._update_system_time(int(json.get("epochTime")), time_zone_remote)
 
     if "carrotCmd" in json:
       print(json.get("carrotCmd"), json.get("carrotArg"))
