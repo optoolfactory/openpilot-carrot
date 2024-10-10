@@ -34,6 +34,7 @@ def get_default_params():
     ("ShowDebugUI", "0"),
     ("ShowDateTime", "1"),
     ("ShowPathEnd", "1"),
+    ("ShowCustomBrightness", "100"),
     ("ShowLaneInfo", "1"),
     ("ShowRadarInfo", "1"),
     ("ShowPathMode", "9"),
