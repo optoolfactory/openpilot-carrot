@@ -11,6 +11,7 @@ import select
 import fcntl
 import struct
 import math
+import os
 
 from ftplib import FTP
 from openpilot.common.realtime import Ratekeeper
@@ -1132,6 +1133,11 @@ class CarrotServ:
     if epoch_time_remote > 0:
       epoch_time_offset = epoch_time_remote - epoch_time
       print(f"epoch_time_offset = {epoch_time_offset}")
+      if True: #abs(epoch_time_offset) > 60:
+        formatted_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time_remote))
+        print(f"Setting system time to: {formatted_time}")
+        os.system(f'sudo date -s "{formatted_time}"')
+
     
   def update(self, json):
     if json == None:
@@ -1139,7 +1145,7 @@ class CarrotServ:
     if "carrotIndex" in json:
       self.carrotIndex = int(json.get("carrotIndex"))
 
-    if "epochTime" in json:
+    if self.carrotIndex % 60 == 0 and "epochTime" in json:
       self._update_system_time(int(json.get("epochTime")))
 
     if "carrotCmd" in json:
