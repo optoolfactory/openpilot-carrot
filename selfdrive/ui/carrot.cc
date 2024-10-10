@@ -1941,7 +1941,7 @@ public:
         float a_ego = car_state.getAEgo();
 
         a_ego_width = a_ego_width * 0.5 + (w * std::abs(a_ego) / 4.0) * 0.5;
-        ui_fill_rect(vg, { w/2 - (int)a_ego_width, h - 30, (int)a_ego_width * 2, 30 }, (a_ego >= 0)? COLOR_YELLOW : COLOR_RED, 15);
+        ui_fill_rect(vg, { w/2 - (int)(a_ego_width / 2), h - 30, (int)a_ego_width, 30 }, (a_ego >= 0)? COLOR_YELLOW : COLOR_RED, 15);
 
         steering_angle_pos = steering_angle_pos * 0.5 + (w / 2. - w / 2. * car_state.getSteeringAngleDeg() / 180) * 0.5;
         int x_st = (int)steering_angle_pos - 50;
