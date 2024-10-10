@@ -1126,12 +1126,21 @@ class CarrotServ:
     msg.carrotMan.xPosLon = float(self.vpPosPointLon)
 
     pm.send('carrotMan', msg)
+
+  def _update_system_time(self, epoch_time_remote):
+    epoch_time = int(time.time())
+    if epoch_time_remote > 0:
+      epoch_time_offset = epoch_time_remote - epoch_time
+      print(f"epoch_time_offset = {epoch_time_offset}")
     
   def update(self, json):
     if json == None:
       return
     if "carrotIndex" in json:
       self.carrotIndex = int(json.get("carrotIndex"))
+
+    if "epochTime" in json:
+      self._update_system_time(int(json.get("epochTime")))
 
     if "carrotCmd" in json:
       print(json.get("carrotCmd"), json.get("carrotArg"))
