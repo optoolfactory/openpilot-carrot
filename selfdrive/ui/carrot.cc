@@ -1933,8 +1933,8 @@ public:
         ui_fill_rect(vg, { 0,0, w, h / 2  - 100}, bg, 15);
         ui_fill_rect(vg, { 0, h / 2 + 100, w, h }, bg_long, 15);
 
-        if (_right_blinker) ui_fill_rect(vg, {w - 50, h/2 - 95, 50, 190}, COLOR_GREEN, 15);
-        if (_left_blinker) ui_fill_rect(vg, {0, h/2 - 95, 50, 190}, COLOR_GREEN, 15);
+        if (_right_blinker) ui_fill_rect(vg, {w - 50, h/2 - 95, 50, 190}, COLOR_ORANGE, 15);
+        if (_left_blinker) ui_fill_rect(vg, {0, h/2 - 95, 50, 190}, COLOR_ORANGE, 15);
 
         const SubMaster& sm = *(s->sm);
         auto car_state = sm["carState"].getCarState();
