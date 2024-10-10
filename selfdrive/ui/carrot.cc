@@ -1,4 +1,4 @@
-﻿#include "selfdrive/ui/carrot.h"
+#include "selfdrive/ui/carrot.h"
 
 #include <cassert>
 #include <cmath>
@@ -1004,16 +1004,18 @@ public:
         bool left_blinker = car_state.getLeftBlinker() || atc_type=="fork left" || atc_type =="turn left";
         bool right_blinker = car_state.getRightBlinker() || atc_type=="fork right" || atc_type =="turn right";
 
+        _right_blinker = false;
+        _left_blinker = false;
         if (blinker_timer <= 8) {
             if (right_blinker) {
+		_right_blinker = true;
                 ui_draw_image(s, { x - icon_size / 2, y - icon_size / 2, icon_size, icon_size }, "ic_blinker_r", 1.0f);
             }
             if (left_blinker) {
+		_left_blinker = true;
                 ui_draw_image(s, { x - icon_size / 2, y - icon_size / 2, icon_size, icon_size }, "ic_blinker_l", 1.0f);
             }
         }
-        _right_blinker = right_blinker;
-        _left_blinker = left_blinker;
     }
 };
 
@@ -1950,7 +1952,7 @@ public:
         if (x_ed < 50) x_ed = 50;
         if (x_st > w - 50) x_st = w - 50;
         if (x_ed > w) x_ed = w;
-        ui_fill_rect(vg, { x_st, 0, x_ed - x_st, 30 }, COLOR_GREEN, 15);
+        ui_fill_rect(vg, { x_st, 0, x_ed - x_st, 30 }, COLOR_ORANGE, 15);
 
 
         char top[256] = "", top_left[256] = "", top_right[256] = "";
