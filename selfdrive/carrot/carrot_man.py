@@ -1147,7 +1147,7 @@ class CarrotServ:
     if "carrotIndex" in json:
       self.carrotIndex = int(json.get("carrotIndex"))
 
-    if self.carrotIndex % 60 == 0 and "epochTime" in json:
+    if self.carrotIndex % 10 == 0 and "epochTime" in json:
       time_zone_remote = json.get("timezone", "Asia/Seoul")
       self._update_system_time(int(json.get("epochTime")), time_zone_remote)
 
