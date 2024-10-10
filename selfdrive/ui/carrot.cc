@@ -1633,6 +1633,7 @@ public:
             szPosRoadName = QString::fromStdString(carrot_man.getSzPosRoadName());
             QString atcType = QString::fromStdString(carrot_man.getAtcType());
             trafficState_carrot = carrot_man.getTrafficState();
+            const auto velocity = model.getVelocity();
 
             auto meta = sm["modelV2"].getModelV2().getMeta();
             QString desireLog = QString::fromStdString(meta.getDesireLog());
