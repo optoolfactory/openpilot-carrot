@@ -49,11 +49,11 @@ def create_steering_messages_scc2(packer, CP, CAN, enabled, lat_active, steering
   values["HAS_LANE_SAFETY"] = 0  # hide LKAS settings
   values["LKA_ACTIVE"] =  3 if lat_active else 0
   values["NEW_SIGNAL_2"] = 0  
-  values["LKAS_ANGLE_CMD"]: -apply_angle,
-  values["LKAS_ANGLE_ACTIVE"]: 2 if lat_active else 1
+  values["LKAS_ANGLE_CMD"] = -apply_angle
+  values["LKAS_ANGLE_ACTIVE"] = 2 if lat_active else 1
     # a torque scale value? ramps up when steering, highest seen is 234
     # "UNKNOWN": 50 if lat_active and not steering_pressed else 0,
-  values["UNKNOWN"]: max_torque if lat_active else 0
+  values["UNKNOWN"] = max_torque if lat_active else 0
     # TODO: Commenting these out to see if the fix a regression
     #"NEW_SIGNAL_1": 10,
     #"NEW_SIGNAL_3": 9,
