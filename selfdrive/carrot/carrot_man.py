@@ -1134,8 +1134,9 @@ class CarrotServ:
       epoch_time_offset = epoch_time_remote - epoch_time
       print(f"epoch_time_offset = {epoch_time_offset}")
       if True: #abs(epoch_time_offset) > 60:
+        tz = pytz.timezone(timezone)
         #formatted_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time_remote))
-        formatted_time = datetime.fromtimestamp(epoch_time_remote, time_zone_remote).strftime('%Y-%m-%d %H:%M:%S')
+        formatted_time = datetime.fromtimestamp(epoch_time_remote, tz).strftime('%Y-%m-%d %H:%M:%S')
 
         print(f"Setting system time to: {formatted_time}")
         os.system(f'sudo date -s "{formatted_time}"')
