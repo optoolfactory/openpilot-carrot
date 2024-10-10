@@ -1134,7 +1134,7 @@ class CarrotServ:
     if epoch_time_remote > 0:
       epoch_time_offset = epoch_time_remote - epoch_time
       print(f"epoch_time_offset = {epoch_time_offset}")
-      if True: #abs(epoch_time_offset) > 60:
+      if abs(epoch_time_offset) > 60:
         os.system(f"sudo timedatectl set-timezone {timezone_remote}")        
         formatted_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time_remote))
         print(f"Setting system time to: {formatted_time}")
