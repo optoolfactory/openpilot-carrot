@@ -1129,7 +1129,6 @@ class CarrotServ:
 
     pm.send('carrotMan', msg)
     
-  from zoneinfo import ZoneInfo
   def _update_system_time(self, epoch_time_remote, time_zone_remote):
     epoch_time = int(time.time())
     if epoch_time_remote > 0:
@@ -1139,10 +1138,8 @@ class CarrotServ:
         #tz = pytz.timezone(time_zone_remote)
         #formatted_time = datetime.fromtimestamp(epoch_time_remote, tz).strftime('%Y-%m-%d %H:%M:%S')
         
-        #formatted_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time_remote))
+        formatted_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch_time_remote))
         
-        tz = ZoneInfo(time_zone_remote)
-        formatted_time = datetime.fromtimestamp(epoch_time_remote, tz).strftime('%Y-%m-%d %H:%M:%S')
         
 
         print(f"Setting system time to: {formatted_time}")
