@@ -692,6 +692,19 @@
     },
     {
       "group": "감속제어",
+      "name": "AutoNaviCountDownMode",
+      "title": "네비알림 카운트다운 방법",
+      "descr": "0: 알림없음, 1: 턴지점+속도, 2: 턴지점+속도+방지턱",
+      "egroup": "SPEED",
+      "etitle": "NaviCountDownMode",
+      "edescr": "",
+      "min": 0,
+      "max": 2,
+      "default": 2,
+      "unit": 1
+    },
+    {
+      "group": "감속제어",
       "name": "AutoNaviSpeedSafetyFactor",
       "title": "과속카메라 제한속도적용율(105)%",
       "descr": "",
