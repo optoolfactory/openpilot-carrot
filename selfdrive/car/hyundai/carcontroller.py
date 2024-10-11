@@ -8,7 +8,6 @@ from openpilot.selfdrive.car.hyundai import hyundaicanfd, hyundaican
 from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
 from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CANFD_CAR, CAR, LEGACY_SAFETY_MODE_CAR, CAN_GEARS, HyundaiExtFlags
 from openpilot.selfdrive.car.interfaces import CarControllerBase
-from openpilot.selfdrive.car.structs import CarParams
 import random
 from random import randint
 from openpilot.common.params import Params
