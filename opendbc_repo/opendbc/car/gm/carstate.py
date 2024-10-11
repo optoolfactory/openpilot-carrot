@@ -201,7 +201,8 @@ class CarState(CarStateBase):
       ret.vEgoCluster = cluSpeed * speed_conv
       vEgoClu, aEgoClu = self.update_clu_speed_kf(ret.vEgoCluster)
       if self.CP.carFingerprint in CAR.CHEVROLET_VOLT:
-        ret.vCluRatio = (ret.vEgo / vEgoClu) if (vEgoClu > 3. and ret.vEgo > 3.) else 1.0
+        vCluRatio = (ret.vEgo / vEgoClu) if (vEgoClu > 3. and ret.vEgo > 3.) else 1.0
+        ret.vCluRatio = 0.96 if vCluRatio > 1.2 or vCluRatio < 0.8  else vCluRatio # carrot: 임시방편... cluster speed가 mph인지, kph인지 확인필요..
         #print("vCluRatio={}".format(ret.vCluRatio))
       else:
         ret.vCluRatio = 0.96
