@@ -3,7 +3,7 @@ from openpilot.common.conversions import Conversions as CV
 from openpilot.common.numpy_fast import clip, interp
 from openpilot.common.realtime import DT_CTRL
 from opendbc.can.packer import CANPacker
-from openpilot.selfdrive.car import apply_driver_steer_torque_limits, apply_std_steer_angle_limits, common_fault_avoidance, make_tester_present_msg, structs
+from openpilot.selfdrive.car import apply_driver_steer_torque_limits, apply_std_steer_angle_limits, common_fault_avoidance, structs
 from openpilot.selfdrive.car.hyundai import hyundaicanfd, hyundaican
 from openpilot.selfdrive.car.hyundai.hyundaicanfd import CanBus
 from openpilot.selfdrive.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CANFD_CAR, CAR, LEGACY_SAFETY_MODE_CAR, CAN_GEARS, HyundaiExtFlags
