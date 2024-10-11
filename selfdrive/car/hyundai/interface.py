@@ -141,7 +141,8 @@ class CarInterface(CarInterfaceBase):
 
     ret.steerActuatorDelay = 0.1  # Default delay
     ret.steerLimitTimer = 0.4
-    CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
+    if candidate not in (CAR.HYUNDAI_SANTA_FE_2024_MX5, CAR.HYUNDAI_SANTA_FE_2024_HEV_MX5):
+      CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
 
     # *** longitudinal control ***
     if candidate in CANFD_CAR:
@@ -251,6 +252,9 @@ class CarInterface(CarInterfaceBase):
     if candidate in (CAR.HYUNDAI_KONA, CAR.HYUNDAI_KONA_EV, CAR.HYUNDAI_KONA_HEV, CAR.HYUNDAI_KONA_EV_2022):
       ret.flags |= HyundaiFlags.ALT_LIMITS.value
       ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_ALT_LIMITS
+
+    if candidate in (CAR.HYUNDAI_SANTA_FE_2024_MX5, CAR.HYUNDAI_SANTA_FE_2024_HEV_MX5):
+      ret.steerControlType = structs.CarParams.SteerControlType.angle
 
     ret.centerToFront = ret.wheelbase * 0.4
 
