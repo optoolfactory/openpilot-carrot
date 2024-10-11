@@ -254,7 +254,7 @@ class CarInterface(CarInterfaceBase):
       ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_ALT_LIMITS
 
     if candidate in (CAR.HYUNDAI_SANTA_FE_2024_MX5, CAR.HYUNDAI_SANTA_FE_2024_HEV_MX5):
-      ret.steerControlType = structs.CarParams.SteerControlType.angle
+      ret.steerControlType = car.CarParams.SteerControlType.angle
 
     ret.centerToFront = ret.wheelbase * 0.4
 
