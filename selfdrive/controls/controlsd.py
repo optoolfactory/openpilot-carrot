@@ -121,7 +121,6 @@ class Controls:
     lat_plan = self.sm['lateralPlan']
     curve_speed_abs = abs(self.sm['carrotMan'].vTurnSpeed)
     self.lanefull_mode_enabled = lat_plan.useLaneLines and self.params.get_int("UseLaneLineSpeedApply") > 0 and curve_speed_abs > self.params.get_int("UseLaneLineCurveSpeed")
-    print("lanefull_mode_enabled: ", self.lanefull_mode_enabled)
     steer_actuator_delay = self.params.get_float("SteerActuatorDelay") * 0.01
     if self.lanefull_mode_enabled:
       desired_curvature = get_lag_adjusted_curvature(self.CP, CS.vEgo, lat_plan.psis, lat_plan.curvatures, steer_actuator_delay)
