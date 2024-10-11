@@ -6,8 +6,6 @@ from dataclasses import replace
 
 import capnp
 
-from openpilot.selfdrive.car import structs
-
 from cereal import car
 from openpilot.common.numpy_fast import clip, interp
 from openpilot.common.utils import Freezable
