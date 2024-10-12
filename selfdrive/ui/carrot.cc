@@ -2002,7 +2002,7 @@ public:
             live_torque_params.getTotalBucketPoints(), live_torque_params.getLiveValid() ? "ON" : "OFF", live_torque_params.getLatAccelFactorFiltered(), live_torque_params.getFrictionCoefficientFiltered(),
             memoryUsage, freeSpace, cpuUsage, cpuTemp);
         sprintf(top_right, "%s", str.toStdString().c_str());
-        printf("%s\n", top_right);
+        //printf("%s\n", top_right);
         NVGcolor top_right_color = (cpuTemp>85.0 || memoryUsage > 85.0) ? COLOR_ORANGE : COLOR_WHITE;
 
         //top_left
