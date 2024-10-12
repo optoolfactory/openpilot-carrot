@@ -2000,7 +2000,7 @@ public:
             if (cpu_size > 0) cpuUsage /= cpu_size;
         }
         const auto live_torque_params = sm["liveTorqueParameters"].getLiveTorqueParameters();
-        str.sprintf("LT[%.0f]:%s (%.4f/%.4f) MEM: %d%% DISK: %.0f%% CPU: %.0f%%,%.0f\u00B0C",
+        str.sprintf("LT[%.0f]:%s (%.4f/%.4f) MEM:%d%% DISK:%.0f%% CPU:%.0f%%,%.0f\u00B0C",
             live_torque_params.getTotalBucketPoints(), live_torque_params.getLiveValid() ? "ON" : "OFF", live_torque_params.getLatAccelFactorFiltered(), live_torque_params.getFrictionCoefficientFiltered(),
             memoryUsage, freeSpace, cpuUsage, cpuTemp);
         sprintf(top_right, "%s", str.toStdString().c_str());
