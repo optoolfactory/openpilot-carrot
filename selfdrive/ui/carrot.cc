@@ -1994,7 +1994,7 @@ public:
         if (size > 0) {
             int cpu_size = 0;
             for (cpu_size = 0; cpu_size < size; cpu_size++) {
-                if (cpuUsagePercent <= 0) break;
+                if (cpuUsagePercent[cpu_size] <= 0) break;
                 cpuUsage += cpuUsagePercent[cpu_size];
             }
             if (cpu_size > 0) cpuUsage /= cpu_size;
