@@ -2006,8 +2006,10 @@ public:
         }
         sprintf(top_left, "%s", carName.toStdString().c_str());
 
-        //const auto lat_plan = sm["lateralPlan"].getLateralPlan();
-        //bottomLabel->setText(lat_plan.getLatDebugText().cStr());
+        // bottom
+        const auto lat_plan = sm["lateralPlan"].getLateralPlan();
+        str = lat_plan.getLatDebugText().cStr();
+        strcpy(bottom, str.toStdString().c_str();
 
         // bottom_left
         QString gitBranch = QString::fromStdString(params.get("GitBranch"));
