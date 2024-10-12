@@ -1996,7 +1996,7 @@ public:
                 if (cpuUsagePercent <= 0) break;
                 cpuUsage += cpuUsagePercent[i];
             }
-            cpuUsage /= static_cast<float>(i);
+            if (i > 0) cpuUsage /= i;
         }
         const auto live_torque_params = sm["liveTorqueParameters"].getLiveTorqueParameters();
         str.sprintf("LT[%.0f]:%s (%.4f/%.4f) MEM: %d%% DISK: %.0f%% CPU: %.0f%%,%.0f\u00B0C",
