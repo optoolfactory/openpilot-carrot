@@ -1159,12 +1159,12 @@ class CarrotServ:
     zoneinfo_path = f"/usr/share/zoneinfo/{timezone}"
     localtime_path = "/data/etc/localtime"
     if os.path.exists(localtime_path) or os.path.islink(localtime_path):
-      try:
-        os.remove(localtime_path)
-        print(f"Removed existing file or link: {localtime_path}")
-      except OSError as e:
-        print(f"Error removing {localtime_path}: {e}")
-        return
+        try:
+            subprocess.run(["sudo", "rm", "-f", localtime_path], check=True)
+            print(f"Removed existing file or link: {localtime_path}")
+        except subprocess.CalledProcessError as e:
+            print(f"Error removing {localtime_path}: {e}")
+            return
     try:
         subprocess.run(["sudo", "ln", "-s", zoneinfo_path, localtime_path], check=True)
         print(f"Timezone successfully set to: {timezone}")
