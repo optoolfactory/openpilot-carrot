@@ -1148,6 +1148,47 @@ class CarrotServ:
         os.system(f'sudo date -s "{formatted_time}"')
 
   def set_time(self, epoch_time, timezone):
+      import datetime
+      import os
+      import subprocess
+    
+      new_time = datetime.datetime.utcfromtimestamp(epoch_time)
+      diff = datetime.datetime.utcnow() - new_time
+      if abs(diff) < datetime.timedelta(seconds=10):
+          print(f"Time diff too small: {diff}")
+          return
+
+      print(f"Setting time to {new_time}, diff={diff}")
+    
+      # Timezone 설정
+      zoneinfo_path = f"/usr/share/zoneinfo/{timezone}"
+      localtime_path = "/data/etc/localtime"
+    
+      # 기존 localtime 링크가 있는 경우 삭제
+      if os.path.exists(localtime_path) or os.path.islink(localtime_path):
+          try:
+              subprocess.run(["sudo", "rm", "-f", localtime_path], check=True)
+              print(f"Removed existing file or link: {localtime_path}")
+          except subprocess.CalledProcessError as e:
+              print(f"Error removing {localtime_path}: {e}")
+              return
+    
+      # 새 타임존 설정
+      try:
+          subprocess.run(["sudo", "ln", "-s", zoneinfo_path, localtime_path], check=True)
+          print(f"Timezone successfully set to: {timezone}")
+      except subprocess.CalledProcessError as e:
+          print(f"Failed to set timezone to {timezone}: {e}")
+          return
+    
+      # 시스템 시간 설정
+      try:
+          subprocess.run(["sudo", "date", "-s", new_time.strftime('%Y-%m-%d %H:%M:%S')], check=True)
+          print(f"System time successfully set to: {new_time}")
+      except subprocess.CalledProcessError as e:
+          print("timed.failed_setting_time:", e)
+
+  def set_time__(self, epoch_time, timezone):
     import datetime
     new_time = datetime.datetime.utcfromtimestamp(epoch_time)
     diff = datetime.datetime.utcnow() - new_time
