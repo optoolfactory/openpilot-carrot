@@ -1992,9 +1992,12 @@ public:
         float cpuUsage = 0.0f;
         size = sizeof(cpuUsagePercent) / sizeof(cpuUsagePercent[0]);
         if (size > 0) {
+            printf("cpu = ");
             for (int i = 0; i < size; i++) {
                 cpuUsage += cpuUsagePercent[i];
+                printf("%d ", cpuUsagePercent[i]);
             }
+            printf("\n");
             cpuUsage /= static_cast<float>(size);
         }
         const auto live_torque_params = sm["liveTorqueParameters"].getLiveTorqueParameters();
