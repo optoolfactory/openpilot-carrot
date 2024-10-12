@@ -1992,20 +1992,18 @@ public:
         float cpuUsage = 0.0f;
         size = sizeof(cpuUsagePercent) / sizeof(cpuUsagePercent[0]);
         if (size > 0) {
-            printf("cpu = ");
             for (int i = 0; i < size; i++) {
+                if (cpuUsagePercent <= 0) break;
                 cpuUsage += cpuUsagePercent[i];
-                printf("%d ", cpuUsagePercent[i]);
             }
-            printf("\n");
-            cpuUsage /= static_cast<float>(size);
+            cpuUsage /= static_cast<float>(i);
         }
         const auto live_torque_params = sm["liveTorqueParameters"].getLiveTorqueParameters();
         str.sprintf("LT[%.0f]:%s (%.4f/%.4f) MEM: %d%% DISK: %.0f%% CPU: %.0f%%,%.0f\u00B0C",
             live_torque_params.getTotalBucketPoints(), live_torque_params.getLiveValid() ? "ON" : "OFF", live_torque_params.getLatAccelFactorFiltered(), live_torque_params.getFrictionCoefficientFiltered(),
             memoryUsage, freeSpace, cpuUsage, cpuTemp);
         sprintf(top_right, "%s", str.toStdString().c_str());
-        //printf("%s\n", top_right);
+        printf("%s\n", top_right);
         NVGcolor top_right_color = (cpuTemp>85.0 || memoryUsage > 85.0) ? COLOR_ORANGE : COLOR_WHITE;
 
         //top_left
