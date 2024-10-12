@@ -212,7 +212,7 @@ class LateralPlanner:
     
     self.x_sol = self.lat_mpc.x_sol
 
-    debugText = "{} | {:.1f}m |{:.1f}m | {:.1f}m | {}".format(
+    debugText = "{} | {:.1f}m | {:.1f}m | {:.1f}m | {}".format(
       "lanemode" if self.lanelines_active else "laneless",
       self.LP.lane_width_left,
       self.LP.lane_width,

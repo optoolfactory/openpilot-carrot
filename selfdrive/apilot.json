@@ -328,6 +328,19 @@
     },
     {
       "group": "시작",
+      "name": "AutoEngage",
+      "title": "오토인게이지",
+      "descr": "1:SteerEnable, 2:Steer,Cruise Enable",
+      "egroup": "START",
+      "etitle": "Auto Engage on onroad",
+      "edescr": "1:SteerEnable, 2:Steer, Cruise Enable",
+      "min": 0,
+      "max": 2,
+      "default": 0,
+      "unit": 1
+    },
+    {
+      "group": "시작",
       "name": "MaxTimeOffroadMin",
       "title": "자동전원OFF(분)",
       "descr": "",
