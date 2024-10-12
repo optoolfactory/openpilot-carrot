@@ -193,7 +193,9 @@ class CarState(CarStateBase):
       ret.cruiseState.speed = pt_cp.vl["ECMCruiseControl"]["CruiseSetSpeed"] * CV.KPH_TO_MS
       ret.cruiseState.enabled = pt_cp.vl["ECMCruiseControl"]["CruiseActive"] != 0
 
-    if self.CP.flags & GMFlags.SPEED_RELATED_MSG.value:
+    if True:
+      ret.vCluRatio = 0.96
+    elif self.CP.flags & GMFlags.SPEED_RELATED_MSG.value:
       # kans: use cluster speed & vCluRatio(longitudialPlanner)
       self.is_metric = Params().get_bool("IsMetric")
       speed_conv = CV.KPH_TO_MS * 1.609344 if self.is_metric else CV.MPH_TO_MS
@@ -201,8 +203,7 @@ class CarState(CarStateBase):
       ret.vEgoCluster = cluSpeed * speed_conv
       vEgoClu, aEgoClu = self.update_clu_speed_kf(ret.vEgoCluster)
       if self.CP.carFingerprint in CAR.CHEVROLET_VOLT:
-        vCluRatio = (ret.vEgo / vEgoClu) if (vEgoClu > 3. and ret.vEgo > 3.) else 1.0
-        ret.vCluRatio = 0.96 if vCluRatio > 1.2 or vCluRatio < 0.8  else vCluRatio # carrot: 임시방편... cluster speed가 mph인지, kph인지 확인필요..
+        ret.vCluRatio = (ret.vEgo / vEgoClu) if (vEgoClu > 3. and ret.vEgo > 3.) else 1.0
         #print("vCluRatio={}".format(ret.vCluRatio))
       else:
         ret.vCluRatio = 0.96
