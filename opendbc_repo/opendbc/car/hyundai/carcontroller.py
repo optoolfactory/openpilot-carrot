@@ -83,7 +83,7 @@ class CarController(CarControllerBase):
       if steerDeltaDown > 0:
         self.params.STEER_DELTA_DOWN = steerDeltaDown
       self.soft_hold_mode = 1 if params.get_int("AutoCruiseControl") > 1 else 2
-      self.hapticFeedbackWhenSpeedCamera = int(self.params.get_int("HapticFeedbackWhenSpeedCamera"))
+      self.hapticFeedbackWhenSpeedCamera = int(params.get_int("HapticFeedbackWhenSpeedCamera"))
 
     actuators = CC.actuators
     hud_control = CC.hudControl
