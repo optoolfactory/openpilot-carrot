@@ -2009,7 +2009,7 @@ public:
         // bottom
         const auto lat_plan = sm["lateralPlan"].getLateralPlan();
         str = lat_plan.getLatDebugText().cStr();
-        strcpy(bottom, str.toStdString().c_str();
+        strcpy(bottom, str.toStdString().c_str());
 
         // bottom_left
         QString gitBranch = QString::fromStdString(params.get("GitBranch"));
