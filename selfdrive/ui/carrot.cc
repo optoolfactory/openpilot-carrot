@@ -1992,11 +1992,12 @@ public:
         float cpuUsage = 0.0f;
         size = sizeof(cpuUsagePercent) / sizeof(cpuUsagePercent[0]);
         if (size > 0) {
-            for (int i = 0; i < size; i++) {
+            int cpu_size = 0;
+            for (cpu_size = 0; cpu_size < size; cpu_size++) {
                 if (cpuUsagePercent <= 0) break;
-                cpuUsage += cpuUsagePercent[i];
+                cpuUsage += cpuUsagePercent[cpu_size];
             }
-            if (i > 0) cpuUsage /= i;
+            if (cpu_size > 0) cpuUsage /= cpu_size;
         }
         const auto live_torque_params = sm["liveTorqueParameters"].getLiveTorqueParameters();
         str.sprintf("LT[%.0f]:%s (%.4f/%.4f) MEM: %d%% DISK: %.0f%% CPU: %.0f%%,%.0f\u00B0C",
