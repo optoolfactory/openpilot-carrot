@@ -1147,7 +1147,7 @@ class CarrotServ:
         print(f"Setting system time to: {formatted_time}")
         os.system(f'sudo date -s "{formatted_time}"')
 
-  def set_time(self, epoch_time):
+  def set_time(self, epoch_time, timezone):
     import datetime
     new_time = datetime.datetime.utcfromtimestamp(epoch_time)
     diff = datetime.datetime.utcnow() - new_time
@@ -1156,8 +1156,25 @@ class CarrotServ:
       return
 
     print(f"Setting time to {new_time}, diff={diff}")
+    zoneinfo_path = f"/usr/share/zoneinfo/{timezone}"
+    localtime_path = "/data/etc/localtime"
+    if os.path.exists(localtime_path) or os.path.islink(localtime_path):
+      try:
+        os.remove(localtime_path)
+        print(f"Removed existing file or link: {localtime_path}")
+      except OSError as e:
+        print(f"Error removing {localtime_path}: {e}")
+        return
+    try:
+        subprocess.run(["sudo", "ln", "-s", zoneinfo_path, localtime_path], check=True)
+        print(f"Timezone successfully set to: {timezone}")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to set timezone to {timezone}: {e}")
+      
+
     try:
       subprocess.run(f"TZ=UTC date -s '{new_time}'", shell=True, check=True)
+      subprocess.run()
     except subprocess.CalledProcessError:
       print("timed.failed_setting_time")
 
@@ -1171,7 +1188,7 @@ class CarrotServ:
       # op는 ntp를 사용하기때문에... 필요없는 루틴으로 보임.
       timezone_remote = json.get("timezone", "Asia/Seoul")
       
-      self.set_time(int(json.get("epochTime")))
+      self.set_time(int(json.get("epochTime")), timezone_remote)
                                                     
       #self._update_system_time(int(json.get("epochTime")), timezone_remote)
 
