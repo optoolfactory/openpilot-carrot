@@ -1152,7 +1152,7 @@ class CarrotServ:
     new_time = datetime.datetime.utcfromtimestamp(epoch_time)
     diff = datetime.datetime.utcnow() - new_time
     if abs(diff) < datetime.timedelta(seconds=10):
-      print(f"Time diff too small: {diff}")
+      #print(f"Time diff too small: {diff}")
       return
 
     print(f"Setting time to {new_time}, diff={diff}")
