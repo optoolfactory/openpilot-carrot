@@ -2024,7 +2024,7 @@ public:
             sprintf(bottom_right, "%s", ipAddress.toStdString().c_str());
         }
 
-        int text_margin = 10;
+        int text_margin = 30;
         // top
         nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_TOP);
         ui_draw_text_vg(vg, w / 2, 0, top, 30, COLOR_WHITE, BOLD);
