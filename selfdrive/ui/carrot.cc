@@ -1112,11 +1112,14 @@ private:
     int     show_path_color = 14;
     int     show_path_mode_normal = 13;
     int     show_path_color_normal = 14;
+    int     show_path_mode_lane = 13;
+    int     show_path_color_lane = 14;
     int     show_path_mode_cruise_off = 13;
     int     show_path_color_cruise_off = 14;
     float   show_path_width = 1.0;
     Params  params;
     int     params_count = 0;
+    bool    active_lane_line = false;
 
 protected:
     void update_line_data2(const UIState* s, const cereal::XYZTData::Reader& line,
@@ -1319,6 +1322,7 @@ protected:
 		SubMaster& sm = *(s->sm);
 		if (!sm.alive("modelV2") || !sm.alive("carState")) return false;
         const cereal::ModelDataV2::Reader& model = sm["modelV2"].getModelV2();
+        active_lane_line = sm["controlsState"].getControlsState().getActiveLaneLine();
         auto model_position = model.getPosition();
         float max_distance = s->max_distance;
         max_distance -= 2.0;
@@ -1331,8 +1335,14 @@ protected:
             show_path_color = show_path_color_cruise_off;
         }
         else {
-			show_path_mode = show_path_mode_normal;
-			show_path_color = show_path_color_normal;
+			if (active_lane_line) {
+				show_path_mode = show_path_mode_lane;
+				show_path_color = show_path_color_lane;
+			}
+            else {
+                show_path_mode = show_path_mode_normal;
+                show_path_color = show_path_color_normal;
+            }
         }
 
         if (show_path_mode == 0) {
@@ -1352,6 +1362,8 @@ public:
         if (params_count == 0) {
             show_path_mode_normal = params.getInt("ShowPathMode");
             show_path_color_normal = params.getInt("ShowPathColor");
+            show_path_mode_lane = params.getInt("ShowPathModeLane");
+            show_path_color_lane = params.getInt("ShowPathColorLane");
             show_path_mode_cruise_off = params.getInt("ShowPathModeCruiseOff");
             show_path_color_cruise_off = params.getInt("ShowPathColorCruiseOff");
         }
@@ -1588,6 +1600,7 @@ private:
 #include <QJsonValue>
 #include <QJsonArray>
 
+char    carrot_man_debug[128] = "";
 class DrawCarrot : public QObject {
     Q_OBJECT
 
@@ -1608,7 +1621,6 @@ public:
     int     trafficState = 0;
     int     trafficState_carrot = 0;
     int     active_carrot = 0;
-    char    carrot_man_debug[128] = "";
     float   xTarget = 0.0;
 
     QString szPosRoadName = "";
@@ -1679,8 +1691,8 @@ public:
         }
 	}
     void drawDebug(UIState* s) {
-        nvgTextAlign(s->vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
-        ui_draw_text(s, s->fb_w, s->fb_h, carrot_man_debug, 35, COLOR_WHITE, BOLD, 1.0f, 1.0f);
+        //nvgTextAlign(s->vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
+        //ui_draw_text(s, s->fb_w, s->fb_h, carrot_man_debug, 35, COLOR_WHITE, BOLD, 1.0f, 1.0f);
     }
     char    cruise_speed_last[32] = "";
     char    driving_mode_str_last[32] = "";
@@ -1968,6 +1980,7 @@ public:
         const auto freeSpace = deviceState.getFreeSpacePercent();
         const auto memoryUsage = deviceState.getMemoryUsagePercent();
         const auto cpuTempC = deviceState.getCpuTempC();
+        const auto cpuUsagePercent = deviceState.getCpuUsagePercent();
         float cpuTemp = 0.0f;
         int   size = sizeof(cpuTempC) / sizeof(cpuTempC[0]);
         if (size > 0) {
@@ -1976,11 +1989,23 @@ public:
             }
             cpuTemp /= static_cast<float>(size);
         }
+        float cpuUsage = 0.0f;
+        size = sizeof(cpuUsagePercent) / sizeof(cpuUsagePercent[0]);
+        if (size > 0) {
+            int cpu_size = 0;
+            for (cpu_size = 0; cpu_size < size; cpu_size++) {
+                if (cpuUsagePercent[cpu_size] <= 0) break;
+                cpuUsage += cpuUsagePercent[cpu_size];
+            }
+            if (cpu_size > 0) cpuUsage /= cpu_size;
+        }
         const auto live_torque_params = sm["liveTorqueParameters"].getLiveTorqueParameters();
-        str.sprintf("LT[%.0f]:%s (%.4f/%.4f) MEM: %d%% DISK: %.0f%% CPU: %.0f\u00B0C",
+        str.sprintf("LT[%.0f]:%s (%.4f/%.4f) MEM:%d%% DISK:%.0f%% CPU:%.0f%%,%.0f\u00B0C",
             live_torque_params.getTotalBucketPoints(), live_torque_params.getLiveValid() ? "ON" : "OFF", live_torque_params.getLatAccelFactorFiltered(), live_torque_params.getFrictionCoefficientFiltered(),
-            memoryUsage, freeSpace, cpuTemp);
+            memoryUsage, freeSpace, cpuUsage, cpuTemp);
         sprintf(top_right, "%s", str.toStdString().c_str());
+        //printf("%s\n", top_right);
+        NVGcolor top_right_color = (cpuTemp>85.0 || memoryUsage > 85.0) ? COLOR_ORANGE : COLOR_WHITE;
 
         //top_left
         Params params = Params();
@@ -1994,8 +2019,10 @@ public:
         }
         sprintf(top_left, "%s", carName.toStdString().c_str());
 
-        //const auto lat_plan = sm["lateralPlan"].getLateralPlan();
-        //bottomLabel->setText(lat_plan.getLatDebugText().cStr());
+        // bottom
+        const auto lat_plan = sm["lateralPlan"].getLateralPlan();
+        str = lat_plan.getLatDebugText().cStr();
+        strcpy(bottom, str.toStdString().c_str());
 
         // bottom_left
         QString gitBranch = QString::fromStdString(params.get("GitBranch"));
@@ -2003,29 +2030,34 @@ public:
 
         // bottom_right
         Params params_memory = Params("/dev/shm/params");
-        QString ipAddress = QString::fromStdString(params_memory.get("NetworkAddress"));
-        //extern QString gitBranch;
-        sprintf(bottom_right, "%s", ipAddress.toStdString().c_str());
+        if (carrot_man_debug[0] != 0 && params.getInt("ShowDebugUI") > 0) {
+            strcpy(bottom_right, carrot_man_debug);
+        }
+        else {
+            QString ipAddress = QString::fromStdString(params_memory.get("NetworkAddress"));
+            //extern QString gitBranch;
+            sprintf(bottom_right, "%s", ipAddress.toStdString().c_str());
+        }
 
-
+        int text_margin = 30;
         // top
         nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_TOP);
         ui_draw_text_vg(vg, w / 2, 0, top, 30, COLOR_WHITE, BOLD);
         // top left
         nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-        ui_draw_text_vg(vg, 0, 0, top_left, 30, COLOR_WHITE, BOLD);
+        ui_draw_text_vg(vg, text_margin, 0, top_left, 30, COLOR_WHITE, BOLD);
         // top right
         nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_TOP);
-        ui_draw_text_vg(vg, w, 0, top_right, 30, COLOR_WHITE, BOLD);
+        ui_draw_text_vg(vg, w - text_margin, 0, top_right, 30, top_right_color, BOLD);
         // bottom
         nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
         ui_draw_text_vg(vg, w / 2, h, bottom, 30, COLOR_WHITE, BOLD);
         // bottom left
         nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
-        ui_draw_text_vg(vg, 0, h, bottom_left, 30, COLOR_WHITE, BOLD);
+        ui_draw_text_vg(vg, text_margin, h, bottom_left, 30, COLOR_WHITE, BOLD);
         // bottom right
         nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
-        ui_draw_text_vg(vg, w, h, bottom_right, 30, COLOR_WHITE, BOLD);
+        ui_draw_text_vg(vg, w- text_margin, h, bottom_right, 30, COLOR_WHITE, BOLD);
 
     }
 };

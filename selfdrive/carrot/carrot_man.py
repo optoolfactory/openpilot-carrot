@@ -353,7 +353,8 @@ class CarrotMan:
     toggle_values = fleet.get_all_toggle_values()
     file_path = os.path.join('/data', 'toggle_values.json')
     with open(file_path, 'w') as file:
-      json.dump(toggle_values, file, indent=2) 
+      json.dump(toggle_values, file, indent=2)
+    pass
 
   def carrot_cmd_zmq(self):
 
@@ -1072,10 +1073,10 @@ class CarrotServ:
         pass
       else:
         if self.xSpdDist > 0:
-          left_spd_sec = int(max(self.xSpdDist - v_ego, 1) / max(1, v_ego))
+          left_spd_sec = int(max(self.xSpdDist - v_ego, 1) / max(1, v_ego) + 0.5)
           
       if self.xDistToTurn > 0:
-        left_tbt_sec = int(max(self.xDistToTurn - v_ego, 1) / max(1, v_ego))
+        left_tbt_sec = int(max(self.xDistToTurn - v_ego, 1) / max(1, v_ego) + 0.5)
 
     self._update_cmd()
     if False:
@@ -1146,16 +1147,50 @@ class CarrotServ:
         print(f"Setting system time to: {formatted_time}")
         os.system(f'sudo date -s "{formatted_time}"')
 
-    
+  def set_time(self, epoch_time, timezone):
+    import datetime
+    new_time = datetime.datetime.utcfromtimestamp(epoch_time)
+    diff = datetime.datetime.utcnow() - new_time
+    if abs(diff) < datetime.timedelta(seconds=10):
+      #print(f"Time diff too small: {diff}")
+      return
+
+    print(f"Setting time to {new_time}, diff={diff}")
+    zoneinfo_path = f"/usr/share/zoneinfo/{timezone}"
+    localtime_path = "/data/etc/localtime"
+    if os.path.exists(localtime_path) or os.path.islink(localtime_path):
+        try:
+            subprocess.run(["sudo", "rm", "-f", localtime_path], check=True)
+            print(f"Removed existing file or link: {localtime_path}")
+        except subprocess.CalledProcessError as e:
+            print(f"Error removing {localtime_path}: {e}")
+            return
+    try:
+        subprocess.run(["sudo", "ln", "-s", zoneinfo_path, localtime_path], check=True)
+        print(f"Timezone successfully set to: {timezone}")
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to set timezone to {timezone}: {e}")
+      
+
+    try:
+      subprocess.run(f"TZ=UTC date -s '{new_time}'", shell=True, check=True)
+      #subprocess.run()
+    except subprocess.CalledProcessError:
+      print("timed.failed_setting_time")
+
   def update(self, json):
     if json == None:
       return
     if "carrotIndex" in json:
       self.carrotIndex = int(json.get("carrotIndex"))
 
-    if self.carrotIndex % 10 == 0 and "epochTime" in json:
+    if self.carrotIndex % 60 == 0 and "epochTime" in json:
+      # op는 ntp를 사용하기때문에... 필요없는 루틴으로 보임.
       timezone_remote = json.get("timezone", "Asia/Seoul")
-      self._update_system_time(int(json.get("epochTime")), timezone_remote)
+      
+      self.set_time(int(json.get("epochTime")), timezone_remote)
+                                                    
+      #self._update_system_time(int(json.get("epochTime")), timezone_remote)
 
     if "carrotCmd" in json:
       print(json.get("carrotCmd"), json.get("carrotArg"))
@@ -1215,6 +1250,8 @@ class CarrotServ:
       self.nGoPosDist = int(json.get("nGoPosDist", 0))
       self.nGoPosTime = int(json.get("nGoPosTime", 0))
       self.szPosRoadName = json.get("szPosRoadName", "")
+      if self.szPosRoadName == "null":
+        self.szPosRoadName = ""
 
       self.vpPosPointLat = float(json.get("vpPosPointLat", self.vpPosPointLat))
       self.vpPosPointLon = float(json.get("vpPosPointLon", self.vpPosPointLon))

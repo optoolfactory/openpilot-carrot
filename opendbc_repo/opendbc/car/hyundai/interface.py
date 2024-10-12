@@ -140,10 +140,8 @@ class CarInterface(CarInterfaceBase):
     ret.centerToFront = ret.wheelbase * 0.4
     ret.steerActuatorDelay = 0.1
     ret.steerLimitTimer = 0.4
-    #if candidate != CAR.KIA_EV9:
-    if candidate not in (CAR.HYUNDAI_SANTA_FE_2024_MX5, CAR.HYUNDAI_SANTA_FE_2024_HEV_MX5):
-      CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
-      
+    CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
+
     if ret.flags & HyundaiFlags.ALT_LIMITS:
       ret.safetyConfigs[-1].safetyParam |= Panda.FLAG_HYUNDAI_ALT_LIMITS
 
@@ -153,7 +151,7 @@ class CarInterface(CarInterfaceBase):
     ret.openpilotLongitudinalControl = experimental_long and ret.experimentalLongitudinalAvailable
 
     # carrot, if camera_scc enabled, enable openpilotLongitudinalControl
-    if ret.flags & HyundaiFlags.CAMERA_SCC.value:
+    if ret.flags & HyundaiFlags.CAMERA_SCC.value or params.get_int("EnableRadarTracks") > 0:
       ret.radarUnavailable = False
       ret.openpilotLongitudinalControl = True
 
@@ -207,10 +205,6 @@ class CarInterface(CarInterfaceBase):
 
     if candidate == CAR.KIA_OPTIMA_G4_FL:
       ret.steerActuatorDelay = 0.2
-
-    if candidate in (CAR.HYUNDAI_SANTA_FE_2024_MX5, CAR.HYUNDAI_SANTA_FE_2024_HEV_MX5):
-      ret.steerControlType = structs.CarParams.SteerControlType.angle
-
 
     # Dashcam cars are missing a test route, or otherwise need validation
     # TODO: Optima Hybrid 2017 uses a different SCC12 checksum

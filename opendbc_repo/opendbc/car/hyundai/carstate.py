@@ -68,7 +68,7 @@ class CarState(CarStateBase):
 
     self.params = CarControllerParams(CP)
 
-    self.main_enabled = True #if Params().get_int("AutoEngage") == 2 else False
+    self.main_enabled = True if Params().get_int("AutoEngage") == 2 else False
     self.gear_shifter = GearShifter.drive # Gear_init for Nexo ?? unknown 21.02.23.LSW
 
   def update(self, cp, cp_cam, *_) -> structs.CarState:
@@ -316,7 +316,7 @@ class CarState(CarStateBase):
       cp_ = cp_cam if (self.CP.flags & HyundaiFlags.CAMERA_SCC and self.CP.extFlags & HyundaiExtFlags.BSM_IN_ADAS.value) else cp
       #ret.leftBlindspot = cp.vl["BLINDSPOTS_REAR_CORNERS"]["FL_INDICATOR"] != 0
       #ret.rightBlindspot = cp.vl["BLINDSPOTS_REAR_CORNERS"]["FR_INDICATOR"] != 0
-      if self.CP.carFingerprint in (CAR.KIA_CARNIVAL_4TH_GEN, CAR.HYUNDAI_SANTA_FE_2024_MX5, CAR.HYUNDAI_SANTA_FE_2024_HEV_MX5):
+      if self.CP.carFingerprint in [CAR.KIA_CARNIVAL_4TH_GEN]:
         ret.leftBlindspot = cp_.vl["BLINDSPOTS_REAR_CORNERS"]["INDICATOR_LEFT_FOUR"] != 0
         ret.rightBlindspot = cp_.vl["BLINDSPOTS_REAR_CORNERS"]["INDICATOR_RIGHT_FOUR"] != 0
       else:
