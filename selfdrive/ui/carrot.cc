@@ -1990,7 +1990,7 @@ public:
             cpuTemp /= static_cast<float>(size);
         }
         float cpuUsage = 0.0f;
-        int   size = sizeof(cpuUsagePercent) / sizeof(cpuUsagePercent[0]);
+        size = sizeof(cpuUsagePercent) / sizeof(cpuUsagePercent[0]);
         if (size > 0) {
             for (int i = 0; i < size; i++) {
                 cpuUsage += cpuUsagePercent[i];
