@@ -1147,7 +1147,7 @@ class CarrotServ:
         print(f"Setting system time to: {formatted_time}")
         os.system(f'sudo date -s "{formatted_time}"')
 
-  def set_time__(self, epoch_time, timezone):
+  def set_time(self, epoch_time, timezone):
     import datetime
     new_time = datetime.datetime.utcfromtimestamp(epoch_time)
     diff = datetime.datetime.utcnow() - new_time
