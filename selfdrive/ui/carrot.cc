@@ -765,6 +765,7 @@ protected:
     float navi_turn_point_y[2] = { 0.0, };
     bool navi_turn_point_flag = true;
     void drawTurnInfo(const UIState* s) {
+        nvgTextAlign(s->vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
         if (xDistToTurn < 1500 && xDistToTurn > 0) {
             SubMaster& sm = *(s->sm);
 
@@ -820,6 +821,7 @@ protected:
     bool left_dist_flag = true;
 
     void drawSpeedLimit(const UIState* s) {
+        nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
         if (xSpdLimit <= 0) left_dist_flag = true;
         if (xSpdDist > 0) {
             SubMaster& sm = *(s->sm);
@@ -1007,11 +1009,9 @@ public:
             sprintf(str, "%d", nRoadLimitSpeed);
             ui_draw_text(s, bx, by + 75, str, 50, COLOR_BLACK, BOLD, 0.0f, 0.0f);
         }
-
-        drawTurnInfoHud(s);
-
         drawTurnInfo(s);
         drawSpeedLimit(s);
+        drawTurnInfoHud(s);
 
     }
 };
