@@ -1967,6 +1967,37 @@ public:
         ui_draw_text(s, bx - 90, by + 80, get_tpms_text(rl), 38, get_tpms_color(rl), BOLD);
         ui_draw_text(s, bx + 90, by + 80, get_tpms_text(rr), 38, get_tpms_color(rr), BOLD);
     }
+    void drawDeviceInfo(const UIState* s) {
+        nvgTextAlign(s->vg, NVG_ALIGN_RIGHT | NVG_ALIGN_TOP);
+        SubMaster& sm = *(s->sm);
+        auto deviceState = sm["deviceState"].getDeviceState();
+        const auto freeSpace = deviceState.getFreeSpacePercent();
+        const auto memoryUsage = deviceState.getMemoryUsagePercent();
+        const auto cpuTempC = deviceState.getCpuTempC();
+        const auto cpuUsagePercent = deviceState.getCpuUsagePercent();
+        float cpuTemp = 0.0f;
+        QString str = "";
+        int   size = sizeof(cpuTempC) / sizeof(cpuTempC[0]);
+        if (size > 0) {
+            for (int i = 0; i < size; i++) {
+                cpuTemp += cpuTempC[i];
+            }
+            cpuTemp /= static_cast<float>(size);
+        }
+        float cpuUsage = 0.0f;
+        size = sizeof(cpuUsagePercent) / sizeof(cpuUsagePercent[0]);
+        if (size > 0) {
+            int cpu_size = 0;
+            for (cpu_size = 0; cpu_size < size; cpu_size++) {
+                if (cpuUsagePercent[cpu_size] <= 0) break;
+                cpuUsage += cpuUsagePercent[cpu_size];
+            }
+            if (cpu_size > 0) cpuUsage /= cpu_size;
+        }
+        str.sprintf("MEM:%d%% DISK:%.0f%% CPU:%.0f%%,%.0f\u00B0C", memoryUsage, freeSpace, cpuUsage, cpuTemp);
+        NVGcolor top_right_color = (cpuTemp > 85.0 || memoryUsage > 85.0) ? COLOR_ORANGE : COLOR_WHITE;
+		ui_draw_text(s, s->fb_w - 10, 2, str.toStdString().c_str(), 30, top_right_color, BOLD, 1.0f, 1.0f);
+    }
 
 };
 
@@ -2018,6 +2049,7 @@ void ui_draw(UIState *s, ModelRenderer* model_renderer, int w, int h) {
   drawCarrot.drawDebug(s);
   drawCarrot.drawDateTime(s);
   drawCarrot.drawConnInfo(s);
+  drawCarrot.drawDeviceInfo(s);
   drawCarrot.drawTpms(s);
 
   drawTurnInfo.draw(s);
@@ -2070,36 +2102,10 @@ public:
         str = QString::fromStdString(car_state.getLogCarrot());
         sprintf(top, "%s", str.toStdString().c_str());
         // top_right
-        auto deviceState = sm["deviceState"].getDeviceState();
-        const auto freeSpace = deviceState.getFreeSpacePercent();
-        const auto memoryUsage = deviceState.getMemoryUsagePercent();
-        const auto cpuTempC = deviceState.getCpuTempC();
-        const auto cpuUsagePercent = deviceState.getCpuUsagePercent();
-        float cpuTemp = 0.0f;
-        int   size = sizeof(cpuTempC) / sizeof(cpuTempC[0]);
-        if (size > 0) {
-            for (int i = 0; i < size; i++) {
-                cpuTemp += cpuTempC[i];
-            }
-            cpuTemp /= static_cast<float>(size);
-        }
-        float cpuUsage = 0.0f;
-        size = sizeof(cpuUsagePercent) / sizeof(cpuUsagePercent[0]);
-        if (size > 0) {
-            int cpu_size = 0;
-            for (cpu_size = 0; cpu_size < size; cpu_size++) {
-                if (cpuUsagePercent[cpu_size] <= 0) break;
-                cpuUsage += cpuUsagePercent[cpu_size];
-            }
-            if (cpu_size > 0) cpuUsage /= cpu_size;
-        }
         const auto live_torque_params = sm["liveTorqueParameters"].getLiveTorqueParameters();
-        str.sprintf("LT[%.0f]:%s (%.4f/%.4f) MEM:%d%% DISK:%.0f%% CPU:%.0f%%,%.0f\u00B0C",
-            live_torque_params.getTotalBucketPoints(), live_torque_params.getLiveValid() ? "ON" : "OFF", live_torque_params.getLatAccelFactorFiltered(), live_torque_params.getFrictionCoefficientFiltered(),
-            memoryUsage, freeSpace, cpuUsage, cpuTemp);
+        str.sprintf("LT[%.0f]:%s (%.4f/%.4f)",
+            live_torque_params.getTotalBucketPoints(), live_torque_params.getLiveValid() ? "ON" : "OFF", live_torque_params.getLatAccelFactorFiltered(), live_torque_params.getFrictionCoefficientFiltered());
         sprintf(top_right, "%s", str.toStdString().c_str());
-        //printf("%s\n", top_right);
-        NVGcolor top_right_color = (cpuTemp>85.0 || memoryUsage > 85.0) ? COLOR_ORANGE : COLOR_WHITE;
 
         //top_left
         Params params = Params();
@@ -2142,7 +2148,7 @@ public:
         ui_draw_text_vg(vg, text_margin, 0, top_left, 30, COLOR_WHITE, BOLD);
         // top right
         nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_TOP);
-        ui_draw_text_vg(vg, w - text_margin, 0, top_right, 30, top_right_color, BOLD);
+        ui_draw_text_vg(vg, w - text_margin, 0, top_right, 30, COLOR_WHITE, BOLD);
         // bottom
         nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
         ui_draw_text_vg(vg, w / 2, h, bottom, 30, COLOR_WHITE, BOLD);
