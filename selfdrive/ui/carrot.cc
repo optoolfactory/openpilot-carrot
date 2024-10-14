@@ -945,9 +945,9 @@ protected:
             int remaining_minutes = (int)nGoPosTime / 60;
             local->tm_min += remaining_minutes;
             mktime(local);
-            sprintf(str, "도착: %.1fkm", nGoPosDist / 1000.);
+            sprintf(str, "도착: %.1f km", nGoPosDist / 1000.);
             ui_draw_text(s, tbt_x + 190, tbt_y + 80, str, 50, COLOR_WHITE, BOLD);
-            sprintf(str, "%.1f분(%02d:%02d)", (float)nGoPosTime / 60., local->tm_hour, local->tm_min);
+            sprintf(str, "%.1f분 (%02d:%02d)", (float)nGoPosTime / 60., local->tm_hour, local->tm_min);
             ui_draw_text(s, tbt_x +190 + 120, tbt_y + 130, str, 50, COLOR_WHITE, BOLD);
         }
     }
