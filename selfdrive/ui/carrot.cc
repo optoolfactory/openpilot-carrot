@@ -1952,6 +1952,7 @@ public:
         return str;
     }
     void drawTpms(const UIState* s) {
+        nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
         SubMaster& sm = *(s->sm);
         auto car_state = sm["carState"].getCarState();
 
