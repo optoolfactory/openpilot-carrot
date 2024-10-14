@@ -503,7 +503,7 @@ class CarrotServ:
     
     self.nRoadLimitSpeed = 30
 
-    self.active = 0     ## 1: CarrotMan Active, 2: sdi active , 3: speed decel active, 4: section active
+    self.active = 0     ## 1: CarrotMan Active, 2: sdi active , 3: speed decel active, 4: section active, 5: bump active
     self.active_count = 0
     self.active_sdi_count = 0
     self.active_sdi_count_max = 80
@@ -1036,7 +1036,7 @@ class CarrotServ:
       safe_sec = self.autoNaviSpeedBumpTime if self.xSpdType == 22 else self.autoNaviSpeedCtrlEnd
       decel = self.autoNaviSpeedDecelRate
       sdi_speed = min(sdi_speed, self.calculate_current_speed(self.xSpdDist, self.xSpdLimit, safe_sec, decel))
-      self.active = 3
+      self.active = 5 if self.xSpdType == 22 else 3
       if self.xSpdType == 4:
         sdi_speed = self.xSpdLimit
         self.active = 4
