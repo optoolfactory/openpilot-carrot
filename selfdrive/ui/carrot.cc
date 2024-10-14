@@ -914,7 +914,7 @@ protected:
             int bx = tbt_x + 100;
             int by = tbt_y + 85;
             if (atc_type.length() > 0 && !atc_type.contains("prepare")) {
-                ui_fill_rect(s->vg, { bx - 80, by - 65, 160, 210 }, COLOR_GREEN, 15);
+                ui_fill_rect(s->vg, { bx - 80, by - 65, 160, 210 }, COLOR_GREEN_ALPHA(100), 15);
             }
             switch (xTurnInfo) {
             case 1: ui_draw_image(s, { bx - icon_size / 2, by - icon_size / 2, icon_size, icon_size }, "ic_turn_l", 1.0f); break;
