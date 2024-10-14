@@ -758,6 +758,7 @@ private:
     int nGoPosTime = 0;
 
     QString szSdiDescr = "";
+    QString atc_type;
 
 protected:
     QPointF navi_turn_point[2];
@@ -912,6 +913,9 @@ protected:
         if(xTurnInfo > 0) {
             int bx = tbt_x + 100;
             int by = tbt_y + 80;
+            if (atc_type.length() > 0 && !atc_type.contains("prepare")) {
+                ui_fill_rect(s->vg, { bx - 80, by - 65, 160, 210 }, COLOR_GREEN, 15);
+            }
             switch (xTurnInfo) {
             case 1: ui_draw_image(s, { bx - icon_size / 2, by - icon_size / 2, icon_size, icon_size }, "ic_turn_l", 1.0f); break;
             case 2: ui_draw_image(s, { bx - icon_size / 2, by - icon_size / 2, icon_size, icon_size }, "ic_turn_r", 1.0f); break;
@@ -921,7 +925,7 @@ protected:
             case 6: ui_draw_text(s, bx, by + 20, "TG", 35, COLOR_WHITE, BOLD); break;
             case 8: ui_draw_text(s, bx, by + 20, "목적지", 35, COLOR_WHITE, BOLD); break;
             default:
-                sprintf(str, "unknown(%d)", xTurnInfo);
+                sprintf(str, "감속:%d", xTurnInfo);
                 ui_draw_text(s, bx, by + 20, str, 35, COLOR_WHITE, BOLD, 0.0f, 0.0f);
                 break;
             }
@@ -933,11 +937,11 @@ protected:
         if (szSdiDescr.length() > 0) {
             float bounds[4];  // [xmin, ymin, xmax, ymax]를 저장하는 배열
             nvgFontSize(s->vg, 40);
-            nvgTextBounds(s->vg, tbt_x + 190, tbt_y + 190, szSdiDescr.toStdString().c_str(), NULL, bounds);
+            nvgTextBounds(s->vg, tbt_x + 200, tbt_y + 200, szSdiDescr.toStdString().c_str(), NULL, bounds);
             float text_width = bounds[2] - bounds[0];
             float text_height = bounds[3] - bounds[1];
             ui_fill_rect(s->vg, { (int)bounds[0] - 10, (int)bounds[1] - 2, (int)text_width + 20, (int)text_height + 13 }, COLOR_GREEN, 10);
-            ui_draw_text(s, tbt_x + 190, tbt_y + 190, szSdiDescr.toStdString().c_str(), 40, COLOR_WHITE, BOLD);
+            ui_draw_text(s, tbt_x + 200, tbt_y + 200, szSdiDescr.toStdString().c_str(), 40, COLOR_WHITE, BOLD);
         }
         if (nGoPosDist > 0 && nGoPosTime > 0) {
             time_t now = time(NULL);  // 현재 시간 얻기
@@ -945,10 +949,10 @@ protected:
             int remaining_minutes = (int)nGoPosTime / 60;
             local->tm_min += remaining_minutes;
             mktime(local);
-            sprintf(str, "도착: %.1f km", nGoPosDist / 1000.);
+            sprintf(str, "도착: %.1f분(%02d:%02d)", (float)nGoPosTime / 60., local->tm_hour, local->tm_min);
             ui_draw_text(s, tbt_x + 190, tbt_y + 80, str, 50, COLOR_WHITE, BOLD);
-            sprintf(str, "%.1f분 (%02d:%02d)", (float)nGoPosTime / 60., local->tm_hour, local->tm_min);
-            ui_draw_text(s, tbt_x +190 + 120, tbt_y + 130, str, 50, COLOR_WHITE, BOLD);
+            sprintf(str, "%.1fkm", nGoPosDist / 1000.);
+            ui_draw_text(s, tbt_x + 190 + 120, tbt_y + 130, str, 50, COLOR_WHITE, BOLD);
         }
     }
 public:
@@ -968,6 +972,7 @@ public:
         xDistToTurn = carrot_man.getXDistToTurn();
         nRoadLimitSpeed = carrot_man.getNRoadLimitSpeed();
         active_carrot = carrot_man.getActive();
+        atc_type = QString::fromStdString(carrot_man.getAtcType());
 
         nGoPosDist = carrot_man.getNGoPosDist();
         nGoPosTime = carrot_man.getNGoPosTime();
