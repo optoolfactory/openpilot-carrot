@@ -287,6 +287,7 @@ DevicePanel::DevicePanel(SettingsWindow *parent) : ListWidget(parent) {
   QObject::connect(uiState()->prime_state, &PrimeState::changed, [this] (PrimeState::Type type) {
     pair_device->setVisible(type == PrimeState::PRIME_TYPE_UNPAIRED);
   });
+  /*
   QObject::connect(uiState(), &UIState::offroadTransition, [=](bool offroad) {
     for (auto btn : findChildren<ButtonControl *>()) {
       if (btn != pair_device) {
@@ -294,7 +295,7 @@ DevicePanel::DevicePanel(SettingsWindow *parent) : ListWidget(parent) {
       }
     }
   });
-
+*/
 }
 
 void DevicePanel::updateCalibDescription() {
