@@ -371,7 +371,7 @@ class CAR(Platforms):
     flags=HyundaiFlags.CAMERA_SCC | HyundaiFlags.CHECKSUM_CRC8 | HyundaiFlags.EV
   )
 
-    HYUNDAI_SANTA_FE_2024_MX5 = HyundaiCanFDPlatformConfig(
+  HYUNDAI_SANTA_FE_2024_MX5 = HyundaiCanFDPlatformConfig(
     [
       HyundaiCarDocs("Hyundai Santa Fe MX5 (with HDA II) 2024", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_q])),
     ],
