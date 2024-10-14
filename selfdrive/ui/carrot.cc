@@ -912,7 +912,7 @@ protected:
 
         if(xTurnInfo > 0) {
             int bx = tbt_x + 100;
-            int by = tbt_y + 80;
+            int by = tbt_y + 85;
             if (atc_type.length() > 0 && !atc_type.contains("prepare")) {
                 ui_fill_rect(s->vg, { bx - 80, by - 65, 160, 210 }, COLOR_GREEN, 15);
             }
