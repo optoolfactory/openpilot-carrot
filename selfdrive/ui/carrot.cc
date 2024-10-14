@@ -919,7 +919,7 @@ protected:
             case 4: ui_draw_image(s, { bx - icon_size / 2, by - icon_size / 2, icon_size, icon_size }, "ic_lane_change_r", 1.0f); break;
             case 7: ui_draw_image(s, { bx - icon_size / 2, by - icon_size / 2, icon_size, icon_size }, "ic_turn_u", 1.0f); break;
             case 6: ui_draw_text(s, bx, by + 20, "TG", 35, COLOR_WHITE, BOLD); break;
-            case 8: ui_draw_text(s, bx, by + 20, "arrived", 35, COLOR_WHITE, BOLD); break;
+            case 8: ui_draw_text(s, bx, by + 20, "목적지", 35, COLOR_WHITE, BOLD); break;
             default:
                 sprintf(str, "unknown(%d)", xTurnInfo);
                 ui_draw_text(s, bx, by + 20, str, 35, COLOR_WHITE, BOLD, 0.0f, 0.0f);
@@ -930,10 +930,25 @@ protected:
             ui_draw_text(s, bx, by + 120, str, 40, COLOR_WHITE, BOLD);
         }
         nvgTextAlign(s->vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
-        ui_draw_text(s, tbt_x + 190, tbt_y + 180, szSdiDescr.toStdString().c_str(), 40, COLOR_WHITE, BOLD);
+        if (szSdiDescr.length() > 0) {
+            float bounds[4];  // [xmin, ymin, xmax, ymax]를 저장하는 배열
+            nvgFontSize(s->vg, 40);
+            nvgTextBounds(s->vg, tbt_x + 190, tbt_y + 190, szSdiDescr.toStdString().c_str(), NULL, bounds);
+            float text_width = bounds[2] - bounds[0];
+            float text_height = bounds[3] - bounds[1];
+            ui_fill_rect(s->vg, { (int)bounds[0] - 10, (int)bounds[1] - 2, (int)text_width + 20, (int)text_height + 13 }, COLOR_GREEN, 10);
+            ui_draw_text(s, tbt_x + 190, tbt_y + 190, szSdiDescr.toStdString().c_str(), 40, COLOR_WHITE, BOLD);
+        }
         if (nGoPosDist > 0 && nGoPosTime > 0) {
-            sprintf(str, "도착: %.1fkm, %.1f분", nGoPosDist / 1000., (float)nGoPosTime / 60.);
-            ui_draw_text(s, tbt_x + 190, tbt_y + 100, str, 50, COLOR_WHITE, BOLD);
+            time_t now = time(NULL);  // 현재 시간 얻기
+            struct tm* local = localtime(&now);
+            int remaining_minutes = (int)nGoPosTime / 60;
+            local->tm_min += remaining_minutes;
+            mktime(local);
+            sprintf(str, "도착: %.1fkm", nGoPosDist / 1000.);
+            ui_draw_text(s, tbt_x + 190, tbt_y + 80, str, 50, COLOR_WHITE, BOLD);
+            sprintf(str, "%.1f분(%02d:%02d)", (float)nGoPosTime / 60., local->tm_hour, local->tm_min);
+            ui_draw_text(s, tbt_x +190 + 120, tbt_y + 130, str, 50, COLOR_WHITE, BOLD);
         }
     }
 public:
