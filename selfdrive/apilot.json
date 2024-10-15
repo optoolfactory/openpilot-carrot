@@ -756,6 +756,19 @@
       "unit": 10
     },
     {
+      "group": "주행튜닝",
+      "name": "StoppingAccel",
+      "title": "정지시작가속도x0.01(-40)",
+      "descr": "정지시작가속도 조정, 0으로 하면 기존방식",
+      "egroup": "LONG",
+      "etitle": "StoppingStartAccelx0.01(-40)",
+      "edescr": "",
+      "min": -100,
+      "max": 0,
+      "default": -40,
+      "unit": 10
+    },
+    {
       "group": "가속설정",
       "name": "MyDrivingMode",
       "title": "드라이브모드:(3)",
