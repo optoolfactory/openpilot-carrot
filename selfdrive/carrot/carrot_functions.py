@@ -272,7 +272,7 @@ class CarrotPlanner:
     stop_model_x = self.xStop
 
     #self.check_model_stopping(v, v_ego, self.xStop, y)
-    self.check_model_stopping(v, v_ego, x[-1], y, radarstate.leadOne.dRel if radar_detected else 1000)
+    self.check_model_stopping(v, v_ego, x[-1], y, radarstate.leadOne.dRel if radarstate.leadOne.status else 1000)
 
     if self.myDrivingMode == 4:
       self.trafficState = TrafficState.off
