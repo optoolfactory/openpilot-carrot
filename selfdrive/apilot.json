@@ -238,10 +238,10 @@
     {
       "group": "주행튜닝",
       "name": "RadarReactionFactor",
-      "title": "Radar reaction factor (100)%",
+      "title": "Radar reaction factor (10)%",
       "descr": "값이 낮아지면 선행차량에 대한 반응이 빨라짐.",
       "egroup": "LONG",
-      "etitle": "Radar reaction factor (100)%",
+      "etitle": "Radar reaction factor (10)%",
       "edescr": "",
       "min": 0,
       "max": 200,
