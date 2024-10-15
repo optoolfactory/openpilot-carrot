@@ -802,11 +802,13 @@ protected:
                 img_x = (int)navi_turn_point_x[0] - size_x / 2;
                 img_y = (int)navi_turn_point_y[0] - size_y;
                 ui_draw_image(s, { img_x, img_y, size_x, size_y }, "ic_navi_point", 1.0f);
+                nvgTextAlign(s->vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
                 break;
             case 2: case 4:
                 img_x = (int)navi_turn_point_x[1] - size_x / 2;
                 img_y = (int)navi_turn_point_y[1] - size_y;
                 ui_draw_image(s, { img_x, img_y, size_x, size_y }, "ic_navi_point", 1.0f);
+                nvgTextAlign(s->vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
                 break;
             }
             char str[128] = "";
