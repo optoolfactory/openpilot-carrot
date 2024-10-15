@@ -802,11 +802,13 @@ protected:
                 img_x = (int)navi_turn_point_x[0] - size_x / 2;
                 img_y = (int)navi_turn_point_y[0] - size_y;
                 ui_draw_image(s, { img_x, img_y, size_x, size_y }, "ic_navi_point", 1.0f);
+                nvgTextAlign(s->vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
                 break;
             case 2: case 4:
                 img_x = (int)navi_turn_point_x[1] - size_x / 2;
                 img_y = (int)navi_turn_point_y[1] - size_y;
                 ui_draw_image(s, { img_x, img_y, size_x, size_y }, "ic_navi_point", 1.0f);
+                nvgTextAlign(s->vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
                 break;
             }
             char str[128] = "";
@@ -912,9 +914,9 @@ protected:
 
         if(xTurnInfo > 0) {
             int bx = tbt_x + 100;
-            int by = tbt_y + 80;
+            int by = tbt_y + 85;
             if (atc_type.length() > 0 && !atc_type.contains("prepare")) {
-                ui_fill_rect(s->vg, { bx - 80, by - 65, 160, 210 }, COLOR_GREEN, 15);
+                ui_fill_rect(s->vg, { bx - 80, by - 65, 160, 210 }, COLOR_GREEN_ALPHA(100), 15);
             }
             switch (xTurnInfo) {
             case 1: ui_draw_image(s, { bx - icon_size / 2, by - icon_size / 2, icon_size, icon_size }, "ic_turn_l", 1.0f); break;
@@ -1952,6 +1954,7 @@ public:
         return str;
     }
     void drawTpms(const UIState* s) {
+        nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
         SubMaster& sm = *(s->sm);
         auto car_state = sm["carState"].getCarState();
 
