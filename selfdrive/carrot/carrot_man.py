@@ -933,10 +933,10 @@ class CarrotServ:
 
   def update_auto_turn(self, v_ego_kph, sm, x_turn_info, x_dist_to_turn, check_steer=False):
     turn_speed = self.autoTurnControlSpeedTurn
-    stop_speed = 1
-    turn_dist_for_speed = 5 #50
-    fork_dist_for_speed = 5 #20
     fork_speed = self.nRoadLimitSpeed
+    stop_speed = 1
+    turn_dist_for_speed = self.autoTurnControlTurnEnd * turn_speed / 3.6 # 5
+    fork_dist_for_speed = self.autoTurnControlTurnEnd * fork_speed / 3.6 # 5
     stop_dist_for_speed = 5
     start_fork_dist = interp(self.nRoadLimitSpeed, [30, 50, 100], [160, 200, 350])
     start_turn_dist = interp(self.nTBTNextRoadWidth, [5, 10], [43, 60])
