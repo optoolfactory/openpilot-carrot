@@ -364,6 +364,14 @@ class CAR(Platforms):
     flags=HyundaiFlags.CAMERA_SCC | HyundaiFlags.CHECKSUM_CRC8 | HyundaiFlags.EV,
     #flags=HyundaiFlags.CAMERA_SCC | HyundaiFlags.CHECKSUM_6B | HyundaiFlags.EV,
   )
+  HYUNDAI_PALISADE_2023 = HyundaiPlatformConfig(
+    [
+      HyundaiCarDocs("Hyundai Palisade (without HDA II) 2023-24", "Highway Driving Assist", car_parts=CarParts.common([CarHarness.hyundai_a])),
+      HyundaiCarDocs("Kia Telluride (without HDA II) 2023-24", "Highway Driving Assist", car_parts=CarParts.common([CarHarness.hyundai_l])),
+    ],
+    HYUNDAI_PALISADE.specs,
+    flags=HyundaiFlags.CHECKSUM_CRC8 | HyundaiFlags.CAN_CANFD_HYBRID | HyundaiFlags.UNSUPPORTED_LONGITUDINAL,
+  )
 
 
   # Kia
