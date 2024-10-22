@@ -144,6 +144,9 @@ class HyundaiPlatformConfig(PlatformConfig):
     if self.flags & HyundaiFlags.MIN_STEER_32_MPH:
       self.specs = self.specs.override(minSteerSpeed=32 * CV.MPH_TO_MS)
 
+    if self.flags & HyundaiFlags.CAN_CANFD_HYBRID:
+      self.dbc_dict = dbc_dict('hyundai_palisade_2023_generated', None)
+
 
 @dataclass
 class HyundaiCanFDPlatformConfig(PlatformConfig):
