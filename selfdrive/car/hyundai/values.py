@@ -370,7 +370,7 @@ class CAR(Platforms):
       HyundaiCarDocs("Kia Telluride (without HDA II) 2023-24", "Highway Driving Assist", car_parts=CarParts.common([CarHarness.hyundai_l])),
     ],
     HYUNDAI_PALISADE.specs,
-    flags=HyundaiFlags.CHECKSUM_CRC8 | HyundaiFlags.CAN_CANFD_HYBRID | HyundaiFlags.UNSUPPORTED_LONGITUDINAL,
+    flags=HyundaiFlags.CHECKSUM_CRC8 | HyundaiFlags.UNSUPPORTED_LONGITUDINAL,
   )
 
 
