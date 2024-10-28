@@ -3,10 +3,10 @@ from dataclasses import dataclass, field
 from enum import Enum, IntFlag
 
 from panda import uds
-from opendbc.car import CarSpecs, DbcDict, PlatformConfig, Platforms, dbc_dict
+from opendbc.car import CarSpecs, DbcDict, PlatformConfig, Platforms, dbc_dict, AngleRateLimit
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.structs import CarParams
-from opendbc.car.docs_definitions import CarFootnote, CarHarness, CarDocs, CarParts, Column
+from opendbc.car.docs_definitions import CarFootnote, CarHarness, CarDocs, CarParts, Column, Mount
 from opendbc.car.fw_query_definitions import FwQueryConfig, Request, p16
 
 Ecu = CarParams.Ecu
@@ -15,6 +15,10 @@ Ecu = CarParams.Ecu
 class CarControllerParams:
   ACCEL_MIN = -4.0 # m/s
   ACCEL_MAX = 2.5 # m/s
+
+  # seen changing at 0.2 deg/frame down, 0.1 deg/frame up at 100Hz
+  ANGLE_RATE_LIMIT_UP = AngleRateLimit(speed_bp=[0., 5., 15.], angle_v=[5., .8, .15])
+  ANGLE_RATE_LIMIT_DOWN = AngleRateLimit(speed_bp=[0., 5., 15.], angle_v=[5., 3.5, 0.4])
 
   def __init__(self, CP):
     self.STEER_DELTA_UP = 3
@@ -366,6 +370,21 @@ class CAR(Platforms):
     CarSpecs(mass=1355, wheelbase=2.58, steerRatio=14.3),  # mass: from https://www.hyundai-motor.com.tw/clicktobuy/custin#spec_0, steerRatio: from learner
     flags=HyundaiFlags.CAMERA_SCC | HyundaiFlags.CHECKSUM_CRC8 | HyundaiFlags.EV
   )
+
+  HYUNDAI_SANTA_FE_2024_MX5 = HyundaiCanFDPlatformConfig(
+    [
+      HyundaiCarDocs("Hyundai Santa Fe MX5 (with HDA II) 2024", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_q])),
+    ],
+    CarSpecs(mass=1915, wheelbase=2.815, steerRatio=14.26, tireStiffnessFactor=0.65),
+  )
+  HYUNDAI_SANTA_FE_2024_HEV_MX5 = HyundaiCanFDPlatformConfig(
+    [
+      HyundaiCarDocs("Hyundai Santa Fe MX5 HEV (with HDA II) 2024", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_q])),
+    ],
+    CarSpecs(mass=1930, wheelbase=2.815, steerRatio=14.26, tireStiffnessFactor=0.65),
+    flags=HyundaiFlags.HYBRID,
+  )
+
 
 
   # Kia
