@@ -75,7 +75,7 @@ procs = [
   #PythonProcess("carrotmodeld", "selfdrive.modeld.carrot.carrotmodeld", only_onroad),
   NativeProcess("encoderd", "system/loggerd", ["./encoderd"], only_onroad),
   NativeProcess("stream_encoderd", "system/loggerd", ["./encoderd", "--stream"], notcar),
-  NativeProcess("loggerd", "system/loggerd", ["./loggerd"], (enable_logging and logging), enabled=not NoLogging),
+  #NativeProcess("loggerd", "system/loggerd", ["./loggerd"], (enable_logging and logging), enabled=not NoLogging),
   NativeProcess("modeld", "selfdrive/modeld", ["./modeld"], only_onroad),
   NativeProcess("sensord", "system/sensord", ["./sensord"], only_onroad, enabled=not PC),
   NativeProcess("ui", "selfdrive/ui", ["./ui"], always_run, watchdog_max_dt=(5 if not PC else None)),
