@@ -316,12 +316,12 @@ class CarrotMan:
         distances = []
         speeds = []
         distance = 10.0
-        if len(resampled_points) >= 7:
-            for i in range(len(resampled_points) - 6):
+        if len(resampled_points) >= 5:
+            for i in range(len(resampled_points) - 4):
                 distance += 10.0
                 p1 = resampled_points[i]
-                p2 = resampled_points[i + 3]
-                p3 = resampled_points[i + 6]
+                p2 = resampled_points[i + 2]
+                p3 = resampled_points[i + 4]
                 curvature = calculate_curvature(p1, p2, p3)
                 curvatures.append(curvature)
                 if abs(curvature) > 0.001:
@@ -1306,8 +1306,10 @@ class CarrotServ:
     if self.turnSpeedControlMode in [2,3]:
       #if len(route_speeds) > 0:
       #  print(" ".join(str(round(speed, 1)) for speed in route_speeds))
+      safe_sec = 2.0
+      decel_rate = 1.2
       for dist, speed in zip(speed_distances, route_speeds):
-        speed_n_sources.append((self.calculate_current_speed(dist, speed * self.mapTurnSpeedFactor, 0, 1.2), "route"))
+        speed_n_sources.append((self.calculate_current_speed(dist, speed * self.mapTurnSpeedFactor, safe_sec, decel_rate), "route"))
 
     desired_speed, source = min(speed_n_sources, key=lambda x: x[0])
 
