@@ -772,6 +772,7 @@ class CarrotServ:
     self.last_update_gps_time = 0
     self.last_calculate_gps_time = 0
     self.bearing_offset = 0.0
+    self.bearing_measured = 0.0
     self.bearing = 0.0
     
     self.totalDistance = 0
@@ -1125,11 +1126,12 @@ class CarrotServ:
       bearing = 0.0
       return self.nPosAngle
 
-    if abs(CS.steeringAngleDeg) < 2.0:
+    if abs(self.bearing_measured - bearing) < 0.1:
         self.diff_angle_count += 1
     else:
         self.diff_angle_count = 0
-
+    self.bearing_measured = bearing
+    
     if self.diff_angle_count > 5:
       diff_angle = (self.nPosAngle - bearing) % 360
       if diff_angle > 180:
