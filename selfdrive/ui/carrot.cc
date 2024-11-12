@@ -1853,7 +1853,7 @@ public:
                     int idx = get_path_length_idx(lane_lines[2], d);
 
                     if (idx >= max_z) z_offset -= 0.05;
-                    _model->mapToScreen((x<3.0) ? 5.0 : x, y, lane_lines[2].getZ()[idx] + 1.22 + z_offset, &nav_path_vertex[nav_path_vertex_count++]);
+                    _model->mapToScreen((x<3.0) ? 5.0 : x, y, lane_lines[2].getZ()[idx] + z_offset, &nav_path_vertex[nav_path_vertex_count++]);
                 }
             }
             auto meta = sm["modelV2"].getModelV2().getMeta();
