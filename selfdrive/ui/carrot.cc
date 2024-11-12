@@ -2091,6 +2091,9 @@ public:
             ui_fill_rect(s->vg, { dx - 55, dy - 38, 110, 48 }, COLOR_BLUE_ALPHA(210), 15, 2);
             ui_draw_text(s, dx, dy, "APM", 40, COLOR_WHITE, BOLD);
         }
+        if (nav_path_vertex_count > 0) {
+            ui_draw_text(s, dx, dy - 45, "ROUTE", 30, COLOR_WHITE, BOLD);
+		}
 #ifdef __UI_TEST
         active_carrot = 2;
         nRoadLimitSpeed = 30;

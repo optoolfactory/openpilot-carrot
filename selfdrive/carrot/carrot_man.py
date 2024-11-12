@@ -215,6 +215,7 @@ class CarrotMan:
 
     self.navi_points = []
     self.navi_points_start_index = 0
+    self.navi_points_active = False
 
   def get_broadcast_address(self):
     try:
@@ -271,6 +272,7 @@ class CarrotMan:
             if remote_addr is None:
               print(f"Broadcasting: {self.broadcast_ip}:{msg}")
               self.navi_points = []
+              self.navi_points_active = False
             
           except Exception as e:
             if self.connection:
@@ -288,7 +290,7 @@ class CarrotMan:
 
   def carrot_navi_route(self):
    
-    if len(self.navi_points) == 0 or not SHAPELY_AVAILABLE:
+    if not self.navi_points_active or not SHAPELY_AVAILABLE:
       haversine_cache.clear()
       curvature_cache.clear()
       return [],[],[],[]
@@ -342,7 +344,7 @@ class CarrotMan:
     msg['Carrot2'] = self.params.get("Version").decode('utf-8')
     isOnroad = self.params.get_bool("IsOnroad")
     msg['IsOnroad'] = isOnroad
-    msg['CarrotRouteActive'] = True if len(self.navi_points) > 0 else False
+    msg['CarrotRouteActive'] = self.navi_points_active
     msg['ip'] = self.ip_address
     msg['port'] = self.carrot_man_port
     self.controls_active = False
@@ -627,6 +629,7 @@ class CarrotMan:
               #points.append(coord)
             #coords = [c.as_dict() for c in points]
             self.navi_points_start_index = 0
+            self.navi_points_active = True
             print("Received points:", len(self.navi_points))
             #print("Received points:", self.navi_points)
 
