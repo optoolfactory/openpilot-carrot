@@ -124,7 +124,7 @@ def get_path_after_distance(start_index, coordinates, current_position, distance
             total_distance += segment_distance
             path_after_distance.append(coord2)
 
-    return path_after_distance, start_index
+    return path_after_distance, start_index, closest_point
 
 
 def calculate_angle(point1, point2):
@@ -296,10 +296,11 @@ class CarrotMan:
     current_position = (self.carrot_serv.vpPosPointLon, self.carrot_serv.vpPosPointLat)
     heading_deg = self.carrot_serv.bearing
 
-    path, self.navi_points_start_index = get_path_after_distance(self.navi_points_start_index, self.navi_points, current_position, 300)
+    path, self.navi_points_start_index, start_point = get_path_after_distance(self.navi_points_start_index, self.navi_points, current_position, 300)
     relative_coords = []
     if path:
-        relative_coords = gps_to_relative_xy(path, current_position, heading_deg)
+        #relative_coords = gps_to_relative_xy(path, current_position, heading_deg)
+        relative_coords = gps_to_relative_xy(path, start_point, heading_deg)
         # Resample relative_coords at 5m intervals using LineString
         line = LineString(relative_coords)
         resampled_points = []
