@@ -577,7 +577,7 @@ class VCruiseCarrot:
         self._cruise_control(1, -1 if self.v_ego_kph_set < 1 else 0, "Cruise on (lead car)")
 
     elif not CC.enabled and self._brake_pressed_count < 0 and self._gas_pressed_count < 0:
-      if self.v_rel < -0.2 and 0 < self.d_rel < CS.vEgo ** 2 / (2.0 * 2):
+      if self.v_rel < -0.2 and 0 < self.d_rel < CS.vEgo ** 2 / (1.5 * 2):
         self._cruise_control(1, -1, "Cruise on (fcw)")
       elif CS.vEgo > 0.02 and 0 < self.d_rel < 4:
         self._cruise_control(1, -1, "Cruise on (fcw dist)")
