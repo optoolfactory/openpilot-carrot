@@ -293,7 +293,7 @@ class CarrotMan:
     if not self.navi_points_active or not SHAPELY_AVAILABLE:
       haversine_cache.clear()
       curvature_cache.clear()
-      return [],[],[],[]
+      return [],[],300
 
     current_position = (self.carrot_serv.vpPosPointLon, self.carrot_serv.vpPosPointLat)
     heading_deg = self.carrot_serv.bearing
