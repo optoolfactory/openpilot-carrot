@@ -1798,7 +1798,7 @@ public:
     int     nRoadLimitSpeed = 30;
     int     xSpdLimit = 0;
     int     xSignType = -1;
-    QPointF nav_path_vertex[100];
+    QPointF nav_path_vertex[150];
     int     nav_path_vertex_count = 0;
 
     void updateState(UIState *s) {
