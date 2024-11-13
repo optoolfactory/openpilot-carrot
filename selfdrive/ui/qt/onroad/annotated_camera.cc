@@ -6,6 +6,7 @@
 #include <cmath>
 #include <exception>
 #include <iostream>
+#include <execinfo.h>
 
 #include "common/swaglog.h"
 #include "selfdrive/ui/qt/util.h"
@@ -191,7 +192,7 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
 	LOGE("ui_nvg_draw failed: %s", e.what());
     print_stack_trace();
     Params params;
-    params.put_bool("CarrotException", true);
+    params.putBool("CarrotException", true);
   }
   painter.endNativePainting();
   //dmon.draw(painter, rect());
