@@ -124,6 +124,18 @@ mat4 AnnotatedCameraWidget::calcFrameMatrix() {
 void AnnotatedCameraWidget::paintGL() {
 }
 
+void print_stack_trace() {
+    void* buffer[100];
+    int nptrs = backtrace(buffer, 100);
+    char** symbols = backtrace_symbols(buffer, nptrs);
+    if (symbols != nullptr) {
+        for (int i = 0; i < nptrs; i++) {
+            std::cerr << symbols[i] << std::endl;
+        }
+        free(symbols);
+    }
+}
+
 void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
   UIState *s = uiState();
   SubMaster &sm = *(s->sm);
@@ -171,7 +183,14 @@ void AnnotatedCameraWidget::paintEvent(QPaintEvent *event) {
 
   model.draw(painter, rect());
   painter.beginNativePainting();
-  ui_draw(s, &model, width(), height());
+  try {
+      ui_draw(s, &model, width(), height());      
+  } catch (const std::exception &e) {
+	LOGE("ui_nvg_draw failed: %s", e.what());
+    print_stack_trace();
+    Params params;
+    param.put_bool("CarrotException", true);
+  }
   painter.endNativePainting();
   //dmon.draw(painter, rect());
   //hud.updateState(*s);
