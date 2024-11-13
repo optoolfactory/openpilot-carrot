@@ -1854,6 +1854,7 @@ public:
 
                     if (idx >= max_z) z_offset -= 0.05;
                     _model->mapToScreen((x<3.0) ? 5.0 : x, y, lane_lines[2].getZ()[idx] + z_offset, &nav_path_vertex[nav_path_vertex_count++]);
+                    if(nav_path_vertex_count >= 150) break;
                 }
             }
             auto meta = sm["modelV2"].getModelV2().getMeta();
