@@ -351,7 +351,7 @@ class CarrotMan:
 
                 out_speeds[i] = adjusted_speed
 
-            distance_advance = self.sm['carState'].vEgo * 3.6 * 3.0  # Advance distance by 3.0 seconds
+            distance_advance = self.sm['carState'].vEgo * 2.0  # Advance distance by 3.0 seconds
             out_speed = interp(distance_advance, distances, out_speeds)
     else:
         resampled_points = []
