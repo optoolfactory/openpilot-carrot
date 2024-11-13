@@ -1,3 +1,4 @@
+from re import S
 from tkinter import CURRENT
 import numpy as np
 import time
@@ -350,12 +351,8 @@ class CarrotMan:
 
                 out_speeds[i] = adjusted_speed
 
-            if len(out_speeds) > 2:
-              out_speed = out_speeds[2]  # 20M 이후 속도를 적용
-            elif len(out_speeds) > 1:
-              out_speed = out_speeds[1] # 10M 이후 속도를 적용
-            else:
-              out_speed = out_speeds[0] # 0M 이후 속도를 적용
+            distance_advance = self.sm['carState'].vEgo * 3.6 * 3.0  # Advance distance by 3.0 seconds
+            out_speed = interp(distance_advance, distances, out_speeds)
     else:
         resampled_points = []
         curvatures = []
