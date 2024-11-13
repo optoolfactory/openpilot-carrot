@@ -244,11 +244,11 @@ class CarrotMan:
         remote_addr = self.remote_addr
         remote_ip = remote_addr[0] if remote_addr is not None else ""
         vturn_speed = self.carrot_curve_speed(self.sm)
-        coords, distances, route_speeds, speed_distances = self.carrot_navi_route()
+        coords, distances, route_speed = self.carrot_navi_route()
         
         #print("coords=", coords)
         #print("curvatures=", curvatures)
-        self.carrot_serv.update_navi(remote_ip, self.sm, self.pm, vturn_speed, coords, distances, route_speeds, speed_distances)
+        self.carrot_serv.update_navi(remote_ip, self.sm, self.pm, vturn_speed, coords, distances, route_speed)
 
         if frame % 20 == 0 or remote_addr is not None:
           try:
@@ -298,6 +298,8 @@ class CarrotMan:
     current_position = (self.carrot_serv.vpPosPointLon, self.carrot_serv.vpPosPointLat)
     heading_deg = self.carrot_serv.bearing
 
+    distance_interval = 10.0
+    out_speed = 300
     path, self.navi_points_start_index, start_point = get_path_after_distance(self.navi_points_start_index, self.navi_points, current_position, 300)
     relative_coords = []
     if path:
@@ -312,31 +314,49 @@ class CarrotMan:
             point = line.interpolate(current_distance)
             resampled_points.append((point.x, point.y))
             resampled_distances.append(current_distance)
-            current_distance += 10
+            current_distance += distance_interval
 
         curvatures = []
         distances = []
-        speeds = []
         distance = 10.0
         if len(resampled_points) >= 5:
+            # Calculate curvatures and speeds based on curvature
+            speeds = []
             for i in range(len(resampled_points) - 4):
-                distance += 10.0
-                p1 = resampled_points[i]
-                p2 = resampled_points[i + 2]
-                p3 = resampled_points[i + 4]
+                distance += distance_interval
+                p1, p2, p3 = resampled_points[i], resampled_points[i + 2], resampled_points[i + 4]
                 curvature = calculate_curvature(p1, p2, p3)
                 curvatures.append(curvature)
-                if abs(curvature) > 0.001:
-                    speed = interp(abs(curvature), V_CURVE_LOOKUP_BP, V_CRUVE_LOOKUP_VALS)
-                    speeds.append(speed)
-                    distances.append(distance)
+                speed = interp(abs(curvature), V_CURVE_LOOKUP_BP, V_CRUVE_LOOKUP_VALS)
+                speeds.append(speed)
+                distances.append(distance)
+
+            # Apply acceleration limits in reverse to adjust speeds
+            accel_limit = 1.5  # m/s^2
+            accel_limit_kmh = accel_limit * 3.6  # Convert to km/h per second
+            out_speeds = [0] * len(speeds)
+            out_speeds[-1] = speeds[-1]  # Set the last speed as the initial value
+
+            for i in range(len(speeds) - 2, -1, -1):
+                target_speed = speeds[i]
+                next_out_speed = out_speeds[i + 1]
+
+                # Calculate time interval for the current segment based on speed
+                time_interval = distance_interval / (next_out_speed / 3.6) if target_speed > 0 else 0
+
+                # Calculate maximum allowed speed with acceleration limit
+                max_allowed_speed = next_out_speed + (accel_limit_kmh * time_interval)
+                adjusted_speed = min(target_speed, max_allowed_speed)
+
+                out_speeds[i] = adjusted_speed
+            out_speed = out_speeds[0]
     else:
         resampled_points = []
         curvatures = []
         speeds = []
         distances = []
       
-    return resampled_points, resampled_distances, speeds, distances
+    return resampled_points, resampled_distances, out_speed #speeds, distances
 
 
   def make_send_message(self):
@@ -1219,7 +1239,7 @@ class CarrotServ:
 
     return atc_desired, atc_type, atc_speed, atc_dist
 
-  def update_navi(self, remote_ip, sm, pm, vturn_speed, coords, distances, route_speeds, speed_distances):
+  def update_navi(self, remote_ip, sm, pm, vturn_speed, coords, distances, route_speed):
 
     self.update_params()
     if sm.alive['carState'] and sm.alive['selfdriveState']:
@@ -1309,12 +1329,7 @@ class CarrotServ:
       speed_n_sources.append((abs(vturn_speed), "vturn"))
 
     if self.turnSpeedControlMode in [2,3]:
-      #if len(route_speeds) > 0:
-      #  print(" ".join(str(round(speed, 1)) for speed in route_speeds))
-      safe_sec = 2.0
-      decel_rate = 1.2
-      for dist, speed in zip(speed_distances, route_speeds):
-        speed_n_sources.append((self.calculate_current_speed(dist, speed * self.mapTurnSpeedFactor, safe_sec, decel_rate), "route"))
+      speed_n_sources.append((route_speed * self.mapTurnSpeedFactor, "route"))
 
     desired_speed, source = min(speed_n_sources, key=lambda x: x[0])
 
