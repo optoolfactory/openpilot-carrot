@@ -4,6 +4,8 @@
 #include <QPainter>
 #include <algorithm>
 #include <cmath>
+#include <exception>
+#include <iostream>
 
 #include "common/swaglog.h"
 #include "selfdrive/ui/qt/util.h"
