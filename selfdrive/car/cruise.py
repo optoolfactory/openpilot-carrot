@@ -529,7 +529,8 @@ class VCruiseCarrot:
     elif self.model_v_kph + 5 > v_cruise_kph and v_cruise_kph < desired_speed:
       v_cruise_kph += 5
     elif road_limit_kph < self.road_limit_kph:
-      v_cruise_kph = min(v_cruise_kph, road_limit_kph)
+      #v_cruise_kph = min(v_cruise_kph, road_limit_kph)
+      pass
 
     self.road_limit_kph = road_limit_kph
     return v_cruise_kph
