@@ -148,7 +148,7 @@ class CarState(CarStateBase):
 
     # TODO: Find brake pressure
     ret.brake = 0
-    if not self.cp.flags & HyundaiFlags.CC_ONLY_CAR:
+    if not self.CP.flags & HyundaiFlags.CC_ONLY_CAR:
       ret.brakePressed = cp.vl["TCS13"]["DriverOverride"] == 2  # 2 includes regen braking by user on HEV/EV
       ret.brakeHoldActive = cp.vl["TCS15"]["AVH_LAMP"] == 2  # 0 OFF, 1 ERROR, 2 ACTIVE, 3 READY
       ret.parkingBrake = cp.vl["TCS13"]["PBRAKE_ACT"] == 1
