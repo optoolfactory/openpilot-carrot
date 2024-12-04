@@ -137,7 +137,7 @@ class CarState(CarStateBase):
       ret.cruiseState.enabled = cp.vl["TCS13"]["ACC_REQ"] == 1
       ret.cruiseState.standstill = False
       ret.cruiseState.nonAdaptive = False
-    elif not self.cp.flags & HyundaiFlags.CC_ONLY_CAR:
+    elif not self.CP.flags & HyundaiFlags.CC_ONLY_CAR:
       self.main_enabled = ret.cruiseState.available = cp_cruise.vl["SCC11"]["MainMode_ACC"] == 1
       ret.cruiseState.enabled = cp_cruise.vl["SCC12"]["ACCMode"] != 0
       ret.cruiseState.standstill = cp_cruise.vl["SCC11"]["SCCInfoDisplay"] == 4.
@@ -241,7 +241,7 @@ class CarState(CarStateBase):
                         *create_button_events(self.main_buttons[-1], prev_main_buttons, {1: ButtonType.mainCruise})]
 
 
-    if not self.cp.flags & HyundaiFlags.CC_ONLY_CAR:
+    if not self.CP.flags & HyundaiFlags.CC_ONLY_CAR:
       tpms_unit = cp.vl["TPMS11"]["UNIT"] * 0.725 if int(cp.vl["TPMS11"]["UNIT"]) > 0 else 1.
       ret.tpms.fl = tpms_unit * cp.vl["TPMS11"]["PRESSURE_FL"]
       ret.tpms.fr = tpms_unit * cp.vl["TPMS11"]["PRESSURE_FR"]
