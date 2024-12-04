@@ -2449,6 +2449,7 @@ public:
         char top[256] = "", top_left[256] = "", top_right[256] = "";
         char bottom[256] = "", bottom_left[256] = "", bottom_right[256] = "";
 
+        Params params = Params();
         QString str;
 
         // top
@@ -2456,12 +2457,14 @@ public:
         sprintf(top, "%s", str.toStdString().c_str());
         // top_right
         const auto live_torque_params = sm["liveTorqueParameters"].getLiveTorqueParameters();
-        str.sprintf("LT[%.0f]:%s (%.4f/%.4f)",
-            live_torque_params.getTotalBucketPoints(), live_torque_params.getLiveValid() ? "ON" : "OFF", live_torque_params.getLatAccelFactorFiltered(), live_torque_params.getFrictionCoefficientFiltered());
+        const auto live_params = sm["liveParameters"].getLiveParameters();
+        str.sprintf("LT[%.0f,%s](%.2f/%.2f), SR(%.1f,%.1f)",
+            live_torque_params.getTotalBucketPoints(), live_torque_params.getLiveValid() ? "ON" : "OFF",
+            live_torque_params.getLatAccelFactorFiltered(), live_torque_params.getFrictionCoefficientFiltered(),
+            live_params.getSteerRatio(), params.getFloat("CustomSR")/10.0);
         sprintf(top_right, "%s", str.toStdString().c_str());
 
         //top_left
-        Params params = Params();
         QString carName = QString::fromStdString(params.get("CarName"));
         bool longitudinal_control = sm["carParams"].getCarParams().getOpenpilotLongitudinalControl();
         if (params.getInt("HyundaiCameraSCC") > 0) {
