@@ -352,7 +352,7 @@ void OnroadWindow::updateStateText() {
     extern char ip_address[];
     extern QString gitBranch;
     bottomRightLabel->setText(QString(ip_address));
-    bottomLeftLabel->setText(gitBranch);
+    //bottomLeftLabel->setText(gitBranch);
 
 }
 
