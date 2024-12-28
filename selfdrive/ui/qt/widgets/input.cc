@@ -290,8 +290,8 @@ MultiOptionDialog::MultiOptionDialog(const QString &prompt_text, const QStringLi
   int current_selected_button = 0;
   for (const QString &s : l) {
     // 현재 선택된 버튼의 인덱스를 저장
-    if (s == current) current_selected_button = total_buttons;
-
+    if (s == current) current_selected_button = total_button;
+    
     QPushButton *selectionLabel = new QPushButton(s);
     selectionLabel->setCheckable(true);
     selectionLabel->setChecked(s == current);
