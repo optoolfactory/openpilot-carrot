@@ -829,7 +829,7 @@
       "egroup": "LAT",
       "etitle": "LaneLine: AdjustLaneOffset (0)cm",
       "edescr": "",
-      "min": -100,
+      "min": -500,
       "max": 500,
       "default": 0,
       "unit": 10
