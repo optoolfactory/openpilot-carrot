@@ -722,6 +722,11 @@ class CAR(Platforms):
     CarSpecs(mass=2625, wheelbase=3.1, steerRatio=16.02),
     flags=HyundaiFlags.EV | HyundaiFlags.ANGLE_CONTROL,
   )
+  KIA_RAY_EV = HyundaiPlatformConfig(
+    [HyundaiCarDocs("Kia Ray EV 2024", car_parts=CarParts.common([CarHarness.hyundai_h]))],
+    CarSpecs(mass=1290, wheelbase=2.52, steerRatio=14.5),
+    flags=HyundaiFlags.EV | HyundaiFlags.CC_ONLY_CAR,
+  )
 
 
 class Buttons:
