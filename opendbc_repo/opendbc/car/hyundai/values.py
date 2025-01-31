@@ -513,6 +513,14 @@ class CAR(Platforms):
     ],
     # weight from SX and above trims, average of FWD and AWD version, steering ratio according to Kia News https://www.kiamedia.com/us/en/models/sportage/2023/specifications
     CarSpecs(mass=1725, wheelbase=2.756, steerRatio=13.6),
+  )  
+  KIA_SPORTAGE_HEV_5TH_GEN_2025 = HyundaiCanFDPlatformConfig(
+    [
+      HyundaiCarDocs("Kia Sportage Hybrid 2025", car_parts=CarParts.common([CarHarness.hyundai_n])),
+    ],
+    # weight from SX and above trims, average of FWD and AWD version, steering ratio according to Kia News https://www.kiamedia.com/us/en/models/sportage/2023/specifications
+    CarSpecs(mass=1725, wheelbase=2.756, steerRatio=13.6),
+    flags=HyundaiFlags.HYBRID |HyundaiFlags.ANGLE_CONTROL,
   )
   KIA_SORENTO = HyundaiPlatformConfig(
     [
