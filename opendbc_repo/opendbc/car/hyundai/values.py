@@ -728,7 +728,13 @@ class CAR(Platforms):
     CarSpecs(mass=2625, wheelbase=3.1, steerRatio=16.02),
     flags=HyundaiFlags.EV | HyundaiFlags.ANGLE_CONTROL,
   )
-
+  KIA_EV3 = HyundaiCanFDPlatformConfig(
+    [
+      HyundaiCarDocs("Kia EV3 (SV1)", car_parts=CarParts.common([CarHarness.hyundai_k])),
+    ],
+    CarSpecs(mass=1835, wheelbase=2.68, steerRatio=14.02),
+    flags=HyundaiFlags.EV | HyundaiFlags.ANGLE_CONTROL,
+  )
 
 class Buttons:
   NONE = 0
