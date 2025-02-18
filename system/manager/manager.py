@@ -107,7 +107,7 @@ def get_default_params():
     ("CanfdHDA2", "0"),
     ("CanfdDebug", "0"),
     ("SoundVolumeAdjust", "100"),
-    ("SoundVolumeAdjustEngage", "10"),
+    ("SoundVolumeAdjustEngage", "100"),
     ("TFollowGap1", "110"),
     ("TFollowGap2", "120"),
     ("TFollowGap3", "140"),
