@@ -727,6 +727,16 @@ class CAR(Platforms):
     CarSpecs(mass=1515, wheelbase=2.855, steerRatio=15.5, tireStiffnessFactor=0.7),
     flags=HyundaiFlags.HYBRID | HyundaiFlags.LEGACY,
   )
+  KIA_K7_YG_2020 = HyundaiPlatformConfig(
+    [HyundaiCarDocs("Kia K7 2020(YG)", "All", car_parts=CarParts.common([CarHarness.hyundai_b]))],
+    CarSpecs(mass=1555, wheelbase=2.855, steerRatio=14.4),
+    flags=HyundaiFlags.LEGACY | HyundaiFlags.TCU_GEARS,
+  )
+  KIA_K7_HEV_YG_2020 = HyundaiPlatformConfig(
+    [HyundaiCarDocs("Kia K7 Hybrid 2020-", "All", car_parts=CarParts.common([CarHarness.hyundai_c]))],
+    CarSpecs(mass=1680, wheelbase=2.855, steerRatio=14.4),
+    flags=HyundaiFlags.HYBRID | HyundaiFlags.LEGACY,
+  )
   KIA_K9 = HyundaiPlatformConfig(
     [HyundaiCarDocs("Kia K9 2016-2019", "All", car_parts=CarParts.common([CarHarness.hyundai_h]))],
     CarSpecs(mass=2075, wheelbase=3.15, steerRatio=14.5, tireStiffnessFactor=0.7),
@@ -939,7 +949,7 @@ CAN_GEARS = {
   # which message has the gear. hybrid and EV use ELECT_GEAR
   "use_cluster_gears": CAR.with_flags(HyundaiFlags.CLUSTER_GEARS),
   "use_tcu_gears": CAR.with_flags(HyundaiFlags.TCU_GEARS),
-  "send_mdps12": {CAR.GENESIS_G90, CAR.GENESIS_G90_2019, CAR.KIA_K9, CAR.KIA_K7},
+  "send_mdps12": {CAR.GENESIS_G90, CAR.GENESIS_G90_2019, CAR.KIA_K9, CAR.KIA_K7, CAR.KIA_K7_YG_2020},
 }
 
 CANFD_CAR = CAR.with_flags(HyundaiFlags.CANFD)
