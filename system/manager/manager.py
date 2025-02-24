@@ -90,7 +90,7 @@ def get_default_params():
     ("CruiseSpeedUnit", "10"),
     ("MyDrivingMode", "3"),
     ("MyDrivingModeAuto", "0"),
-    ("TrafficLightDetectMode", "2"),
+    ("TrafficLightDetectMode", "0"),
     ("CruiseMaxVals1", "200"),
     ("CruiseMaxVals2", "160"),
     ("CruiseMaxVals3", "130"),
