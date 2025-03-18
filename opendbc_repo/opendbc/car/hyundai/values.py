@@ -773,6 +773,13 @@ class CAR(Platforms):
     CarSpecs(mass=1835, wheelbase=2.68, steerRatio=14.02),
     flags=HyundaiFlags.EV | HyundaiFlags.ANGLE_CONTROL,
   )
+  HYUNDAI_PALISADE_LX3 = HyundaiCanFDPlatformConfig(
+    [
+      HyundaiCarDocs("Hyundai Palisade 2025 (LX3)", "All", video_link="https://youtu.be/TAnDqjF4fDY?t=456", car_parts=CarParts.common([CarHarness.hyundai_h])),
+    ],
+    CarSpecs(mass=2020, wheelbase=2.97, steerRatio=15.6 * 1.15, tireStiffnessFactor=0.63),
+    flags=HyundaiFlags.ANGLE_CONTROL,
+  )
 
 class Buttons:
   NONE = 0
