@@ -614,7 +614,7 @@ class CAR(Platforms):
   )
   KIA_CARNIVAL_4TH_GEN_PE = HyundaiCanFDPlatformConfig(
     [
-      HyundaiCarDocs("Kia Carnival 2022-25", car_parts=CarParts.common([CarHarness.hyundai_a])),
+      HyundaiCarDocs("Kia Carnival 2025", car_parts=CarParts.common([CarHarness.hyundai_a])),
     ],
     CarSpecs(mass=2087, wheelbase=3.09, steerRatio=14.23),
     flags=HyundaiFlags.RADAR_SCC | HyundaiFlags.ANGLE_CONTROL,
