@@ -612,6 +612,20 @@ class CAR(Platforms):
     CarSpecs(mass=2087, wheelbase=3.09, steerRatio=14.23),
     flags=HyundaiFlags.RADAR_SCC | HyundaiFlags.HYBRID,
   )
+  KIA_CARNIVAL_4TH_GEN_PE = HyundaiCanFDPlatformConfig(
+    [
+      HyundaiCarDocs("Kia Carnival 2022-25", car_parts=CarParts.common([CarHarness.hyundai_a])),
+    ],
+    CarSpecs(mass=2087, wheelbase=3.09, steerRatio=14.23),
+    flags=HyundaiFlags.RADAR_SCC | HyundaiFlags.ANGLE_CONTROL,
+  )
+  KIA_CARNIVAL_4TH_GEN_HEV_PE = HyundaiCanFDPlatformConfig(
+    [
+      HyundaiCarDocs("Kia Carnival Hybrid 2025", car_parts=CarParts.common([CarHarness.hyundai_a])),
+    ],
+    CarSpecs(mass=2087, wheelbase=3.09, steerRatio=14.23),
+    flags=HyundaiFlags.RADAR_SCC | HyundaiFlags.HYBRID | HyundaiFlags.ANGLE_CONTROL,
+  )
 
   # Genesis
   GENESIS_GV60_EV_1ST_GEN = HyundaiCanFDPlatformConfig(
