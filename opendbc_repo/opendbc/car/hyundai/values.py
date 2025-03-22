@@ -430,8 +430,13 @@ class CAR(Platforms):
     CarSpecs(mass=2020, wheelbase=2.97, steerRatio=15.6 * 1.15, tireStiffnessFactor=0.63),
     flags=HyundaiFlags.ANGLE_CONTROL,
   )
-
-
+  HYUNDAI_IONIQ_9 = HyundaiCanFDPlatformConfig(
+    [
+      HyundaiCarDocs("Hyundai IONIQ 9", car_parts=CarParts.common([CarHarness.hyundai_q])),
+    ],
+    CarSpecs(mass=2510, wheelbase=3.13, steerRatio=16.02),
+    flags=HyundaiFlags.EV | HyundaiFlags.ANGLE_CONTROL,
+  )
 
 
   # Kia
