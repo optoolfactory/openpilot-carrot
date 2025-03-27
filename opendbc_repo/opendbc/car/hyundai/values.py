@@ -802,7 +802,7 @@ class CAR(Platforms):
   )
   KIA_RAY_EV = HyundaiCanFDPlatformConfig(
     [
-      HyundaiCarDocs("Kia RAY EV ", car_parts=CarParts.common([CarHarness.hyundai_k])),
+      HyundaiCarDocs("Kia RAY EV", car_parts=CarParts.common([CarHarness.hyundai_k])),
     ],
     CarSpecs(mass=1295, wheelbase=2.52, steerRatio=14.02),
     flags=HyundaiFlags.EV | HyundaiFlags.CC_ONLY_CAR,
