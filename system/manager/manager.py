@@ -149,7 +149,7 @@ def get_default_params():
     ("CustomSteerDeltaUp", "0"),
     ("CustomSteerDeltaDown", "0"),
     ("SpeedFromPCM", "1"),
-    ("SteerActuatorDelay", "30"),
+    ("SteerActuatorDelay", "20"),
     ("MaxTimeOffroadMin", "60"),
     ("DisableDM", "1"),
     ("RecordRoadCam", "0"),
