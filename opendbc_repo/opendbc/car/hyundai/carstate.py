@@ -71,6 +71,7 @@ class CarState(CarStateBase):
     self.new_msg_4b4 = None
     self.tcs_info_373 = None
     self.mdps_info = {}
+    self.steer_touch_info = {}
     
     self.cruise_buttons_msg = None
     self.hda2_lfa_block_msg = None
@@ -361,6 +362,8 @@ class CarState(CarStateBase):
     #ret.steerFaultTemporary = False
 
     self.mdps_info = copy.copy(cp.vl["MDPS"])
+    if self.CP.extFlags & HyundaiExtFlags.STEER_TOUCH:
+      self.steer_touch_info = copy.copy(cp.vl["STEER_TOUCH"])
 
     # carrot test
     left_blinker_lamp = cp.vl["BLINKERS"]["LEFT_LAMP"] or cp.vl["BLINKERS"]["LEFT_LAMP_ALT"] 

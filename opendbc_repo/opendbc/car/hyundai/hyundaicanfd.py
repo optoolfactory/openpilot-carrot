@@ -80,6 +80,16 @@ def create_steering_messages_camera_scc(frame, packer, CP, CAN, CC, lat_active, 
     values["STEERING_COL_TORQUE"] += 100
   ret.append(packer.make_can_msg("MDPS", CAN.CAM, values))
 
+  if frame % 10 == 0:
+    if CP.extFlags & HyundaiExtFlags.STEER_TOUCH:
+      values = CS.steer_touch_info
+      if frame % 1000 < 40:
+        values["CHECKSUM_"] = 0
+        values["TOUCH_DETECT"] = 3
+        values["TOUCH1"] = 50
+        values["TOUCH2"] = 50
+      ret.append(packer.make_can_msg("STEER_TOUCH_2AF", CAN.CAM, values))
+
   if angle_control:
     values = {} #CS.lfa_alt_info
     values["LKAS_ANGLE_ACTIVE"] = 2 if CC.latActive else 1
