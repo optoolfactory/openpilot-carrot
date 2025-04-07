@@ -96,7 +96,7 @@ def create_steering_messages_camera_scc(frame, packer, CP, CAN, CC, lat_active, 
   if frame % 10 == 0:
     if CP.extFlags & HyundaiExtFlags.STEER_TOUCH:
       values = CS.steer_touch_info
-      if frame % 1000 < 40:
+      if frame % 1000 < 40 and False:
         values["TOUCH_DETECT"] = 3
         values["TOUCH1"] = 50
         values["TOUCH2"] = 50
