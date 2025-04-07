@@ -106,7 +106,7 @@ def create_steering_messages_camera_scc(frame, packer, CP, CAN, CC, lat_active, 
         #dat = packer.make_can_msg("STEER_TOUCH_2AF", 0, values)[1]
         #print("STEER_TOUCH_2AF1 = ", dat)
         
-      ret.append(packer.make_can_msg("STEER_TOUCH_2AF", CAN.CAM, values))
+      #ret.append(packer.make_can_msg("STEER_TOUCH_2AF", CAN.CAM, values))
 
   if angle_control:
     values = {} #CS.lfa_alt_info
