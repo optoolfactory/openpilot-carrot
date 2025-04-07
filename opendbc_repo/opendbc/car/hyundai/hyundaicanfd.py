@@ -537,7 +537,7 @@ def create_ccnc_messages(CP, packer, CAN, frame, CC, CS, hud_control, disp_angle
         values["FAULT_HDA"] = 0
         """
 
-        if left_lane_warning or right_lane_warning:
+        if (left_lane_warning and not CS.out.leftBlinker) or (right_lane_warning and not CS.out.rightBlinker):
           values["VIBRATE"] = 1
         ret.append(packer.make_can_msg("ADRV_0x162", CAN.ECAN, values))
 
