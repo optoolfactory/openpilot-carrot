@@ -1475,7 +1475,7 @@
       "group": "감속제어",
       "name": "TurnSpeedControlMode",
       "title": "턴속도제어방법",
-      "descr": "0: 속도제어안함,1:비젼,2:비젼+경로,3:경로",
+      "descr": "0: 속도제어안함,1:비젼,2:비젼+경로(TBT),3:경로(항상)",
       "egroup": "SPEED",
       "etitle": "TurnSpeedControlMode",
       "edescr": "",
