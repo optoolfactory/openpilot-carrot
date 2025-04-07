@@ -528,7 +528,7 @@ def create_ccnc_messages(CP, packer, CAN, frame, CC, CS, hud_control, disp_angle
           #values["FF_DETECT"] = 5 if hud_control.leadRelSpeed > -0.1 else 6 # truck
           ff_type = 3 if hud_control.leadRadar == 1 else 9
           values["FF_DETECT"] = ff_type if hud_control.leadRelSpeed > -0.1 else ff_type + 1
-          values["FF_DETECT_LAT"] = hud_control.leadDPath
+          values["FF_DETECT_LAT"] = - hud_control.leadDPath
 
 
         """
