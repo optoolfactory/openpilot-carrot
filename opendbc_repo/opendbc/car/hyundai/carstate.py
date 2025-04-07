@@ -363,7 +363,7 @@ class CarState(CarStateBase):
 
     self.mdps_info = copy.copy(cp.vl["MDPS"])
     if self.CP.extFlags & HyundaiExtFlags.STEER_TOUCH:
-      self.steer_touch_info = copy.copy(cp.vl["STEER_TOUCH"])
+      self.steer_touch_info = copy.copy(cp.vl["STEER_TOUCH_2AF"])
 
     # carrot test
     left_blinker_lamp = cp.vl["BLINKERS"]["LEFT_LAMP"] or cp.vl["BLINKERS"]["LEFT_LAMP_ALT"] 
