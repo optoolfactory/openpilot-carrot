@@ -102,7 +102,9 @@ def create_steering_messages_camera_scc(frame, packer, CP, CAN, CC, lat_active, 
         values["TOUCH2"] = 50
         dat = packer.make_can_msg("STEER_TOUCH_2AF", 0, values)[1]
         values["CHECKSUM_"] = hyundai_crc8(dat[1:7])
+        dat = packer.make_can_msg("STEER_TOUCH_2AF", 0, values)[1]
         print("STEER_TOUCH_2AF1 = ", dat)
+        
       #ret.append(packer.make_can_msg("STEER_TOUCH_2AF", CAN.CAM, values))
 
   if angle_control:
