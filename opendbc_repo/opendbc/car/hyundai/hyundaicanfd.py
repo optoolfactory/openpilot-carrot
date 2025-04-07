@@ -96,17 +96,14 @@ def create_steering_messages_camera_scc(frame, packer, CP, CAN, CC, lat_active, 
   if frame % 10 == 0:
     if CP.extFlags & HyundaiExtFlags.STEER_TOUCH:
       values = CS.steer_touch_info
-      if frame % 1000 < 40 and False:
+      if frame % 1000 < 40:
         values["TOUCH_DETECT"] = 3
         values["TOUCH1"] = 50
         values["TOUCH2"] = 50
         values["CHECKSUM_"] = 0
         dat = packer.make_can_msg("STEER_TOUCH_2AF", 0, values)[1]
         values["CHECKSUM_"] = hyundai_crc8(dat[1:8])
-        #dat = packer.make_can_msg("STEER_TOUCH_2AF", 0, values)[1]
-        #print("STEER_TOUCH_2AF1 = ", dat)
 
-      # 아무래도.. counter문제인듯.. 이렇게 해도 에러가 나네...
       ret.append(packer.make_can_msg("STEER_TOUCH_2AF", CAN.CAM, values))
 
   if angle_control:
