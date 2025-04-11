@@ -302,7 +302,9 @@ def create_acc_control_scc2(packer, CAN, enabled, accel_last, accel, stopping, g
 
   values["TARGET_DISTANCE"] = CS.out.vEgo * 1.0 + 4.0
 
-  values["CRUISE_STANDSTILL"] = 0 # 이건 button 누르라는 display message로 보임.. # 1 if stopping and CS.out.aEgo > -0.1 else 0
+  soft_hold_info = 1 if CS.softHoldActive > 1 and enabled else 0
+
+  values["CRUISE_STANDSTILL"] = soft_hold_info # 이건 button 누르라는 display message로 보임.. # 1 if stopping and CS.out.aEgo > -0.1 else 0
 
   values["NEW_SIGNAL_2"] = 0    # 이것이 켜지면 가속을 안하는듯함.
   values["NEW_SIGNAL_4"] = 9 if hud_control.leadVisible else 0
