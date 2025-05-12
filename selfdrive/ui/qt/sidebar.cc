@@ -123,14 +123,14 @@ void Sidebar::paintEvent(QPaintEvent *event) {
   p.drawPixmap(settings_btn.x(), settings_btn.y(), settings_img);
   p.setOpacity(onroad && flag_pressed ? 0.65 : 1.0);
   //p.drawPixmap(home_btn.x(), home_btn.y(), onroad ? flag_img : home_img);
-  p.drawPixmap(home_btn.x(), home_btn.y(), c3x_img);
+  //p.drawPixmap(home_btn.x(), home_btn.y(), c3x_img);
 
-  const QRect r3 = QRect(0, 967, event->rect().width(), 50);
-  p.setFont(InterFont(30));
-  p.setPen(QColor(0xff, 0xff, 0xff));
-  p.drawText(r3, Qt::AlignCenter, c3x_position);
+  //const QRect r3 = QRect(0, 967, event->rect().width(), 50);
+  //p.setFont(InterFont(30));
+  //p.setPen(QColor(0xff, 0xff, 0xff));
+  //p.drawText(r3, Qt::AlignCenter, c3x_position);
 
-  p.setOpacity(1.0);
+  //p.setOpacity(1.0);
 
   // network
   int x = 58;
