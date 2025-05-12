@@ -73,7 +73,7 @@ def get_default_params():
     ("AutoTurnControlTurnEnd", "6"),
     ("AutoTurnMapChange", "0"),
 
-    ("AutoNaviSpeedCtrlEnd", "7"),
+    ("AutoNaviSpeedCtrlEnd", "9"),
     ("AutoNaviSpeedCtrlMode", "2"),
     ("AutoNaviSpeedBumpTime", "1"),
     ("AutoNaviSpeedBumpSpeed", "35"),
@@ -147,7 +147,7 @@ def get_default_params():
     ("SteerActuatorDelay", "20"),
     ("SteerSmoothSec", "13"),
     ("MaxTimeOffroadMin", "60"),
-    ("DisableDM", "0"),
+    ("DisableDM", "1"),
     ("RecordRoadCam", "0"),
     ("HDPuse", "0"),
     ("CruiseOnDist", "400"),
