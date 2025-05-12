@@ -40,7 +40,7 @@ def get_default_params():
 
     ("LongitudinalPersonalityMax", "3"),
     ("ShowDebugUI", "0"),
-    ("ShowDateTime", "1"),
+    ("ShowDateTime", "0"),
     ("ShowPathEnd", "1"),
     ("ShowCustomBrightness", "100"),
     ("ShowLaneInfo", "1"),
