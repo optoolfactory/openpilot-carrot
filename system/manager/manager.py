@@ -43,7 +43,7 @@ def get_default_params():
     ("ShowDateTime", "0"),
     ("ShowPathEnd", "1"),
     ("ShowCustomBrightness", "100"),
-    ("ShowLaneInfo", "1"),
+    ("ShowLaneInfo", "2"),
     ("ShowRadarInfo", "1"),
     ("ShowDeviceState", "1"),
     ("ShowRouteInfo", "1"),
