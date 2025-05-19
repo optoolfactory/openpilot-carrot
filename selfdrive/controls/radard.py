@@ -45,8 +45,8 @@ class Track:
     self.jLead = j_lead
     
     self.measured = measured   # measured or estimate
-
-    if abs(self.aLead) < 0.5 and abs(j_lead) < 0.5:
+    a_lead_threshold = 0.5 * self.radar_reaction_factor
+    if abs(self.aLead) < a_lead_threshold and abs(j_lead) < 0.5:
       self.aLeadTau.x = _LEAD_ACCEL_TAU * self.radar_reaction_factor
     else:
       self.aLeadTau.update(0.0)
@@ -299,7 +299,7 @@ class VisionTrack:
       self.yRel = float(-lead_msg.y[0])
       dPath = self.yRel + np.interp(self.dRel, md.position.x, md.position.y)
       a_lead_vision = lead_msg.a[0]
-      if self.cnt < 2 or self.prob < 0.99:
+      if self.cnt < 2 or self.prob < 0.97:
         self.vRel = lead_v_rel_pred
         self.vLead = float(v_ego + lead_v_rel_pred)
         self.aLead = a_lead_vision
@@ -309,7 +309,9 @@ class VisionTrack:
         v_rel = self.vRel * (1. - self.alpha) + v_rel * self.alpha
 
         #self.vRel = lead_v_rel_pred if self.mixRadarInfo == 3 else (lead_v_rel_pred + self.vRel) / 2
-        self.vRel = (lead_v_rel_pred + v_rel) / 2
+        model_weight = np.interp(self.prob, [0.97, 1.0], [0.4, 0.0])  # prob가 높으면 v_rel(dRel미분값)에 가중치를 줌.
+        self.vRel = float(lead_v_rel_pred * model_weight + v_rel * (1. - model_weight))
+        #self.vRel = (lead_v_rel_pred + v_rel) / 2
         self.vLead = float(v_ego + self.vRel)
 
         a_lead = (self.vLead - self.vLead_last) / self.radar_ts * 0.2 #0.5 -> 0.2 vel 미분적용을 줄임.
