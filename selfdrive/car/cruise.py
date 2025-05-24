@@ -169,6 +169,7 @@ class VCruiseCarrot:
     self._cruise_speed_min, self._cruise_speed_max = 5, 161
     self._cruise_speed_unit = 10
     self._cruise_button_mode = 2
+    self._lfa_button_mode = 0
 
     self._gas_pressed_count = 0
     self._gas_pressed_count_last = 0
@@ -250,6 +251,7 @@ class VCruiseCarrot:
       self._cruise_speed_unit = self.params.get_int("CruiseSpeedUnit")
       self._paddle_mode = self.params.get_int("PaddleMode")
       self._cruise_button_mode = self.params.get_int("CruiseButtonMode")
+      self._lfa_button_mode = self.params.get_int("LfaButtonMode")
       self.cruiseOnDist = self.params.get_float("CruiseOnDist") * 0.01
 
   def update_v_cruise(self, CS, sm, is_metric):
@@ -507,8 +509,14 @@ class VCruiseCarrot:
         self.params.put_int_nonblocking('LongitudinalPersonality', personality)
         #self.events.append(EventName.personalityChanged)
       elif button_type == ButtonType.lfaButton:
-        self._lat_enabled = not self._lat_enabled
-        self._add_log("Lateral " + "enabled" if self._lat_enabled else "disabled")
+        if self._lfa_button_mode == 0:
+          self._lat_enabled = not self._lat_enabled
+          self._add_log("Lateral " + "enabled" if self._lat_enabled else "disabled")
+        else:
+          if False: #CC.enabled and self._paddle_decel_active:  # 수정필요...
+            self._paddle_decel_active = False
+          else:          
+            self._paddle_decel_active = True
         print("lfaButton")
       elif button_type == ButtonType.cancel:
         self._paddle_decel_active = False
@@ -615,6 +623,7 @@ class VCruiseCarrot:
 
   def _update_cruise_state(self, CS, CC, v_cruise_kph):
     if not CC.enabled:
+      self._pause_auto_speed_up = False
       if self._brake_pressed_count == -1 and self._soft_hold_active > 0:
         self._soft_hold_active = 2
         self._cruise_control(1, -1, "Cruise on (soft hold)")
