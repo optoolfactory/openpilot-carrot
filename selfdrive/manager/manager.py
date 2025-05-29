@@ -23,10 +23,10 @@ from openpilot.system.version import get_build_metadata, terms_version, training
 
 def get_default_params():
   default_params : list[tuple[str, str | bytes]] = [
-    ("CompletedTrainingVersion", "0"),
+    ("CompletedTrainingVersion", "2"),
     ("DisengageOnAccelerator", "0"),
     ("GsmMetered", "1"),
-    ("HasAcceptedTerms", "0"),
+    ("HasAcceptedTerms", "2"),
     ("LanguageSetting", "main_en"),
     ("OpenpilotEnabledToggle", "1"),
     ("LongitudinalPersonality", str(log.LongitudinalPersonality.standard)),
