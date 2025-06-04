@@ -19,6 +19,7 @@ from openpilot.common.params import Params
 from openpilot.common.filter_simple import MyMovingAverage
 from openpilot.system.hardware import PC, TICI
 from openpilot.selfdrive.navd.helpers import Coordinate
+from opendbc.car.common.conversions import Conversions as CV
 
 try:
   from shapely.geometry import LineString
@@ -277,6 +278,8 @@ class CarrotMan:
     self.navd_active = False
 
     self.active_carrot_last = False
+
+    self.is_metric = self.params.get_bool("IsMetric")
 
   def get_broadcast_address(self):
     if PC:
@@ -583,6 +586,81 @@ class CarrotMan:
         print(f"Network error, retrying...: {e}")
         time.sleep(2)
 
+
+  def parse_kisa_data(self, data: bytes):
+    result = {}
+    
+    try:
+      decoded = data.decode('utf-8')
+    except UnicodeDecodeError:
+      print("Decoding error:", data)
+      return result
+
+    parts = decoded.split('/')
+    for part in parts:
+      if ':' in part:
+        key, value = part.split(':', 1)
+        try:
+          result[key] = int(value)
+        except ValueError:
+          result[key] = value
+    return result
+  
+  def kisa_app_thread(self):
+    while True:
+      try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+          sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+          sock.settimeout(10)  # 소켓 타임아웃 설정 (10초)
+          sock.bind(('', 12345))  # UDP 포트 바인딩
+          print("#########kisa_app_thread: UDP thread started...")
+
+          while True:
+            try:
+              #self.remote_addr = None
+              # 데이터 수신 (UDP는 recvfrom 사용)
+              try:
+                data, remote_addr = sock.recvfrom(4096)  # 최대 4096 바이트 수신
+                #print(f"Received data from {self.remote_addr}")
+
+                if not data:
+                  raise ConnectionError("No data received")
+
+                #if self.remote_addr is None:
+                #  print("Connected to: ", remote_addr)
+                #self.remote_addr = remote_addr
+                try:
+                  print(data)
+                  kisa_data = self.parse_kisa_data(data)
+                  self.carrot_serv.update_kisa(kisa_data)
+                  #json_obj = json.loads(data.decode())
+                  #print(json_obj)
+                except Exception as e:
+                  traceback.print_exc()
+                  print(f"kisa_app_thread: json error...: {e}")
+                  print(data)
+
+              except TimeoutError:
+                print("Waiting for data (timeout)...")
+                #self.remote_addr = None
+                time.sleep(1)
+
+              except Exception as e:
+                print(f"kisa_app_thread: error...: {e}")
+                #self.remote_addr = None
+                break
+
+            except Exception as e:
+              print(f"kisa_app_thread: recv error...: {e}")
+              #self.remote_addr = None
+              break
+
+          time.sleep(1)
+      except Exception as e:
+        #self.remote_addr = None
+        print(f"Network error, retrying...: {e}")
+        time.sleep(2)
+
   def make_tmux_data(self):
     try:
       subprocess.run("rm /data/media/tmux.log; tmux capture-pane -pq -S-1000 > /data/media/tmux.log", shell=True, capture_output=True, text=False)
@@ -886,12 +964,15 @@ class CarrotServ:
     self.params_memory = Params("/dev/shm/params")
 
     self.nRoadLimitSpeed = 30
+    self.nRoadLimitSpeed_last = 30
     self.nRoadLimitSpeed_counter = 0
 
     self.active_carrot = 0     ## 1: CarrotMan Active, 2: sdi active , 3: speed decel active, 4: section active, 5: bump active, 6: speed limit active
     self.active_count = 0
     self.active_sdi_count = 0
     self.active_sdi_count_max = 200 # 20 sec
+
+    self.active_kisa_count = 0
 
     self.nSdiType = -1
     self.nSdiSpeedLimit = 0
@@ -1006,6 +1087,8 @@ class CarrotServ:
     self.autoTurnControlTurnEnd = self.params.get_int("AutoTurnControlTurnEnd")
     #self.autoNaviSpeedDecelRate = float(self.params.get_int("AutoNaviSpeedDecelRate")) * 0.01
     self.autoCurveSpeedLowerLimit = int(self.params.get("AutoCurveSpeedLowerLimit"))
+    self.is_metric = self.params.get_bool("IsMetric")
+    self.autoRoadSpeedLimitOffset = self.params.get_int("AutoRoadSpeedLimitOffset")
 
 
   def _update_cmd(self):
@@ -1440,6 +1523,44 @@ class CarrotServ:
       self.debugText = f"{self.nRoadLimitSpeed},{msg_nav.maneuverType},{msg_nav.maneuverModifier} "
       #print(msg_nav)
       #print(f"navInstruction: {self.xTurnInfo}, {self.xDistToTurn}, {self.szTBTMainText}")
+
+  def update_kisa(self, data):
+    self.active_kisa_count = 100
+    if "kisawazecurrentspd" in data:
+      pass
+    if "kisawazeroadspdlimit" in data:
+      road_limit_speed = data["kisawazeroadspdlimit"]
+      if road_limit_speed > 0:
+        print(f"kisawazeroadspdlimit: {road_limit_speed} km/h")
+        if not self.is_metric:
+          road_limit_speed *= CV.MPH_TO_KPH
+        self.nRoadLimitSpeed = road_limit_speed 
+    if "kisawazealert" in data:
+      pass
+    if "kisawazeendalert" in data:
+      pass
+    if "kisawazeroadname" in data:
+      print(f"kisawazeroadname: {data['kisawazeroadname']}")
+      self.szPosRoadName = data["kisawazeroadname"]
+    if "kisawazereportid" in data and "kisawazealertdist" in data:
+      id_str = data["kisawazereportid"]
+      dist_str = data["kisawazealertdist"].lower()
+      import re
+      match = re.search(r'(\d+)', dist_str)
+      distance = int(match.group(1)) if match else 0
+      if not self.is_metric:
+        distance = int(distance * 0.3048)
+      print(f"{id_str}: {distance} m")
+      xSpdType = -1
+      if 'camera' in id_str:
+        xSpdType = 1
+      elif 'police' in id_str:
+        xSpdType = 100
+
+      if xSpdType >= 0:
+        self.xSpdLimit = self.nRoadLimitSpeed
+        self.xSpdDist = distance
+        self.xSpdType =xSpdType 
     
   def update_navi(self, remote_ip, sm, pm, vturn_speed, coords, distances, route_speed):
 
@@ -1452,25 +1573,40 @@ class CarrotServ:
       distanceTraveled = sm['selfdriveState'].distanceTraveled
       delta_dist = distanceTraveled - self.totalDistance
       self.totalDistance = distanceTraveled
-      if CS.speedLimit > 0:
+      if CS.speedLimit > 0 and self.active_carrot <= 1:
         self.nRoadLimitSpeed = CS.speedLimit
     else:
       v_ego = v_ego_kph = 0
       delta_dist = 0
       CS = None
 
+    road_speed_limit_changed = True if self.nRoadLimitSpeed != self.nRoadLimitSpeed_last else False
+    self.nRoadLimitSpeed_last = self.nRoadLimitSpeed
     #self.bearing = self.nPosAngle #self._update_gps(v_ego, sm)
     self.bearing = self._update_gps(v_ego, sm)
 
-    self.xSpdDist = max(self.xSpdDist - delta_dist, 0)
+    self.xSpdDist = max(self.xSpdDist - delta_dist, -1000)
     self.xDistToTurn = max(self.xDistToTurn - delta_dist, 0)
     self.xDistToTurnNext = max(self.xDistToTurnNext - delta_dist, 0)
     self.active_count = max(self.active_count - 1, 0)
     self.active_sdi_count = max(self.active_sdi_count - 1, 0)
-    if self.active_count > 0:
+    self.active_kisa_count = max(self.active_kisa_count - 1, 0)
+    if self.active_kisa_count > 0:
+      self.active_carrot = 2
+      
+    elif self.active_count > 0:
       self.active_carrot = 2 if self.active_sdi_count > 0 else 1
     else:
       self.active_carrot = 0
+
+    if self.autoRoadSpeedLimitOffset >= 0 and self.active_carrot>=2:
+      if self.nRoadLimitSpeed >= 30:
+        road_speed_limit_offset = self.autoRoadSpeedLimitOffset
+        if not self.is_metric:
+          road_speed_limit_offset *= CV.KPH_TO_MPH
+        limit_speed = self.nRoadLimitSpeed + road_speed_limit_offset
+    else:
+      limit_speed = 200
 
     if self.active_carrot <= 1:
       self.xSpdType = self.navType = self.xTurnInfo = self.xTurnInfoNext = -1
@@ -1480,7 +1616,7 @@ class CarrotServ:
       self.nGoPosDist = 0
       self.update_nav_instruction(sm)
 
-    if self.xSpdType < 0 or self.xSpdDist <= 0:
+    if self.xSpdType < 0 or (self.xSpdType != 100 and self.xSpdDist <= 0) or (self.xSpdType == 100 and self.xSpdDist < -250):
       self.xSpdType = -1
       self.xSpdDist = self.xSpdLimit = 0
     if self.xTurnInfo < 0 or self.xDistToTurn < -50:
@@ -1491,13 +1627,13 @@ class CarrotServ:
 
     sdi_speed = 250
     hda_active = False
-    ### 과속카메라, 사고방지턱    
-    if self.xSpdDist > 0 and self.active_carrot > 0:
+    ### 과속카메라, 사고방지턱
+    if (self.xSpdDist > 0 or self.xSpdType == 100) and self.active_carrot > 0:
       safe_sec = self.autoNaviSpeedBumpTime if self.xSpdType == 22 else self.autoNaviSpeedCtrlEnd
       decel = self.autoNaviSpeedDecelRate
       sdi_speed = min(sdi_speed, self.calculate_current_speed(self.xSpdDist, self.xSpdLimit, safe_sec, decel))
       self.active_carrot = 5 if self.xSpdType == 22 else 3
-      if self.xSpdType == 4:
+      if self.xSpdType == 4 or (self.xSpdType == 100 and self.xSpdDist <= 0):
         sdi_speed = self.xSpdLimit
         self.active_carrot = 4
     elif CS is not None and CS.speedLimit > 0 and CS.speedLimitDistance > 0:
@@ -1509,6 +1645,7 @@ class CarrotServ:
       #self.active_carrot = 6
       hda_active = True
 
+    #print(f"sdi_speed: {sdi_speed}, hda_active: {hda_active}, xSpdType: {self.xSpdType}, xSpdDist: {self.xSpdDist}, active_carrot: {self.active_carrot}, v_ego_kph: {v_ego_kph}, nRoadLimitSpeed: {self.nRoadLimitSpeed}")
     ### TBT 속도제어
     atc_desired, self.atcType, self.atcSpeed, self.atcDist = self.update_auto_turn(v_ego*3.6, sm, self.xTurnInfo, self.xDistToTurn, True)
     atc_desired_next, _, _, _ = self.update_auto_turn(v_ego*3.6, sm, self.xTurnInfoNext, self.xDistToTurnNext, False)
@@ -1539,7 +1676,8 @@ class CarrotServ:
     speed_n_sources = [
       (atc_desired, "atc"),
       (atc_desired_next, "atc2"),
-      (sdi_speed, "hda" if hda_active else "bump" if self.xSpdType == 22 else "section" if self.xSpdType == 4 else "cam"),
+      (sdi_speed, "hda" if hda_active else "bump" if self.xSpdType == 22 else "section" if self.xSpdType == 4 else "police" if self.xSpdType == 100 else "cam"),
+      (limit_speed, "road"),
     ]
     if self.turnSpeedControlMode in [1,2]:
       speed_n_sources.append((max(abs(vturn_speed), self.autoCurveSpeedLowerLimit), "vturn"))
@@ -1557,7 +1695,7 @@ class CarrotServ:
       if source != self.source_last:
         self.gas_override_speed = 0
         self.gas_pressed_state = CS.gasPressed
-      if CS.vEgo < 0.1 or desired_speed > 150 or source in ["cam", "section"] or CS.brakePressed:
+      if CS.vEgo < 0.1 or desired_speed > 150 or source in ["cam", "section", "police"] or CS.brakePressed or road_speed_limit_changed:
         self.gas_override_speed = 0
       elif CS.gasPressed and not self.gas_pressed_state:
         self.gas_override_speed = max(v_ego_kph, self.gas_override_speed)
@@ -1867,6 +2005,7 @@ def main():
   carrot_man = CarrotMan()
 
   print(f"CarrotMan {carrot_man}")
+  threading.Thread(target=carrot_man.kisa_app_thread).start()
   while True:
     try:
       carrot_man.carrot_man_thread()

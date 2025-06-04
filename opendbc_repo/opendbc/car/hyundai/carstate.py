@@ -422,6 +422,7 @@ class CarState(CarStateBase):
       self.cruise_info = copy.copy(cp_cruise_info.vl["SCC_CONTROL"])
       ret.brakeHoldActive = cp.vl["ESP_STATUS"]["AUTO_HOLD"] == 1 and cp_cruise_info.vl["SCC_CONTROL"]["ACCMode"] not in (1, 2)
 
+    speed_limit_cam = False
     if self.CP.flags & HyundaiFlags.CAMERA_SCC.value:
       self.cruise_info = copy.copy(cp_cam.vl["SCC_CONTROL"])
       self.lfa_info = copy.copy(cp_cam.vl["LFA"])
@@ -445,10 +446,11 @@ class CarState(CarStateBase):
       if "ADRV_0x160" in cp_cam.vl:
         self.adrv_info_160 = copy.copy(cp_cam.vl.get("ADRV_0x160", {}))
 
-      speed_limit_cam = False
       if "HDA_INFO_4A3" in cp.vl:
         self.hda_info_4a3 = copy.copy(cp.vl.get("HDA_INFO_4A3", {}))
         speedLimit = self.hda_info_4a3["SPEED_LIMIT"]
+        if not self.is_metric:
+          speedLimit = CV.MPH_TO_KPH
         ret.speedLimit = speedLimit if speedLimit < 255 else 0
         if int(self.hda_info_4a3["NEW_SIGNAL_4"]) == 17:
           speed_limit_cam = True
@@ -586,10 +588,9 @@ class CarState(CarStateBase):
         ("SCC_CONTROL", 50),
       ]
 
-    if CP.flags & HyundaiFlags.CANFD_HDA2 and CP.flags & HyundaiFlags.CAMERA_SCC:
+    if CP.extFlags & HyundaiExtFlags.CANFD_4A3:
       pt_messages += [
         ("HDA_INFO_4A3", 5),
-        #("NEW_MSG_4B4", 10),  # G80 hda2개조차량은 안나옴. 원래그런건지.. 어짜피 안쓰는데이터이니깐...
       ]
     #if CP.flags & HyundaiFlags.CANFD_HDA2 and CP.extFlags & HyundaiExtFlags.NAVI_CLUSTER.value and not (CP.extFlags & HyundaiExtFlags.SCC_BUS2.value):
     # 어떤차는 bus2에 있음, 내차는 bus0에 있는데.... 이건 옆두부와 관련이 없나?

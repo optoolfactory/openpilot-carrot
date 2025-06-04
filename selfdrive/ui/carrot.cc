@@ -1024,13 +1024,13 @@ protected:
                 nvgCircle(s->vg, bx, by, 110 / 2 * scale);
                 nvgFillColor(s->vg, COLOR_WHITE);
                 nvgFill(s->vg);
-                sprintf(str, "%d", xSpdLimit);
+                sprintf(str, "%d", (int)(xSpdLimit * ((s->scene.is_metric)?1:KM_TO_MILE) + 0.5));
                 ui_draw_text(s, bx, by + 25 * scale - 6 * (1 - scale), str, 60 * scale, COLOR_BLACK, BOLD, 0.0f, 0.0f);
             }
         }
 	}
-    void drawTurnInfoHud(const UIState* s) {
-      if (s->fb_w < 1200) return;
+    int  drawTurnInfoHud(const UIState* s) {
+      if (s->fb_w < 1200) return -1;
 #ifdef __UI_TEST
         active_carrot = 2;
         nGoPosDist = 500000;
@@ -1054,7 +1054,7 @@ protected:
           ui_fill_rect(s->vg, { tbt_x, 5, 790, s->fb_h - 15 }, COLOR_BLACK_ALPHA(120), 30, 2, &stroke_color);
         }
         if (nGoPosDist > 0 && nGoPosTime > 0);
-        else return;
+        else return -1;
         if (s->scene._current_carrot_display == 3);
         else {
           ui_fill_rect(s->vg, { tbt_x, tbt_y - 60, 790, 240 + 60 }, COLOR_BLACK_ALPHA(120), 30, 2, &stroke_color);
@@ -1116,14 +1116,15 @@ protected:
             sprintf(str, "%.1fkm", nGoPosDist / 1000.);
             ui_draw_text(s, tbt_x + 190 + 120, tbt_y + 130, str, 50, COLOR_WHITE, BOLD);
         }
+        return 0;
     }
 public:
-    void draw(const UIState* s) {
+    int draw(const UIState* s) {
         nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
         SubMaster& sm = *(s->sm);
         if (!sm.alive("modelV2") || !sm.alive("carrotMan") || !sm.alive("carState")) {
             active_carrot = -1;
-            return;
+            return -1;
         }
         const auto carrot_man = sm["carrotMan"].getCarrotMan();
           
@@ -1172,7 +1173,7 @@ public:
 #endif
         drawTurnInfo(s);
         drawSpeedLimit(s);
-        drawTurnInfoHud(s);
+        return drawTurnInfoHud(s);
 
     }
 };
@@ -1607,7 +1608,7 @@ public:
         if (!make_data(s)) return;
         int temp = params.getInt("UseLaneLineSpeedApply");
         if (temp != use_lane_line_speed_apply) {
-            ui_draw_text_a(s, 0, 0, (temp>0)?"LaneMode":"Laneless", 30, COLOR_GREEN, BOLD);
+            ui_draw_text_a(s, 0, 0, (temp>0)?"LaneMode":"Laneless", 30, (temp>0)?COLOR_GREEN:COLOR_YELLOW, BOLD);
             use_lane_line_speed_apply = temp;
         }
         static bool forward = true;
@@ -2104,13 +2105,16 @@ public:
     int     gap_last = 0;
     char    gear_str_last[32] = "";
     int     blink_timer = 0;
+    int     disp_timer = 0;
     float cpuTemp = 0.0f;
     float cpuUsage = 0.0f;
     int   memoryUsage = 0;
     float freeSpace = 0.0f;
+    float voltage = 0.0f;
     void drawHud(UIState* s) {
         int show_device_state = params.getInt("ShowDeviceState");
         blink_timer = (blink_timer + 1) % 16;
+        disp_timer = (disp_timer + 1) % 64; 
         nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
 
         int x = 140;// 120;
@@ -2161,7 +2165,7 @@ public:
         char cruise_speed[32];
         int cruise_x = bx + 170;
         int cruise_y = by + 15;
-        if(longActive) sprintf(cruise_speed, "%.0f", (s->scene.is_metric)?v_cruise: v_cruise * KM_TO_MILE);
+        if(longActive) sprintf(cruise_speed, "%d", (int)((s->scene.is_metric)?v_cruise: v_cruise * KM_TO_MILE + 0.5));
 		    else sprintf(cruise_speed, "--");
         if (strcmp(cruise_speed_last, cruise_speed) != 0) {
 			    strcpy(cruise_speed_last, cruise_speed);
@@ -2178,13 +2182,13 @@ public:
         int apply_y = by - 50;
 
         if (apply_source.length()) {
-            sprintf(apply_speed_str, "%.0f", (s->scene.is_metric)?apply_speed:apply_speed * KM_TO_MILE);
+            sprintf(apply_speed_str, "%d", (int)((s->scene.is_metric)?apply_speed:apply_speed * KM_TO_MILE + 0.5));
             textColor = COLOR_OCHRE;    // apply speed가 작동되면... 색을 바꾸자.
             ui_draw_text(s, apply_x, apply_y, apply_speed_str, 50, textColor, BOLD, 1.0, 5.0, COLOR_BLACK, COLOR_BLACK);
             ui_draw_text(s, apply_x, apply_y - 50, apply_source.toStdString().c_str(), 30, textColor, BOLD, 1.0, 5.0, COLOR_BLACK, COLOR_BLACK);
         }
 		    else if(abs(cruiseTarget - v_cruise) > 0.5) {
-            sprintf(apply_speed_str, "%.0f", (s->scene.is_metric)?cruiseTarget: cruiseTarget * KM_TO_MILE);
+            sprintf(apply_speed_str, "%d", (int)((s->scene.is_metric)?cruiseTarget: cruiseTarget * KM_TO_MILE + 0.5));
 			      ui_draw_text(s, apply_x, apply_y, apply_speed_str, 50, textColor, BOLD, 1.0, 5.0, COLOR_BLACK, COLOR_BLACK);
             ui_draw_text(s, apply_x, apply_y - 50, "eco", 30, textColor, BOLD, 1.0, 5.0, COLOR_BLACK, COLOR_BLACK);
 		    }
@@ -2295,13 +2299,14 @@ public:
             int disp_speed = 0;
             NVGcolor limit_color = COLOR_GREEN_ALPHA(210);
             if (xSpdLimit > 0 && xSignType != 22) {
-                disp_speed = xSpdLimit;
+                disp_speed = (int)(xSpdLimit * ((s->scene.is_metric)?1:KM_TO_MILE) + 0.5);
                 limit_color = (blink_timer <= 8) ? COLOR_RED_ALPHA(210) : COLOR_YELLOW_ALPHA(210);
                 ui_draw_text(s, dx, dy-45, "CAM", 30, COLOR_WHITE, BOLD);
             }
             else {
                 disp_speed = nRoadLimitSpeed;
-                limit_color = (v_ego * 3.6 > nRoadLimitSpeed + 2) ? COLOR_RED_ALPHA(210) : COLOR_WHITE_ALPHA(210);
+		            disp_speed = (int)(disp_speed * ((s->scene.is_metric)?1.0:KM_TO_MILE) + 0.5);
+                limit_color = (v_ego * 3.6 > disp_speed + 2) ? COLOR_RED_ALPHA(210) : COLOR_WHITE_ALPHA(210);
                 ui_draw_text(s, dx, dy - 45, "LIMIT", 30, COLOR_WHITE, BOLD);
             }
 
@@ -2326,10 +2331,18 @@ public:
             ui_draw_text(s, dx, dy + 40, str, 40, COLOR_WHITE, BOLD);
 
             dx += 150;
-            ui_fill_rect(s->vg, { dx - 65, dy - 38, 130, 90 }, mode_color, 15, 2);
-            ui_draw_text(s, dx, dy-5, "DISK", 25, COLOR_WHITE, BOLD);
-            sprintf(str, "%.0f%%", 100 - freeSpace);
-            ui_draw_text(s, dx, dy + 40, str, 40, COLOR_WHITE, BOLD);
+            if (disp_timer < 32) {
+              ui_fill_rect(s->vg, { dx - 65, dy - 38, 130, 90 }, mode_color, 15, 2);
+              ui_draw_text(s, dx, dy - 5, "DISK", 25, COLOR_WHITE, BOLD);
+              sprintf(str, "%.0f%%", 100 - freeSpace);
+              ui_draw_text(s, dx, dy + 40, str, 40, COLOR_WHITE, BOLD);
+            }
+            else {
+              ui_fill_rect(s->vg, { dx - 65, dy - 38, 130, 90 }, mode_color, 15, 2);
+              ui_draw_text(s, dx, dy - 5, "VOLT", 25, COLOR_WHITE, BOLD);
+              sprintf(str, "%.1fV", voltage);
+              ui_draw_text(s, dx, dy + 40, str, 40, COLOR_WHITE, BOLD);
+            }
         }
     }
     void drawDateTime(const UIState* s) {
@@ -2446,6 +2459,27 @@ public:
         ui_draw_text(s, bx - dw, by + 70, get_tpms_text(rl), 40, get_tpms_color(rl), BOLD);
         ui_draw_text(s, bx + dw, by + 70, get_tpms_text(rr), 40, get_tpms_color(rr), BOLD);
     }
+    void drawTpms3(const UIState* s) {
+      nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BOTTOM);
+      SubMaster& sm = *(s->sm);
+      auto car_state = sm["carState"].getCarState();
+
+      int bx = s->fb_w - 125;
+      int by = s->fb_h - 280 / 2 + 15;
+      auto tpms = car_state.getTpms();
+      float fl = tpms.getFl();
+      float fr = tpms.getFr();
+      float rl = tpms.getRl();
+      float rr = tpms.getRr();
+#ifdef __UI_TEST
+      fl = fr = rl = rr = 29;
+#endif
+      int dw = 80;
+      ui_draw_text(s, bx - dw, by - 55, get_tpms_text(fl), 40, get_tpms_color(fl), BOLD);
+      ui_draw_text(s, bx + dw, by - 55, get_tpms_text(fr), 40, get_tpms_color(fr), BOLD);
+      ui_draw_text(s, bx - dw, by + 70, get_tpms_text(rl), 40, get_tpms_color(rl), BOLD);
+      ui_draw_text(s, bx + dw, by + 70, get_tpms_text(rr), 40, get_tpms_color(rr), BOLD);
+    }
     void makeDeviceInfo(const UIState* s) {
         SubMaster& sm = *(s->sm);
         auto deviceState = sm["deviceState"].getDeviceState();
@@ -2469,6 +2503,9 @@ public:
             }
             if (cpu_size > 0) cpuUsage /= cpu_size;
         }
+
+        auto peripheralState = sm["peripheralState"].getPeripheralState();
+        voltage = peripheralState.getVoltage() / 1000.0;
     }
     void drawDeviceInfo(const UIState* s) {
 #ifdef WSL2
@@ -2642,7 +2679,11 @@ void ui_draw(UIState *s, ModelRenderer* model_renderer, int w, int h) {
   drawCarrot.drawDeviceInfo(s);
   drawCarrot.drawTpms2(s);
 
-  drawTurnInfo.draw(s);
+  int draw_turn_info = drawTurnInfo.draw(s);
+
+  if (draw_turn_info < 0) {
+    drawCarrot.drawTpms3(s);
+  }
 
 
   ui_draw_text_a2(s);
