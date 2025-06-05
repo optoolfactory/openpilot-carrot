@@ -2692,6 +2692,7 @@ void ui_draw(UIState *s, ModelRenderer* model_renderer, int w, int h) {
     break;
   }
 
+  drawTurnInfo.draw(s);
 
   ui_draw_text_a2(s);
   ui_draw_alert(s);
