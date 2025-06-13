@@ -57,6 +57,10 @@ class CarInterface(CarInterfaceBase):
       if 0x4a3 in fingerprint[CAN.ECAN]:
         ret.extFlags |= HyundaiExtFlags.CANFD_4A3.value
 
+      if 203 in fingerprint[CAN.CAM]: # LFA_ALT
+        print("##### Anglecontrol detected (LFA_ALT)")
+        ret.flags |= HyundaiFlags.ANGLE_CONTROL.value
+
       # detect HDA2 with ADAS Driving ECU
       if hda2:
         print("$$$CANFD HDA2")
@@ -186,7 +190,9 @@ class CarInterface(CarInterfaceBase):
     else:
       print(f"$$$OenpilotLongitudinalControl = {alpha_long}")
 
-    #ret.radarUnavailable = False  # TODO: canfd... carrot, hyundai cars have radar 
+    #ret.radarUnavailable = False  # TODO: canfd... carrot, hyundai cars have radar
+
+    ret.radarTimeStep = 0.05 if params.get_int("EnableRadarTracks") > 0 else 0.02
 
     ret.pcmCruise = not ret.openpilotLongitudinalControl
     ret.startingState = False # True  # carrot
