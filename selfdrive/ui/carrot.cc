@@ -4,6 +4,11 @@
 #include <cmath>
 #include <limits>
 
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonValue>
+#include <QJsonArray>
+
 //#define __TEST
 //#define __UI_TEST
 
@@ -494,7 +499,8 @@ public:
     }
 };
 
-class ModelDrawer {
+class ModelDrawer : public QObject{
+      Q_OBJECT
 protected:
     template <class T>
     float interp(float x, std::initializer_list<T> x_list, std::initializer_list<T> y_list, bool extrapolate)
@@ -696,11 +702,11 @@ public:
         else if (longActive) {
             if (xState == 3 || xState == 5) {      //XState.e2eStop, XState.e2eStopped
                 if (v_ego < 1.0) {
-                    sprintf(str, "%s", (trafficState >= 1000) ? "신호오류" : "신호대기");
+                    sprintf(str, "%s", (trafficState >= 1000) ? tr("Signal Error").toStdString().c_str(): tr("Signal Ready").toStdString().c_str());
                     ui_draw_text(s, x, disp_y, str, disp_size, COLOR_WHITE, BOLD);
                 }
                 else {
-                    ui_draw_text(s, x, disp_y, "신호감속중", disp_size, COLOR_WHITE, BOLD);
+                    ui_draw_text(s, x, disp_y, tr("Signal slowing").toStdString().c_str(), disp_size, COLOR_WHITE, BOLD);
                 }
 #if 0
                 else if (getStopDist() > 0.5) {
@@ -1596,6 +1602,8 @@ protected:
     int use_lane_line_speed_apply = 0;
 public:
     void draw(const UIState* s, float& pathDrawSeq) {
+        SubMaster& sm = *(s->sm);
+        auto car_state = sm["carState"].getCarState();
         params_count = (params_count + 1) % 20;
         if (params_count == 0) {
             show_path_mode_normal = params.getInt("ShowPathMode");
@@ -1606,7 +1614,7 @@ public:
             show_path_color_cruise_off = params.getInt("ShowPathColorCruiseOff");
         }
         if (!make_data(s)) return;
-        int temp = params.getInt("UseLaneLineSpeedApply");
+        int temp = (int)car_state.getUseLaneLineSpeed();
         if (temp != use_lane_line_speed_apply) {
             ui_draw_text_a(s, 0, 0, (temp>0)?"LaneMode":"Laneless", 30, (temp>0)?COLOR_GREEN:COLOR_YELLOW, BOLD);
             use_lane_line_speed_apply = temp;
@@ -1621,8 +1629,6 @@ public:
             COLOR_WHITE_ALPHA(alpha),         COLOR_BLACK_ALPHA(alpha),
         };
 
-        SubMaster& sm = *(s->sm);
-        auto car_state = sm["carState"].getCarState();
         bool brake_valid = car_state.getBrakeLights();
 
         if (show_path_mode == 0) {
@@ -1838,11 +1844,6 @@ private:
 };
 
 
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonValue>
-#include <QJsonArray>
-
 typedef struct {
     float x, y, d, v, y_rel, v_lat, radar;
 } lead_vertex_data;
@@ -1947,9 +1948,9 @@ public:
             }
             auto meta = sm["modelV2"].getModelV2().getMeta();
             QString desireLog = QString::fromStdString(meta.getDesireLog());
-            sprintf(carrot_man_debug, "model_kph= %d, %s, %dkm/h TBT(%d): %dm, CAM(%d): %dkm/h, %dm, ATC(%s), T(%d)",
-                (int)(velocity.getX()[32] * 3.6),
+            sprintf(carrot_man_debug, "%s, m_kph= %d, %dkm/h TBT(%d): %dm, CAM(%d): %dkm/h, %dm, ATC(%s), T(%d)",
                 desireLog.toStdString().c_str(),
+                (int)(velocity.getX()[32] * 3.6),
                 carrot_man.getDesiredSpeed(),
                 carrot_man.getXTurnInfo(),
                 carrot_man.getXDistToTurn(),
@@ -2045,7 +2046,7 @@ public:
     void drawDebug(UIState* s) {
         if (params.getInt("ShowDebugUI") > 1) {
             nvgTextAlign(s->vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
-            ui_draw_text(s, s->fb_w, s->fb_h - 10, carrot_man_debug, 35, COLOR_WHITE, BOLD, 1.0f, 1.0f);
+            ui_draw_text(s, s->fb_w, s->fb_h - 10, carrot_man_debug, 25, COLOR_WHITE, BOLD, 1.0f, 1.0f);
         }
     }
     void drawNaviPath(UIState* s) {
