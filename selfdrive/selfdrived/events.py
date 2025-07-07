@@ -986,7 +986,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventName.softHold: {
     ET.WARNING: Alert(
-      "SoftHold active",
+      "SoftHold",
       "",
       AlertStatus.normal, AlertSize.small,
       Priority.LOW, VisualAlert.none, AudibleAlert.none, .1),
