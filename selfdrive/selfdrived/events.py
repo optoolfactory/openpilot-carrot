@@ -851,6 +851,11 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.SOFT_DISABLE: soft_disable_alert("프로세스가 작동되지 않고 있습니다"),
   },
 
+  EventName.radarFault: {
+    ET.SOFT_DISABLE: soft_disable_alert("Radar Error: Restart the Car"),
+    ET.NO_ENTRY: NoEntryAlert("Radar Error: Restart the Car"),
+  },
+
   EventName.radarTempUnavailable: {
     ET.SOFT_DISABLE: soft_disable_alert("레이더 오류 : 차량을 재가동하세요"),
     ET.NO_ENTRY: NoEntryAlert("레이더 오류 : 차량을 재가동하세요"),
