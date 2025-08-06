@@ -850,7 +850,13 @@ class CAR(Platforms):
     CarSpecs(mass=2055, wheelbase=2.90, steerRatio=16.0, tireStiffnessFactor=0.65),
     flags=HyundaiFlags.EV | HyundaiFlags.ANGLE_CONTROL,
   )
-
+  KIA_EV4 = HyundaiCanFDPlatformConfig(
+    [
+      HyundaiCarDocs("Kia EV4 (with HDA II) 2025", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))
+    ],
+    CarSpecs(mass=1850, wheelbase=2.82, steerRatio=13.3),
+    flags=HyundaiFlags.EV,
+  )
   KIA_RAY_EV = HyundaiCanFDPlatformConfig(
     [
       HyundaiCarDocs("Kia RAY EV", car_parts=CarParts.common([CarHarness.hyundai_k])),
