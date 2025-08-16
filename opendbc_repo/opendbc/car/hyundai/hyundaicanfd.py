@@ -268,10 +268,13 @@ def create_acc_cancel(packer, CP, CAN, cruise_info_copy):
   return packer.make_can_msg("SCC_CONTROL", CAN.ECAN, values)
 
 def create_lfahda_cluster(packer, CS, CAN, long_active, lat_active):
+
   if CS.lfahda_cluster_info is not None:
     values = {} #
-    values["HDA_ICON"] = 1 if long_active else 0
-    values["LFA_ICON"] = 2 if lat_active else 0
+    values["HDA_CntrlModSta"] = 2 if long_active else 0
+    values["HDA_LFA_SymSta"] = 2 if lat_active else 0
+
+    # 
   else:
     return []
   return [packer.make_can_msg("LFAHDA_CLUSTER", CAN.ECAN, values)]
@@ -320,7 +323,7 @@ def create_acc_control_scc2(packer, CAN, enabled, accel_last, accel, stopping, g
   values["NSCCOper"] = 1 if enabled else 0 # 0: off, 1: Ready, 2: Act, 3: Error Indicator
   values["NSCCOnOff"] = 2  # 0: Default, 1: Off, 2: On, 3: Invalid
   #values["SET_ME_3"] = 0x3  # objRelsped와 충돌
-  values["ACC_ObjLatPos"] = - hud_control.leadDPath
+  #values["ACC_ObjLatPos"] = - hud_control.leadDPath
   values["DriveMode"] = 0 # 0: Default, 1: Comfort Mode, 2:Normal mode, 3:Dynamic mode, reserved
 
   hud_lead_info = 0
@@ -511,7 +514,7 @@ def create_ccnc_messages(CP, packer, CAN, frame, CC, CS, hud_control, disp_angle
         values["NAV_ICON"] = 2 if nav_active else 0
         values["HDA_ICON"] = 5 if hdp_active else 2 if cruise_enabled else 1 if main_enabled else 0
         values["LFA_ICON"] = 5 if hdp_active else 2 if lat_active else 1 if lat_enabled else 0
-        values["LKA_ICON"] = 4 if lat_active else 3 if lat_enabled else 1
+        values["LKA_ICON"] = 4 if lat_active else 3 if lat_enabled else 0
         values["FCA_ALT_ICON"] = 0
 
         if values["ALERTS_2"] in [1, 2, 5]:
