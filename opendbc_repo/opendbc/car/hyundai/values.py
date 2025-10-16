@@ -807,6 +807,10 @@ class CAR(Platforms):
     CarSpecs(mass=2150, wheelbase=3.16, steerRatio=16., tireStiffnessFactor=0.7),
     flags=HyundaiFlags.LEGACY,
   )
+  GENESIS_G90_2ND_GEN = HyundaiCanFDPlatformConfig(
+    [HyundaiCarDocs("Genesis G80 (3.5T Advanced Trim, with HDA II) 2022", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))],
+    CarSpecs(mass=2100, wheelbase=3.18, steerRatio=16.0),
+  )
   HYUNDAI_NEXO = HyundaiPlatformConfig(
     [HyundaiCarDocs("Hyundai Nexo", "All", car_parts=CarParts.common([CarHarness.hyundai_a]))],
     CarSpecs(mass=1885, wheelbase=2.79, steerRatio=15.3, tireStiffnessFactor=0.385),
