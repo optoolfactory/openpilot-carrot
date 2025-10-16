@@ -808,7 +808,7 @@ class CAR(Platforms):
     flags=HyundaiFlags.LEGACY,
   )
   GENESIS_G90_2ND_GEN = HyundaiCanFDPlatformConfig(
-    [HyundaiCarDocs("Genesis G80 (3.5T Advanced Trim, with HDA II) 2022", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))],
+    [HyundaiCarDocs("Genesis G90 (3.5T Advanced Trim, with HDA II) 2022", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))],
     CarSpecs(mass=2100, wheelbase=3.18, steerRatio=16.0),
   )
   HYUNDAI_NEXO = HyundaiPlatformConfig(
