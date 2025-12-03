@@ -19,6 +19,7 @@ from openpilot.common.filter_simple import MyMovingAverage
 from openpilot.system.hardware import PC, TICI
 from openpilot.selfdrive.navd.helpers import Coordinate
 from opendbc.car.common.conversions import Conversions as CV
+from openpilot.common.gps import get_gps_location_service
 
 nav_type_mapping = {
   12: ("turn", "left", 1),
@@ -145,8 +146,11 @@ class CarrotServ:
     self.bearing = 0.0
     self.gps_valid = False
 
-    self.gps_accuracy_phone = 0.0
+    self.phone_gps_accuracy = 0.0
     self.gps_accuracy_device = 0.0
+    self.phone_latitude = 0.0
+    self.phone_longitude = 0.0
+    self.phone_gps_frame = 0
 
     self.totalDistance = 0
     self.xSpdLimit = 0
@@ -540,24 +544,24 @@ class CarrotServ:
     }
 
     sdi_zh = {
-        0: "信号测速/闯灯取缔",
+        0: "信号测速/闯灯拍照",
         1: "固定测速摄像头",
         2: "区间测速开始",
         3: "区间测速结束",
         4: "区间测速中",
-        5: "路口压线取缔摄像头",
-        6: "闯红灯取缔",
-        7: "移动测速摄像头",
-        8: "固定测速区（箱式）",
+        5: "路口压线摄像头",
+        6: "闯红灯拍照",
+        7: "流动测速摄像头",
+        8: "测速拍照",
         9: "公交专用车道区间",
-        10: "可变/潮汐车道取缔",
-        11: "应急车道监控点",
+        10: "可变/潮汐车道拍照",
+        11: "应急车道拍照",
         12: "禁止加塞",
         13: "交通信息采集点",
         14: "治安监控",
         15: "超载车辆风险区",
-        16: "装载不当取缔",
-        17: "违停取缔点",
+        16: "装载不当拍照",
+        17: "违停拍照点",
         18: "单行道",
         19: "铁路道口",
         20: "学校区域开始",
@@ -566,7 +570,7 @@ class CarrotServ:
         23: "LPG加气站",
         24: "隧道区间",
         25: "服务区",
-        26: "收费站",
+        26: "ETC计费拍照",
         27: "多雾路段",
         28: "危险品区域",
         29: "事故多发路段",
@@ -605,7 +609,7 @@ class CarrotServ:
         62: "目的地在对面",
         63: "瞌睡停车区",
         64: "老旧柴油车管制",
-        65: "隧道内变道取缔",
+        65: "隧道内变道拍照",
         66: "",
     }
 
@@ -641,15 +645,14 @@ class CarrotServ:
       self.xSpdType = -1
       self.xSpdDist = 0
 
-  def _update_gps(self, v_ego, sm):
-    llk = 'liveLocationKalman'
-    location = sm[llk]
+  def _update_gps(self, v_ego, sm, gps_service):
+    gps = sm[gps_service]
     #print(f"location = {sm.valid[llk]}, {sm.updated[llk]}, {sm.recv_frame[llk]}, {sm.recv_time[llk]}")
     if not sm.updated['carState'] or not sm.updated['carControl']: # or not sm.updated[llk]:
       return self.nPosAngle
     CS = sm['carState']
     CC = sm['carControl']
-    self.gps_valid = (location.status == log.LiveLocationKalman.Status.valid) and location.positionGeodetic.valid
+    self.gps_valid = sm.updated[gps_service] and gps.hasFix
 
     now = time.monotonic()
     gps_updated_phone = (now - self.last_update_gps_time_phone) < 3
@@ -658,8 +661,8 @@ class CarrotServ:
     bearing = self.nPosAngle
     if gps_updated_phone:
       self.bearing_offset = 0.0
-    elif sm.valid[llk]:
-      bearing = math.degrees(location.calibratedOrientationNED.value[2])
+    elif self.gps_valid:
+      bearing = self.nPosAngle = gps.bearingDeg
       if self.gps_valid:
         self.bearing_offset = 0.0
       elif self.active_carrot > 0:
@@ -669,13 +672,13 @@ class CarrotServ:
     #print(f"bearing = {bearing:.1f}, posA=={self.nPosAngle:.1f}, posP=={self.nPosAnglePhone:.1f}, offset={self.bearing_offset:.1f}, {gps_updated_phone}, {gps_updated_navi}")
     gpsDelayTimeAdjust = 0.0
     if gps_updated_navi:
-      gpsDelayTimeAdjust = 1.0
+      gpsDelayTimeAdjust = 0 #1.0
 
     external_gps_update_timedout = not (gps_updated_phone or gps_updated_navi)
     #print(f"gps_valid = {self.gps_valid}, bearing = {bearing:.1f}, pos = {location.positionGeodetic.value[0]:.6f}, {location.positionGeodetic.value[1]:.6f}")
     if self.gps_valid and external_gps_update_timedout:    # 내부GPS가 자동하고 carrotman으로부터 gps신호가 없는경우
-      self.vpPosPointLatNavi = location.positionGeodetic.value[0]
-      self.vpPosPointLonNavi = location.positionGeodetic.value[1]
+      self.vpPosPointLatNavi = gps.latitude
+      self.vpPosPointLonNavi = gps.longitude
       self.last_calculate_gps_time = now #sm.recv_time[llk]
     elif gps_updated_navi:  # carrot navi로부터 gps신호가 수신되는 경우..
       if abs(self.bearing_measured - bearing) < 0.1:
@@ -853,7 +856,7 @@ class CarrotServ:
         self.xSpdDist = distance
         self.xSpdType =xSpdType
 
-  def update_navi(self, remote_ip, sm, pm, vturn_speed, coords, distances, route_speed):
+  def update_navi(self, remote_ip, sm, pm, vturn_speed, coords, distances, route_speed, gps_service):
 
     self.debugText = ""
     self.update_params()
@@ -874,7 +877,7 @@ class CarrotServ:
     road_speed_limit_changed = True if self.nRoadLimitSpeed != self.nRoadLimitSpeed_last else False
     self.nRoadLimitSpeed_last = self.nRoadLimitSpeed
     #self.bearing = self.nPosAngle #self._update_gps(v_ego, sm)
-    self.bearing = self._update_gps(v_ego, sm)
+    self.bearing = self._update_gps(v_ego, sm, gps_service)
 
     self.xSpdDist = max(self.xSpdDist - delta_dist, -1000)
     self.xDistToTurn = self.xDistToTurn - delta_dist
@@ -979,14 +982,9 @@ class CarrotServ:
     if self.turnSpeedControlMode == 2:
       if -500 < self.xDistToTurn < 500:
         speed_n_sources.append((route_speed, "route"))
-    elif self.turnSpeedControlMode in [3, 4]:
+    elif self.turnSpeedControlMode == 3:
       speed_n_sources.append((route_speed, "route"))
       #speed_n_sources.append((self.calculate_current_speed(dist, speed * self.mapTurnSpeedFactor, 0, 1.2), "route"))
-
-
-    model_turn_speed = max(sm['modelV2'].meta.modelTurnSpeed, self.autoCurveSpeedLowerLimit)
-    if model_turn_speed < 200 and abs(vturn_speed) < 120:
-      speed_n_sources.append((model_turn_speed, "model"))
 
     desired_speed, source = min(speed_n_sources, key=lambda x: x[0])
 
@@ -1218,7 +1216,7 @@ class CarrotServ:
         if nRoadLimitSpeed > 200:
           nRoadLimitSpeed = (nRoadLimitSpeed - 20) / 10
         elif nRoadLimitSpeed == 120:
-          nRoadLimitSpeed = 30
+          nRoadLimitSpeed = 115 # 120 -> 115 fix bug
       else:
         nRoadLimitSpeed = 30
       #self.nRoadLimitSpeed = nRoadLimitSpeed
@@ -1286,15 +1284,20 @@ class CarrotServ:
     # 3초간 navi 데이터가 없으면, phone gps로 업데이트
     if "latitude" in json:
       self.nPosAnglePhone = float(json.get("heading", self.nPosAngle))
+      self.phone_latitude = float(json.get("latitude", self.vpPosPointLatNavi))
+      self.phone_longitude = float(json.get("longitude", self.vpPosPointLonNavi))
+      self.phone_gps_accuracy = float(json.get("accuracy", 0))
+      if self.phone_gps_accuracy < 15.0:
+        self.phone_gps_frame += 1
       if (now - self.last_update_gps_time_navi) > 3.0:
-        self.vpPosPointLatNavi = float(json.get("latitude", self.vpPosPointLatNavi))
-        self.vpPosPointLonNavi = float(json.get("longitude", self.vpPosPointLonNavi))
+        self.vpPosPointLatNavi = self.phone_latitude
+        self.vpPosPointLonNavi = self.phone_longitude
+
         self.nPosAngle = self.nPosAnglePhone
         # self.nPosSpeed = self.ve # TODO speed from v_ego
-        self.last_update_gps_time_phone = self.last_calculate_gps_time = now
-        self.gps_accuracy_phone = float(json.get("accuracy", 0))
+        self.last_update_gps_time_phone = self.last_calculate_gps_time = now        
         self.nPosSpeed = float(json.get("gps_speed", 0))
-        print(f"phone gps: {self.vpPosPointLatNavi}, {self.vpPosPointLonNavi}, {self.gps_accuracy_phone}, {self.nPosSpeed}")
+        print(f"phone gps: {self.vpPosPointLatNavi}, {self.vpPosPointLonNavi}, {self.phone_gps_accuracy}, {self.nPosSpeed}")
 
 
 import traceback

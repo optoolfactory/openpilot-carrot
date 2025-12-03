@@ -88,8 +88,15 @@ function launch {
     echo "shapely installing."
     pip install shapely
   fi
+  if python -c "import kaitaistruct" > /dev/null 2>&1; then
+    echo "kaitaistruct already installed."
+  else
+    echo "kaitaistruct installing."
+    pip install kaitaistruct
+  fi
 
   # events language init
+  #LANG=$(cat ${PARAMS_ROOT}/d/LanguageSetting)
   LANG=$(cat /data/params/d/LanguageSetting)
   EVENTSTAT=$(git status)
 
@@ -97,6 +104,10 @@ function launch {
   if [ "${LANG}" = "main_ko" ] && [[ ! "${EVENTSTAT}" == *"modified:   selfdrive/controls/lib/events.py"* ]]; then
     cp -f $DIR/selfdrive/selfdrived/events.py $DIR/scripts/add/events_en.py
     cp -f $DIR/scripts/add/events_ko.py $DIR/selfdrive/selfdrived/events.py
+  elif [ "${LANG}" = "main_zh-CHS" ] && [[ ! "${EVENTSTAT}" == *"modified:   selfdrive/controls/lib/events.py"* ]]; then
+    # Backup current events.py (assumed English) and install Simplified Chinese events
+    cp -f $DIR/selfdrive/selfdrived/events.py $DIR/scripts/add/events_en.py
+    cp -f $DIR/scripts/add/events_zh.py $DIR/selfdrive/selfdrived/events.py
   elif [ "${LANG}" = "main_en" ] && [[ "${EVENTSTAT}" == *"modified:   selfdrive/controls/lib/events.py"* ]]; then
     cp -f $DIR/scripts/add/events_en.py $DIR/selfdrive/selfdrived/events.py
   fi
