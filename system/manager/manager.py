@@ -183,6 +183,7 @@ def get_default_params():
     ("SteerRatioRate", "100"),
     ("NNFF", "0"),
     ("NNFFLite", "0"),
+    ("HardwareC3xLite", "0"),
   ]
   return default_params
 
