@@ -138,7 +138,7 @@ procs = [
   PythonProcess("carrot_man", "selfdrive.carrot.carrot_man", always_run),#, enabled=not PC),
 
   # c3x lite
-  PythonProcess("beep", "selfdrive.controls.beep", c3x_lite, enabled=TICI),
+  #PythonProcess("beep", "selfdrive.controls.beep", c3x_lite, enabled=TICI),
 ]
 
 managed_processes = {p.name: p for p in procs}
