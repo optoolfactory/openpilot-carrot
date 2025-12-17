@@ -335,6 +335,7 @@ std::unordered_map<std::string, uint32_t> keys = {
     {"CustomSR", PERSISTENT},
     {"SteerRatioRate", PERSISTENT},
     {"SoftRestartTriggered", CLEAR_ON_MANAGER_START},
+    {"HardwareC3xLite", PERSISTENT},
 };
 
 } // namespace
