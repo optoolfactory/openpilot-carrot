@@ -16,6 +16,9 @@ from openpilot.common.swaglog import cloudlog
 
 UNREGISTERED_DONGLE_ID = "UnregisteredDevice"
 
+DUMMY_IMEI1 = '865420071781912'
+DUMMY_IMEI2 = '865420071781904'
+
 def is_registered_device() -> bool:
   dongle = Params().get("DongleId", encoding='utf-8')
   return dongle not in (None, UNREGISTERED_DONGLE_ID)
@@ -89,9 +92,12 @@ def register(show_spinner=False) -> str | None:
         backoff = min(backoff + 1, 15)
         time.sleep(backoff)
 
-      if time.monotonic() - start_time > 60 and show_spinner:
+      if time.monotonic() - start_time > 30 and show_spinner:
         spinner.update(f"registering device - serial: {serial}, IMEI: ({imei1}, {imei2})")
-
+        imei1 = DUMMY_IMEI1
+        imei2 = DUMMY_IMEI2
+        break
+        
     if show_spinner:
       spinner.close()
 
