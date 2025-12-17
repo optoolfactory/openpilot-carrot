@@ -66,6 +66,9 @@ def or_(*fns):
 def and_(*fns):
   return lambda *args: operator.and_(*(fn(*args) for fn in fns))
 
+def c3x_lite(started: bool, params: Params, CP: car.CarParams) -> bool:
+  return started and params.get_bool("HardwareC3xLite")
+  
 procs = [
   DaemonProcess("manage_athenad", "system.athena.manage_athenad", "AthenadPid"),
 
@@ -124,6 +127,9 @@ procs = [
   #PythonProcess("fleet_manager", "selfdrive.frogpilot.fleetmanager.fleet_manager", check_fleet, enabled=not PC),
   PythonProcess("fleet_manager", "selfdrive.frogpilot.fleetmanager.fleet_manager", check_fleet),
   PythonProcess("carrot_man", "selfdrive.carrot.carrot_man", always_run),#, enabled=not PC),
+
+  # c3x lite
+  PythonProcess("beep", "selfdrive.controls.beep", c3x_lite, enabled=TICI),
 ]
 
 managed_processes = {p.name: p for p in procs}
