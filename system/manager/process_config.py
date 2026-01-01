@@ -75,8 +75,8 @@ def enable_dm(started, params, CP: car.CarParams) -> bool:
 def enable_connect(started, params, CP: car.CarParams) -> bool:
   return params.get_int("EnableConnect") > 0
 
-def c3x_lite(started: bool, params: Params, CP: car.CarParams) -> bool:
-  return started and params.get_bool("HardwareC3xLite")
+#def c3x_lite(started: bool, params: Params, CP: car.CarParams) -> bool:
+  #return started and params.get_bool("HardwareC3xLite")
 
 procs = [
   DaemonProcess("manage_athenad", "system.athena.manage_athenad", "AthenadPid"),
