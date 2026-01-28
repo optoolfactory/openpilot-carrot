@@ -78,13 +78,13 @@ def enable_connect(started, params, CP: car.CarParams) -> bool:
 def enable_xiaoge_data(started, params, CP: car.CarParams) -> bool:
   return params.get_bool("ShareData")
 
-def c3x_lite(started: bool, params: Params, CP: car.CarParams) -> bool:
-  return started and params.get_bool("HardwareC3xLite")
+#def c3x_lite(started: bool, params: Params, CP: car.CarParams) -> bool:
+  #return started and params.get_bool("HardwareC3xLite")
 
 procs = [
   DaemonProcess("manage_athenad", "system.athena.manage_athenad", "AthenadPid"),
 
-  NativeProcess("loggerd", "system/loggerd", ["./loggerd"], logging),
+  #NativeProcess("loggerd", "system/loggerd", ["./loggerd"], logging),
   NativeProcess("encoderd", "system/loggerd", ["./encoderd"], only_onroad),
   NativeProcess("stream_encoderd", "system/loggerd", ["./encoderd", "--stream"], notcar),
   PythonProcess("logmessaged", "system.logmessaged", always_run),
@@ -143,7 +143,7 @@ procs = [
   #Xiaoge data broadcaster (conditional on ShareData param)
   PythonProcess("xiaoge_data", "selfdrive.carrot.xiaoge_data", enable_xiaoge_data),
   # c3x lite
-  PythonProcess("beep", "selfdrive.controls.beep", c3x_lite, enabled=TICI),
+  #PythonProcess("beep", "selfdrive.controls.beep", c3x_lite, enabled=TICI),
 ]
 
 managed_processes = {p.name: p for p in procs}
