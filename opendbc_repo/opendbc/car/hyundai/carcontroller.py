@@ -8,6 +8,8 @@ from opendbc.car.hyundai.hyundaicanfd import CanBus
 from opendbc.car.hyundai.values import HyundaiFlags, Buttons, CarControllerParams, CAR
 from opendbc.car.interfaces import CarControllerBase
 
+from opendbc.carrot.hyundai.carrot_carcontroller import CarrotCarController
+
 VisualAlert = structs.CarControl.HUDControl.VisualAlert
 LongCtrlState = structs.CarControl.Actuators.LongControlState
 
@@ -42,7 +44,7 @@ def process_hud_alert(enabled, fingerprint, hud_control):
   return sys_warning, sys_state, left_lane_warning, right_lane_warning
 
 
-class CarController(CarControllerBase):
+class CarController(CarrotCarController):
   def __init__(self, dbc_names, CP):
     super().__init__(dbc_names, CP)
     self.CAN = CanBus(CP)
@@ -54,6 +56,8 @@ class CarController(CarControllerBase):
     self.apply_torque_last = 0
     self.car_fingerprint = CP.carFingerprint
     self.last_button_frame = 0
+    
+    self._carrot_init(CP)
 
   def update(self, CC, CS, now_nanos):
     actuators = CC.actuators
@@ -100,7 +104,11 @@ class CarController(CarControllerBase):
 
     # *** CAN/CAN FD specific ***
     if self.CP.flags & HyundaiFlags.CANFD:
-      can_sends.extend(self.create_canfd_msgs(apply_steer_req, apply_torque, set_speed_in_units, accel,
+      if self.CP.flags & HyundaiFlags.CAMERA_SCC:
+        can_sends.extend(self._carrot_canfd_camera_scc_msg(apply_steer_req, apply_torque, accel, stopping, hud_control, CS, CC,
+                                                         set_speed_in_units, actuators))
+      else:
+        can_sends.extend(self.create_canfd_msgs(apply_steer_req, apply_torque, set_speed_in_units, accel,
                                               stopping, hud_control, CS, CC))
     else:
       can_sends.extend(self.create_can_msgs(apply_steer_req, apply_torque, torque_fault, set_speed_in_units, accel,
@@ -109,6 +117,7 @@ class CarController(CarControllerBase):
     new_actuators = actuators.as_builder()
     new_actuators.torque = apply_torque / self.params.STEER_MAX
     new_actuators.torqueOutputCan = apply_torque
+    new_actuators.steeringAngleDeg = float(self.apply_angle_last)
     new_actuators.accel = accel
 
     self.frame += 1

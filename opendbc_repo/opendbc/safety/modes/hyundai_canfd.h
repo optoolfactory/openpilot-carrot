@@ -52,6 +52,86 @@ static unsigned int hyundai_canfd_get_lka_addr(void) {
   return hyundai_canfd_lka_steering_alt ? 0x110U : 0x50U;
 }
 
+#define BLOCK_MULT_NUM 4U
+#define BLOCK_MULT_DEN 2U
+typedef struct {
+  uint16_t addr;
+  uint16_t hz;         // 0이면 사용 안함
+  uint32_t last_tx_us; // "해당 bus로" 마지막 TX 시각
+} TxRule;
+
+static TxRule g_tx_bus0[] = {
+  {  80, 100, 0 },   // 0x050, LKAS
+  {  81, 100, 0 },   // 0x051, ADRV_0x51
+  { 272, 100, 0 },   // 0x110, LKAS_ALT
+  { 298, 100, 0 },   // 0x12A, LFA
+  { 352,  50, 0 },   // 0x160, ADRV_0x160
+  { 353,  20, 0 },   // 0x161, ADRV_0x161
+  { 354,  20, 0 },   // 0x162, CCNC_0x162
+  { 442,  20, 0 },   // 0x1BA, BLINDSPOTS_REAR_CORNERS
+  { 485,  20, 0 },   // 0x1E5, BLINDSPOTS_FRONT_CORNER_1
+  { 416,  50, 0 },   // 0x1A0, SCC_CONTROL
+  { 437,  20, 0 },   // 0x1B5, CCNC_0x1B5
+  { 506,  10, 0 },   // 0x1FA, CLUSTER_SPEED_LIMIT
+  { 474,   1, 0 },   // 0x1DA, ADRV_0x1DA
+  { 480,  20, 0 },   // 0x1E0, LFAHDA_CLUSTER
+  { 490,  20, 0 },   // 0x1EA, ADRV_0x1EA
+  { 512,  20, 0 },   // 0x200, ADRV_0x200
+  { 676,  20, 0 },   // 0x2A4, CAM_0x2A4
+  { 866,  10, 0 },   // 0x362, CAM_0x362
+  { 837,   5, 0 },   // 0x345, ADRV_0x345
+  {1402,  10, 0 },   // 0x572,
+  { 908,   5, 0 },
+  {1848,  10, 0 },
+  {1204,  10, 0 },
+  { 203, 100, 0 },   // 0xCB, LFA_ALT
+};
+
+static TxRule g_tx_bus2[] = {
+  { 0x4A3,  5, 0 },  // 1187, HDA_INFO_4A3
+  {   373, 50, 0 },  // 0x175, TCS
+  {   506, 10, 0 },  // 0x1FA, CLUSTER_SPEED_LIMIT
+  {   463, 50, 0 },  // 0x1CF, CRUISE_BUTTONS
+  {   426, 50, 0 },  // 0x1AA, CRUISE_BUTTONS_ALT
+  {   234,100, 0 },  // 0x0EA, MDPS
+  {   687, 10, 0 },  // 0x2AF, STEER_TOUCH_2AF
+};
+
+static inline uint32_t arr_len0(void) { return (uint32_t)(sizeof(g_tx_bus0)/sizeof(g_tx_bus0[0])); }
+static inline uint32_t arr_len2(void) { return (uint32_t)(sizeof(g_tx_bus2)/sizeof(g_tx_bus2[0])); }
+
+static TxRule *find_rule(TxRule *arr, uint32_t n, uint16_t addr) {
+  for (uint32_t i = 0; i < n; i++) {
+    if (arr[i].addr == addr) return &arr[i];
+  }
+  return (TxRule *)0;
+}
+static uint32_t block_window_us(const TxRule *r) {
+  if (!r || r->hz == 0U) return 0U;
+  uint32_t period = 1000000U / (uint32_t)r->hz;
+  return (period * BLOCK_MULT_NUM) / BLOCK_MULT_DEN;  // 2.x
+}
+
+static bool should_block_rx(uint8_t to_bus, uint16_t addr, uint32_t now_us) {
+  TxRule *r = 0;
+
+  if (to_bus == 0U) {
+    r = find_rule(g_tx_bus0, arr_len0(), addr);
+  } else if (to_bus == 2U) {
+    r = find_rule(g_tx_bus2, arr_len2(), addr);
+  } else {
+    return false;
+  }
+
+  if (!r || r->last_tx_us == 0U) return false;
+
+  uint32_t win = block_window_us(r);
+  if (win == 0U) return false;
+
+  uint32_t age = now_us - r->last_tx_us;   // uint32 wrap 안전(일반적인 panda 타이머)
+  return age <= win; // win 이내면 block
+}
+
 static uint8_t hyundai_canfd_get_counter(const CANPacket_t *msg) {
   uint8_t ret = 0;
   if (GET_LEN(msg) == 8U) {
@@ -69,8 +149,10 @@ static uint32_t hyundai_canfd_get_checksum(const CANPacket_t *msg) {
 
 static void hyundai_canfd_rx_hook(const CANPacket_t *msg) {
 
-  const unsigned pt_bus = hyundai_canfd_lka_steering ? 1U : 0U;
-  const unsigned int scc_bus = hyundai_camera_scc ? 2U : pt_bus;
+  const unsigned pt_bus1 = hyundai_canfd_lka_steering ? 1U : 0U;
+  const unsigned int scc_bus = hyundai_camera_scc ? 2U : pt_bus1;
+  
+  unsigned pt_bus = hyundai_camera_scc ? 0U : pt_bus1;
 
   if (msg->bus == pt_bus) {
     // driver torque
@@ -124,6 +206,8 @@ static void hyundai_canfd_rx_hook(const CANPacket_t *msg) {
     }
   }
 
+  gas_pressed = brake_pressed = false;
+
   if (msg->bus == scc_bus) {
     // cruise state
     if ((msg->addr == 0x1a0U) && !hyundai_longitudinal) {
@@ -162,21 +246,23 @@ static bool hyundai_canfd_tx_hook(const CANPacket_t *msg) {
     bool steer_req = GET_BIT(msg, 52U);
 
     if (steer_torque_cmd_checks(desired_torque, steer_req, HYUNDAI_CANFD_STEERING_LIMITS)) {
-      tx = false;
+      //tx = false;
     }
   }
-
+#if 0
   // cruise buttons check
   if (msg->addr == 0x1cfU) {
     int button = msg->data[2] & 0x7U;
     bool is_cancel = (button == HYUNDAI_BTN_CANCEL);
     bool is_resume = (button == HYUNDAI_BTN_RESUME);
+    bool is_set = (button == HYUNDAI_BTN_SET);
 
-    bool allowed = (is_cancel && cruise_engaged_prev) || (is_resume && controls_allowed);
+    bool allowed = (is_cancel && cruise_engaged_prev) || (is_resume && controls_allowed) || (is_set && controls_allowed);
     if (!allowed) {
       tx = false;
     }
   }
+#endif
 
   // UDS: only tester present ("\x02\x3E\x80\x00\x00\x00\x00\x00") allowed on diagnostics address
   if (((msg->addr == 0x730U) && hyundai_canfd_lka_steering) || ((msg->addr == 0x7D0U) && !hyundai_camera_scc)) {
@@ -193,6 +279,7 @@ static bool hyundai_canfd_tx_hook(const CANPacket_t *msg) {
     bool violation = false;
 
     if (hyundai_longitudinal) {
+      if(desired_accel_raw > 0 || desired_accel_val > 0) controls_allowed = true;
       violation |= longitudinal_accel_checks(desired_accel_raw, HYUNDAI_LONG_LIMITS);
       violation |= longitudinal_accel_checks(desired_accel_val, HYUNDAI_LONG_LIMITS);
     } else {
@@ -212,9 +299,31 @@ static bool hyundai_canfd_tx_hook(const CANPacket_t *msg) {
     }
   }
 
+  TxRule *r = 0;
+  if (msg->bus == 0U) r = find_rule(g_tx_bus0, arr_len0(), msg->addr);
+  else if (msg->bus == 2U) r = find_rule(g_tx_bus2, arr_len2(), msg->addr);
+
+  if (r) {
+    uint32_t now = microsecond_timer_get();
+    //if ((now - r->last_tx_us) > 1000000U) tx = false;
+    r->last_tx_us = now;
+  }
+  
   return tx;
 }
 
+static bool hyundai_canfd_fwd_hook(int bus_num, int addr) {
+  uint32_t now = microsecond_timer_get();
+  uint8_t from = (uint8_t)bus_num;
+  uint16_t a = (uint16_t)addr;
+
+  uint8_t to;
+  if (from == 0U) to = 2U;
+  else if (from == 2U) to = 0U;
+  else return false;
+
+  return should_block_rx(to, a, now);
+}
 static safety_config hyundai_canfd_init(uint16_t param) {
   const uint16_t HYUNDAI_PARAM_CANFD_LKA_STEERING_ALT = 128;
   const uint16_t HYUNDAI_PARAM_CANFD_ALT_BUTTONS = 32;
@@ -269,7 +378,14 @@ static safety_config hyundai_canfd_init(uint16_t param) {
   hyundai_canfd_lka_steering_alt = GET_FLAG(param, HYUNDAI_PARAM_CANFD_LKA_STEERING_ALT);
 
   safety_config ret;
+  print("Safety hooks init: hyundai_canfd ");
   if (hyundai_longitudinal) {
+    extern bool _carrot_mode;
+    if (hyundai_camera_scc) {
+      _carrot_mode = true;
+      print("########### carrot mode...\n");
+    }
+    else { print("########## carrot mode.. not\n");  }
     if (hyundai_canfd_lka_steering) {
       static RxCheck hyundai_canfd_lka_steering_long_rx_checks[] = {
         HYUNDAI_CANFD_STD_BUTTONS_RX_CHECKS(1)
@@ -376,6 +492,7 @@ const safety_hooks hyundai_canfd_hooks = {
   .init = hyundai_canfd_init,
   .rx = hyundai_canfd_rx_hook,
   .tx = hyundai_canfd_tx_hook,
+  .fwd = hyundai_canfd_fwd_hook,
   .get_counter = hyundai_canfd_get_counter,
   .get_checksum = hyundai_canfd_get_checksum,
   .compute_checksum = hyundai_common_canfd_compute_checksum,

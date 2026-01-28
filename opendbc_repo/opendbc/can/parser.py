@@ -1,3 +1,4 @@
+import time
 import math
 import numbers
 from collections import defaultdict, deque
@@ -108,6 +109,8 @@ class MessageState:
     if self.ignore_alive:
       return True
     if not self.timestamps:
+      if self.first_seen_nanos != 0 and (current_nanos - self.first_seen_nanos) < 2e9:  # carrot: 2초 유예
+        return True
       return False
     if (current_nanos - self.timestamps[-1]) > self.timeout_threshold:
       return False
@@ -136,6 +139,8 @@ class CANParser:
     self.ts_nanos: dict[int | str, dict[str, int]] = {}
     self.addresses: set[int] = set()
     self.message_states: dict[int, MessageState] = {}
+    self.seen_addresses: set[int] = set() # carrot
+    self.enable_capture = False # carrot
 
     for name_or_addr, freq in messages:
       if isinstance(name_or_addr, numbers.Number):
@@ -178,6 +183,7 @@ class CANParser:
       signals=list(msg.sigs.values()),
       ignore_alive=freq is not None and math.isnan(freq),
     )
+    state.first_seen_nanos = time.monotonic_ns()  # carrot: 등록시 즉시 타임스탬프 설정
     if freq is not None and freq > 0:
       state.frequency = freq
     else:
@@ -229,6 +235,8 @@ class CANParser:
       for address, dat, src in frames:
         if src != self.bus:
           continue
+        if self.enable_capture:
+          self.seen_addresses.add(address)
         bus_empty = False
         state = self.message_states.get(address)
         if state is None or len(dat) > 64:

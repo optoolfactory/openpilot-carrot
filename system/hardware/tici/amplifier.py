@@ -75,6 +75,7 @@ class Amplifier:
 
   def __init__(self, debug=False):
     self.debug = debug
+    self.debug = True
 
   def _get_shutdown_config(self, amp_disabled: bool) -> AmpConfig:
     return AmpConfig("Global shutdown", 0b0 if amp_disabled else 0b1, 0x51, 7, 0b10000000)

@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from enum import IntFlag
 
 from opendbc.car import Bus, CarSpecs, DbcDict, PlatformConfig, Platforms, uds
+from opendbc.car.lateral import AngleSteeringLimits
 from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.structs import CarParams
 from opendbc.car.docs_definitions import CarHarness, CarDocs, CarParts
@@ -14,6 +15,15 @@ Ecu = CarParams.Ecu
 class CarControllerParams:
   ACCEL_MIN = -3.5 # m/s
   ACCEL_MAX = 2.0 # m/s
+  ANGLE_LIMITS: AngleSteeringLimits = AngleSteeringLimits(
+    175, # deg
+    ([0, 9, 16, 25], [1.8, 1.6, 1.3, 0.8]),
+    ([0, 9, 16, 25], [2.4, 2.0, 1.6, 1.0]),
+  )
+  ANGLE_MAX_TORQUE = 250  # The maximum amount of torque that will be allowed
+  ANGLE_MIN_TORQUE = 25  # equivalent to ~0.8 m/s^2 of torque (based on ANGLE_MAX_TORQUE) when overriding
+  ANGLE_TORQUE_UP_RATE = 8 #2  # Indicates how fast the torque ramps up after user intervention.
+  ANGLE_TORQUE_DOWN_RATE = 12  #4 Indicates how fast the torque ramps down during user intervention (handing off).
 
   def __init__(self, CP):
     self.STEER_DELTA_UP = 3
@@ -126,6 +136,7 @@ class HyundaiFlags(IntFlag):
 
   ALT_LIMITS_2 = 2 ** 26
 
+  ANGLE_CONTROL = 2 ** 27
 
 @dataclass
 class HyundaiCarDocs(CarDocs):
@@ -146,7 +157,8 @@ class HyundaiPlatformConfig(PlatformConfig):
 
 @dataclass
 class HyundaiCanFDPlatformConfig(PlatformConfig):
-  dbc_dict: DbcDict = field(default_factory=lambda: {Bus.pt: "hyundai_canfd_generated"})
+  #dbc_dict: DbcDict = field(default_factory=lambda: {Bus.pt: "hyundai_canfd_generated"})
+  dbc_dict: DbcDict = field(default_factory=lambda: {Bus.pt: "hyundai_canfd_carrot", Bus.radar: 'hyundai_canfd_radar_generated'})
 
   def init(self):
     self.flags |= HyundaiFlags.CANFD
@@ -341,6 +353,15 @@ class CAR(Platforms):
     ],
     CarSpecs(mass=1948, wheelbase=2.97, steerRatio=14.26, tireStiffnessFactor=0.65),
     flags=HyundaiFlags.EV,
+  )
+  HYUNDAI_IONIQ_5_PE = HyundaiCanFDPlatformConfig(
+    [
+      HyundaiCarDocs("Hyundai IONIQ 5 PE (NE1)", car_parts=CarParts.common([CarHarness.hyundai_q])),
+      HyundaiCarDocs("Hyundai Ioniq 5 PE (with HDA II) 2024", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_q])),
+    ],
+    #CarSpecs(mass=2012, wheelbase=3.0, steerRatio=14.26, tireStiffnessFactor=0.65),
+    CarSpecs(mass=2012, wheelbase=3.0, steerRatio=14.26, tireStiffnessFactor=1.0),
+    flags=HyundaiFlags.EV | HyundaiFlags.ANGLE_CONTROL,
   )
   HYUNDAI_IONIQ_6 = HyundaiCanFDPlatformConfig(
     [HyundaiCarDocs("Hyundai Ioniq 6 (with HDA II) 2023-24", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))],
@@ -793,3 +814,12 @@ LEGACY_SAFETY_MODE_CAR = CAR.with_flags(HyundaiFlags.LEGACY)
 UNSUPPORTED_LONGITUDINAL_CAR = CAR.with_flags(HyundaiFlags.LEGACY) | CAR.with_flags(HyundaiFlags.UNSUPPORTED_LONGITUDINAL)
 
 DBC = CAR.create_dbc_map()
+
+if __name__ == "__main__":
+  cars = []
+  for platform in CAR:
+    for doc in platform.config.car_docs:
+      cars.append(doc.name)
+  cars.sort()
+  for c in cars:
+    print(c)

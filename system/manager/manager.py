@@ -124,6 +124,8 @@ def manager_thread() -> None:
   write_onroad_params(False, params)
   ensure_running(managed_processes.values(), False, params=params, CP=sm['carParams'], not_run=ignore)
 
+  print_timer = 0
+
   started_prev = False
   ignition_prev = False
 
@@ -152,7 +154,9 @@ def manager_thread() -> None:
 
     running = ' '.join("{}{}\u001b[0m".format("\u001b[32m" if p.proc.is_alive() else "\u001b[31m", p.name)
                        for p in managed_processes.values() if p.proc)
-    print(running)
+    print_timer = (print_timer + 1)%10
+    if print_timer == 0:
+      print(running)
     cloudlog.debug(running)
 
     # send managerState
@@ -182,6 +186,12 @@ def manager_thread() -> None:
 
 def main() -> None:
   manager_init()
+  print(f"python ../../opendbc/car/hyundai/values.py > {Params().get_param_path()}/SupportedCars")
+  os.system(f"python ../../opendbc/car/hyundai/values.py > {Params().get_param_path()}/SupportedCars")
+  #os.system(f"python ../../opendbc/car/gm/values.py > {Params().get_param_path()}/SupportedCars_gm")
+  #os.system(f"python ../../opendbc/car/toyota/values.py > {Params().get_param_path()}/SupportedCars_toyota")
+  #os.system(f"python ../../opendbc/car/mazda/values.py > {Params().get_param_path()}/SupportedCars_mazda")
+
   if os.getenv("PREPAREONLY") is not None:
     return
 

@@ -7,8 +7,8 @@
 
 inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AccessToken", {CLEAR_ON_MANAGER_START | DONT_LOG, STRING}},
-    {"AdbEnabled", {PERSISTENT, BOOL}},
-    {"AlwaysOnDM", {PERSISTENT, BOOL}},
+    {"AdbEnabled", {PERSISTENT, BOOL, "1"}},
+    {"AlwaysOnDM", {PERSISTENT, BOOL, "0"}},
     {"ApiCache_Device", {PERSISTENT, STRING}},
     {"ApiCache_FirehoseStats", {PERSISTENT, JSON}},
     {"AssistNowToken", {PERSISTENT, STRING}},
@@ -24,7 +24,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarParamsCache", {CLEAR_ON_MANAGER_START, BYTES}},
     {"CarParamsPersistent", {PERSISTENT, BYTES}},
     {"CarParamsPrevRoute", {PERSISTENT, BYTES}},
-    {"CompletedTrainingVersion", {PERSISTENT, STRING, "0"}},
+    {"CompletedTrainingVersion", {PERSISTENT, STRING, "0.2.0"}},
     {"ControlsReady", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BOOL}},
     {"CurrentBootlog", {PERSISTENT, STRING}},
     {"CurrentRoute", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, STRING}},
@@ -53,7 +53,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"GsmMetered", {PERSISTENT, BOOL, "1"}},
     {"GsmRoaming", {PERSISTENT, BOOL}},
     {"HardwareSerial", {PERSISTENT, STRING}},
-    {"HasAcceptedTerms", {PERSISTENT, STRING, "0"}},
+    {"HasAcceptedTerms", {PERSISTENT, STRING, "2"}},
     {"InstallDate", {PERSISTENT, TIME}},
     {"IsDriverViewEnabled", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsEngaged", {PERSISTENT, BOOL}},
@@ -105,15 +105,15 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"PandaSomResetTriggered", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
     {"PandaSignatures", {CLEAR_ON_MANAGER_START, BYTES}},
     {"PrimeType", {PERSISTENT, INT}},
-    {"RecordAudio", {PERSISTENT, BOOL}},
+    {"RecordAudio", {PERSISTENT, BOOL, "0"}},
     {"RecordAudioFeedback", {PERSISTENT, BOOL, "0"}},
-    {"RecordFront", {PERSISTENT, BOOL}},
-    {"RecordFrontLock", {PERSISTENT, BOOL}},  // for the internal fleet
+    {"RecordFront", {PERSISTENT, BOOL, "0"}},
+    {"RecordFrontLock", {PERSISTENT, BOOL, "0"}},
     {"SecOCKey", {PERSISTENT | DONT_LOG, STRING}},
     {"ShowDebugInfo", {PERSISTENT, BOOL}},
     {"RouteCount", {PERSISTENT, INT, "0"}},
     {"SnoozeUpdate", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
-    {"SshEnabled", {PERSISTENT, BOOL}},
+    {"SshEnabled", {PERSISTENT, BOOL, "1"}},
     {"UbloxAvailable", {PERSISTENT, BOOL}},
     {"UpdateAvailable", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BOOL}},
     {"UpdateFailedCount", {CLEAR_ON_MANAGER_START, INT}},
@@ -129,4 +129,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"UptimeOffroad", {PERSISTENT, FLOAT, "0.0"}},
     {"UptimeOnroad", {PERSISTENT, FLOAT, "0.0"}},
     {"Version", {PERSISTENT, STRING}},
+    
+    // Carrot
+    {"CarSelected3", {PERSISTENT, STRING}},
+    {"HyundaiCameraSCC", {PERSISTENT, INT, "0"}},
+    {"FingerPrints", {PERSISTENT | CLEAR_ON_MANAGER_START, STRING}},
 };

@@ -16,7 +16,7 @@ class CanBus(CanBusBase):
     # have a different harness than the LFA steering variants in order to split
     # a different bus, since the steering is done by different ECUs.
     self._a, self._e = 1, 0
-    if lka_steering:
+    if lka_steering and not (CP.flags & HyundaiFlags.CAMERA_SCC.value):
       self._a, self._e = 0, 1
 
     self._a += self.offset
