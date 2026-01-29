@@ -72,9 +72,9 @@ def register(show_spinner=False) -> str | None:
         spinner.update(f"registering device - serial: {serial}, IMEI: ({imei1}, {imei2})")
         imei1 = DUMMY_IMEI1
         imei2 = DUMMY_IMEI2
-        break    
+        break
         
-	backoff = 0        
+	backoff = 0
     start_time = time.monotonic()
     while True:
       try:
