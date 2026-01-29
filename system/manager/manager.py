@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 import datetime
 import os
@@ -141,11 +142,12 @@ def get_default_params():
     ("SteerActuatorDelay", "30"),
     ("ModelActuatorDelay", "20"),
     ("MaxTimeOffroadMin", "60"),
-    ("DisableDM", "0"),
+    ("DisableDM", "1"),
     ("CruiseOnDist", "400"),
     ("HotspotOnBoot", "0"),
     ("CustomSR", "0"),
     ("SteerRatioRate", "100"),
+    ("HardwareC3xLite", "1"),
   ]
   return default_params
 
