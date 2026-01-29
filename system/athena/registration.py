@@ -74,7 +74,7 @@ def register(show_spinner=False) -> str | None:
         imei2 = DUMMY_IMEI2
         break
         
-	backoff = 0
+    backoff = 0
     start_time = time.monotonic()
     while True:
       try:
