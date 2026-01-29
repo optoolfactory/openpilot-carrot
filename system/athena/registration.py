@@ -68,10 +68,13 @@ def register(show_spinner=False) -> str | None:
         cloudlog.exception("Error getting imei, trying again...")
         time.sleep(1)
 
-      if time.monotonic() - start_time > 60 and show_spinner:
+      if time.monotonic() - start_time > 30 and show_spinner:
         spinner.update(f"registering device - serial: {serial}, IMEI: ({imei1}, {imei2})")
-
-    backoff = 0
+        imei1 = DUMMY_IMEI1
+        imei2 = DUMMY_IMEI2
+        break    
+        
+	backoff = 0        
     start_time = time.monotonic()
     while True:
       try:
@@ -92,18 +95,15 @@ def register(show_spinner=False) -> str | None:
         backoff = min(backoff + 1, 15)
         time.sleep(backoff)
 
-      if time.monotonic() - start_time > 30 and show_spinner:
+      if time.monotonic() - start_time > 60 and show_spinner:
         spinner.update(f"registering device - serial: {serial}, IMEI: ({imei1}, {imei2})")
-        imei1 = DUMMY_IMEI1
-        imei2 = DUMMY_IMEI2
-        break
-        
+
     if show_spinner:
       spinner.close()
 
   if dongle_id:
     params.put("DongleId", dongle_id)
-    set_offroad_alert("Offroad_UnofficialHardware", (dongle_id == UNREGISTERED_DONGLE_ID) and not PC)
+    #set_offroad_alert("Offroad_UnofficialHardware", (dongle_id == UNREGISTERED_DONGLE_ID) and not PC)
   return dongle_id
 
 
