@@ -133,12 +133,13 @@ def manager_thread() -> None:
 
   if params.get_bool("HardwareC3xLite"):
     ignore += ["micd", "soundd", "loggerd"]
-    params.put("RecordAudio", "0")
+    params.put_bool("RecordAudio", False)
 
   sm = messaging.SubMaster(['deviceState', 'carParams', 'pandaStates'], poll='deviceState')
   pm = messaging.PubMaster(['managerState'])
 
   write_onroad_params(False, params)
+  print(f"################# ignore process list: {ignore} #################")
   ensure_running(managed_processes.values(), False, params=params, CP=sm['carParams'], not_run=ignore)
 
   print_timer = 0
