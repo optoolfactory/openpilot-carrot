@@ -16,6 +16,7 @@ TRANSLATIONS_DIR = UI_DIR.joinpath("translations")
 LANGUAGES_FILE = TRANSLATIONS_DIR.joinpath("languages.json")
 
 UNIFONT_LANGUAGES = [
+  "ar",
   "th",
   "zh-CHT",
   "zh-CHS",
