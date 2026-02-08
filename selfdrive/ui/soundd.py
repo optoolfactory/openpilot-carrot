@@ -257,6 +257,7 @@ class Soundd:
 
         frame += 1
         if frame % 100 == 0:
+          self.current_volume = 1.0
           print(f"alert test, volume ={self.current_volume}, {self.soundVolumeAdjust}")
           self.update_alert(AudibleAlert.warningImmediate)
 
