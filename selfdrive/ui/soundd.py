@@ -245,6 +245,7 @@ class Soundd:
 
       cloudlog.info(f"soundd stream started: {stream.samplerate=} {stream.channels=} {stream.dtype=} {stream.device=}, {stream.blocksize=}")
       print(f"soundd stream started: {stream.samplerate=} {stream.channels=} {stream.dtype=} {stream.device=}, {stream.blocksize=}")
+      frame = 0
       while True:
         sm.update(0)
 
@@ -253,6 +254,11 @@ class Soundd:
           self.current_volume = self.calculate_volume(float(self.spl_filter_weighted.x)) * self.soundVolumeAdjust
 
         self.get_audible_alert(sm)
+
+        frame += 1
+        if frame % 100 == 0:
+          print(f"alert test, volume ={self.current_volume}, {self.soundVolumeAdjust}")
+          self.update_alert(AudibleAlert.warningImmediate)
 
         rk.keep_time()
 
