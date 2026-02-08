@@ -299,7 +299,7 @@ def webrtcd_thread(host: str, port: int, debug: bool):
   logging.getLogger("WebRTCStream").setLevel(logging_level)
   logging.getLogger("webrtcd").setLevel(logging_level)
 
-  app = web.Application()
+  app = web.Application(middlewares=[cors_middleware])
 
   app['streams'] = dict()
   app['debug'] = debug
@@ -307,7 +307,8 @@ def webrtcd_thread(host: str, port: int, debug: bool):
   app.router.add_post("/stream", get_stream)
   app.router.add_post("/notify", post_notify)
   app.router.add_get("/schema", get_schema)
-
+  app.router.add_route('OPTIONS', '/{tail:.*}', handle_cors_preflight)
+  
   web.run_app(app, host=host, port=port)
 
 
