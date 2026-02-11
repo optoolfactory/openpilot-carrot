@@ -7,20 +7,11 @@
 #include <string>
 #include <algorithm>  // for std::clamp
 
-#include "common/params.h"
 #include "common/util.h"
 #include "system/hardware/base.h"
 
 class HardwareTici : public HardwareNone {
 public:
-  static constexpr float MAX_VOLUME = 0.9;
-  static constexpr float MIN_VOLUME = 0.1;
-  static bool TICI() { return true; }
-  static bool AGNOS() { return true; }
-  static std::string get_os_version() {
-    return "AGNOS " + util::read_file("/VERSION");
-  }
-
   static std::string get_name() {
     std::string model = util::read_file("/sys/firmware/devicetree/base/model");
     return util::strip(model.substr(std::string("comma ").size()));
@@ -60,14 +51,6 @@ public:
 
   static void reboot() { std::system("sudo reboot"); }
   static void poweroff() { std::system("sudo poweroff"); }
-  static void set_brightness(int percent) {
-    float max = std::stof(util::read_file("/sys/class/backlight/panel0-backlight/max_brightness"));
-    std::ofstream("/sys/class/backlight/panel0-backlight/brightness") << int(percent * (max / 100.0f)) << "\n";
-  }
-  static void set_display_power(bool on) {
-    std::ofstream("/sys/class/backlight/panel0-backlight/bl_power") << (on ? "0" : "4") << "\n";
-  }
-
   static void set_ir_power(int percent) {
     auto device = get_device_type();
     if (device == cereal::InitData::DeviceType::TICI ||

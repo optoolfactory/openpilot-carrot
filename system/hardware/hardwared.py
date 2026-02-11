@@ -19,7 +19,7 @@ from openpilot.common.filter_simple import FirstOrderFilter
 from openpilot.common.params import Params
 from openpilot.common.realtime import DT_HW
 from openpilot.selfdrive.selfdrived.alertmanager import set_offroad_alert
-from openpilot.system.hardware import HARDWARE, TICI, AGNOS
+from openpilot.system.hardware import HARDWARE, TICI, AGNOS, PC
 from openpilot.system.loggerd.config import get_available_percent
 from openpilot.system.statsd import statlog
 from openpilot.common.swaglog import cloudlog
@@ -34,10 +34,11 @@ CURRENT_TAU = 15.   # 15s time constant
 TEMP_TAU = 5.   # 5s time constant
 DISCONNECT_TIMEOUT = 5.  # wait 5 seconds before going offroad after disconnect so you get an alert
 PANDA_STATES_TIMEOUT = round(1000 / SERVICE_LIST['pandaStates'].frequency * 1.5)  # 1.5x the expected pandaState frequency
+ONROAD_CYCLE_TIME = 1  # seconds to wait offroad after requesting an onroad cycle
 
 ThermalBand = namedtuple("ThermalBand", ['min_temp', 'max_temp'])
 HardwareState = namedtuple("HardwareState", ['network_type', 'network_info', 'network_strength', 'network_stats',
-                                             'network_metered', 'nvme_temps', 'modem_temps'])
+                                             'network_metered', 'modem_temps'])
 
 # List of thermal bands. We will stay within this region as long as we are within the bounds.
 # When exiting the bounds, we'll jump to the lower or higher band. Bands are ordered in the dict.
@@ -103,8 +104,8 @@ def hw_state_thread(end_event, hw_queue):
 
   modem_version = None
   modem_configured = False
-  modem_restarted = False
   modem_missing_count = 0
+  modem_restart_count = 0
 
   while not end_event.is_set():
     # these are expensive calls. update every 10s
@@ -121,16 +122,18 @@ def hw_state_thread(end_event, hw_queue):
 
           if modem_version is not None:
             cloudlog.event("modem version", version=modem_version)
-          else:
-            if not modem_restarted:
-              # TODO: we may be able to remove this with a MM update
-              # ModemManager's probing on startup can fail
-              # rarely, restart the service to probe again.
-              modem_missing_count += 1
-              if modem_missing_count > 3:
-                modem_restarted = True
-                cloudlog.event("restarting ModemManager")
-                os.system("sudo systemctl restart --no-block ModemManager")
+
+        if AGNOS and modem_restart_count < 3 and HARDWARE.get_modem_version() is None:
+          # TODO: we may be able to remove this with a MM update
+          # ModemManager's probing on startup can fail
+          # rarely, restart the service to probe again.
+          # Also, AT commands sometimes timeout resulting in ModemManager not
+          # trying to use this modem anymore.
+          modem_missing_count += 1
+          if (modem_missing_count % 4) == 0:
+            modem_restart_count += 1
+            cloudlog.event("restarting ModemManager")
+            os.system("sudo systemctl restart --no-block ModemManager")
 
         tx, rx = HARDWARE.get_modem_data_usage()
 
@@ -140,7 +143,6 @@ def hw_state_thread(end_event, hw_queue):
           network_strength=HARDWARE.get_network_strength(network_type),
           network_stats={'wwanTx': tx, 'wwanRx': rx},
           network_metered=HARDWARE.get_network_metered(network_type),
-          nvme_temps=HARDWARE.get_nvme_temperatures(),
           modem_temps=modem_temps,
         )
 
@@ -201,7 +203,6 @@ def hardware_thread(end_event, hw_queue) -> None:
     network_metered=False,
     network_strength=NetworkStrength.unknown,
     network_stats={'wwanTx': -1, 'wwanRx': -1},
-    nvme_temps=[],
     modem_temps=[],
   )
 
@@ -278,7 +279,6 @@ def hardware_thread(end_event, hw_queue) -> None:
     if last_hw_state.network_info is not None:
       msg.deviceState.networkInfo = last_hw_state.network_info
 
-    msg.deviceState.nvmeTempC = last_hw_state.nvme_temps
     msg.deviceState.modemTempC = last_hw_state.modem_temps
 
     msg.deviceState.screenBrightnessPercent = HARDWARE.get_screen_brightness()
@@ -337,11 +337,11 @@ def hardware_thread(end_event, hw_queue) -> None:
     show_alert = (not onroad_conditions["device_temp_good"] or not startup_conditions["device_temp_engageable"]) and onroad_conditions["ignition"]
     set_offroad_alert_if_changed("Offroad_TemperatureTooHigh", show_alert, extra_text=extra_text)
 
-    # TODO: this should move to TICI.initialize_hardware, but we currently can't import params there
-    if False: #TICI and HARDWARE.get_device_type() == "tici":
-      if not os.path.isfile("/persist/comma/living-in-the-moment"):
-        if not Path("/data/media").is_mount():
-          set_offroad_alert_if_changed("Offroad_StorageMissing", True)
+    # *** registration check ***
+    if not PC:
+      # we enforce this for our software, but you are welcome
+      # to make a different decision in your software
+      startup_conditions["registered_device"] = True #PC or (params.get("DongleId") != UNREGISTERED_DONGLE_ID)
 
     # Handle offroad/onroad transition
     should_start = all(onroad_conditions.values())
@@ -426,8 +426,6 @@ def hardware_thread(end_event, hw_queue) -> None:
     statlog.gauge("memory_temperature", msg.deviceState.memoryTempC)
     for i, temp in enumerate(msg.deviceState.pmicTempC):
       statlog.gauge(f"pmic{i}_temperature", temp)
-    for i, temp in enumerate(last_hw_state.nvme_temps):
-      statlog.gauge(f"nvme_temperature{i}", temp)
     for i, temp in enumerate(last_hw_state.modem_temps):
       statlog.gauge(f"modem_temperature{i}", temp)
     statlog.gauge("fan_speed_percent_desired", msg.deviceState.fanSpeedPercentDesired)
