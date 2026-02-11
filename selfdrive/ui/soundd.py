@@ -190,14 +190,7 @@ class Soundd:
     if status:
       cloudlog.warning(f"soundd stream over/underflow: {status}")
 
-    x = self.get_sound_data(frames).astype(np.float32)
-
-    rms = float(np.sqrt(np.mean(x*x)))
-    mx  = float(np.max(np.abs(x)))
-    print(f"[AUDIO] alert={self.current_alert} vol={self.current_volume:.3f} "
-          f"frames={frames} rms={rms:.6f} max={mx:.6f}")
-
-    data_out[:frames, 0] = x
+    data_out[:frames, 0] = self.get_sound_data(frames)
 
   def update_alert(self, new_alert):
     current_alert_played_once = self.current_alert == AudibleAlert.none or self.current_sound_frame > len(self.loaded_sounds[self.current_alert])
@@ -253,7 +246,6 @@ class Soundd:
 
       cloudlog.info(f"soundd stream started: {stream.samplerate=} {stream.channels=} {stream.dtype=} {stream.device=}, {stream.blocksize=}")
       print(f"soundd stream started: {stream.samplerate=} {stream.channels=} {stream.dtype=} {stream.device=}, {stream.blocksize=}")
-      frame = 0
       while True:
         sm.update(0)
 
@@ -263,13 +255,6 @@ class Soundd:
 
         self.get_audible_alert(sm)
 
-        frame += 1
-        if frame % 500 == 0:
-          self.current_volume = 1.0
-          print(f"alert test, volume ={self.current_volume}, {self.soundVolumeAdjust}")
-          self.update_alert(AudibleAlert.warningImmediate)
-          print(sd.query_devices())
-          print("default device:", sd.default.device)
         rk.keep_time()
 
         assert stream.active
