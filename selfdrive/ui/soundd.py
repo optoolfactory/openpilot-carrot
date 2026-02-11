@@ -189,6 +189,8 @@ class Soundd:
   def callback(self, data_out: np.ndarray, frames: int, time, status) -> None:
     if status:
       cloudlog.warning(f"soundd stream over/underflow: {status}")
+
+    print(f"soundd callback: {frames} frames requested")
     data_out[:frames, 0] = self.get_sound_data(frames)
 
   def update_alert(self, new_alert):
@@ -264,6 +266,7 @@ class Soundd:
         rk.keep_time()
 
         assert stream.active
+        print(stream.active)
 
         self.soundVolumeAdjust = float(self.params.get_int("SoundVolumeAdjust"))/100.
 
