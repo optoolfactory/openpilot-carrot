@@ -190,6 +190,15 @@ class Soundd:
     if status:
       cloudlog.warning(f"soundd stream over/underflow: {status}")
 
+    x = self.get_sound_data(frames).astype(np.float32)
+
+    # 1초에 1번 정도만 로그
+    if (self.current_sound_frame // SAMPLE_RATE) != ((self.current_sound_frame + frames) // SAMPLE_RATE):
+      rms = float(np.sqrt(np.mean(x*x)))
+      mx = float(np.max(np.abs(x)))
+      print(f"[AUDIO] alert={self.current_alert} vol={self.current_volume:.3f} "
+            f"frames={frames} rms={rms:.6f} max={mx:.6f}")
+    
     data_out[:frames, 0] = self.get_sound_data(frames)
 
   def update_alert(self, new_alert):
