@@ -261,7 +261,8 @@ class Soundd:
           self.current_volume = 1.0
           print(f"alert test, volume ={self.current_volume}, {self.soundVolumeAdjust}")
           self.update_alert(AudibleAlert.warningImmediate)
-
+          print(sd.query_devices())
+          print("default device:", sd.default.device)
         rk.keep_time()
 
         assert stream.active
