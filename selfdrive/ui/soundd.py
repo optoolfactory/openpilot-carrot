@@ -193,7 +193,7 @@ class Soundd:
     x = self.get_sound_data(frames).astype(np.float32)
 
     # 1초에 1번 정도만 로그
-    if (self.current_sound_frame // SAMPLE_RATE) != ((self.current_sound_frame + frames) // SAMPLE_RATE):
+    if True: #(self.current_sound_frame // SAMPLE_RATE) != ((self.current_sound_frame + frames) // SAMPLE_RATE):
       rms = float(np.sqrt(np.mean(x*x)))
       mx = float(np.max(np.abs(x)))
       print(f"[AUDIO] alert={self.current_alert} vol={self.current_volume:.3f} "
