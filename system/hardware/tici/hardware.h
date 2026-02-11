@@ -7,6 +7,7 @@
 #include <string>
 #include <algorithm>  // for std::clamp
 
+#include "common/params.h"
 #include "common/util.h"
 #include "system/hardware/base.h"
 
