@@ -182,6 +182,14 @@ def manager_thread() -> None:
     msg.managerState.processes = [p.get_process_state_msg() for p in managed_processes.values()]
     pm.send('managerState', msg)
 
+    # kick AGNOS power monitoring watchdog
+    try:
+      if sm.all_checks(['deviceState']):
+        with atomic_write("/var/tmp/power_watchdog", "w", overwrite=True) as f:
+          f.write(str(time.monotonic()))
+    except Exception:
+      pass
+
     # Exit main loop when uninstall/shutdown/reboot is needed
     shutdown = False
     for param in ("DoUninstall", "DoShutdown", "DoReboot"):
