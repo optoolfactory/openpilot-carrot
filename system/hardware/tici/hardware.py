@@ -94,7 +94,8 @@ class Tici(HardwareBase):
 
   @cached_property
   def amplifier(self):
-    if self.get_device_type() == "mici":
+    print(f"Amplifier Device type: {self.get_device_type()}")
+    if self.get_device_type() == "mici":      
       return None
     return Amplifier()
 
