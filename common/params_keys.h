@@ -174,7 +174,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CommaLongAcc", {PERSISTENT, INT, "0"}},
 
     {"AutoGasTokSpeed", {PERSISTENT, INT, "0"}},
-    {"AutoGasSyncSpeed", {PERSISTENT, INT, "1"}},
+    {"AutoGasSyncSpeed", {PERSISTENT, INT, "0"}},
     {"AutoEngage", {PERSISTENT, INT, "0"}},
     {"DisableMinSteerSpeed", {PERSISTENT, INT, "0"}},
     {"AutoCurveSpeedLowerLimit", {PERSISTENT, INT, "30"}},
@@ -192,7 +192,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AutoNaviSpeedBumpTime", {PERSISTENT, INT, "1"}},
     {"AutoNaviSpeedBumpSpeed", {PERSISTENT, INT, "35"}},
     {"AutoNaviSpeedDecelRate", {PERSISTENT, INT, "120"}},
-    {"AutoNaviSpeedSafetyFactor", {PERSISTENT, INT, "105"}},
+    {"AutoNaviSpeedSafetyFactor", {PERSISTENT, INT, "100"}},
     {"AutoNaviCountDownMode", {PERSISTENT, INT, "2"}},
     {"TurnSpeedControlMode", {PERSISTENT, INT, "1"}},
 
@@ -261,7 +261,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CanfdDebug", {PERSISTENT, INT, "0"}},
 
     {"SoundVolumeAdjust", {PERSISTENT, INT, "100"}},
-    {"SoundVolumeAdjustEngage", {PERSISTENT, INT, "10"}},
+    {"SoundVolumeAdjustEngage", {PERSISTENT, INT, "100"}},
 
     {"TFollowGap1", {PERSISTENT, INT, "110"}},
     {"TFollowGap2", {PERSISTENT, INT, "120"}},
@@ -275,7 +275,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"TrafficStopDistanceAdjust", {PERSISTENT, INT, "400"}},
 
     {"HapticFeedbackWhenSpeedCamera", {PERSISTENT, INT, "0"}},
-    {"UseLaneLineSpeed", {PERSISTENT, INT, "0"}},
+    {"UseLaneLineSpeed", {PERSISTENT, INT, "1"}},
     {"UseLaneLineCurveSpeed", {PERSISTENT, INT, "0"}},
 
     {"AdjustLaneOffset", {PERSISTENT, INT, "0"}},
@@ -309,13 +309,13 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CustomSteerDeltaUpLC", {PERSISTENT, INT, "0"}},
     {"CustomSteerDeltaDownLC", {PERSISTENT, INT, "0"}},
 
-    {"SpeedFromPCM", {PERSISTENT, INT, "2"}},
+    {"SpeedFromPCM", {PERSISTENT, INT, "1"}},
     {"MaxTimeOffroadMin", {PERSISTENT, INT, "60"}},
 
-    {"DisableDM", {PERSISTENT, INT, "0"}},
+    {"DisableDM", {PERSISTENT, INT, "1"}},
     {"EnableConnect", {PERSISTENT, INT, "0"}},
-    {"MuteDoor", {PERSISTENT, INT, "0"}},
-    {"MuteSeatbelt", {PERSISTENT, INT, "0"}},
+    {"MuteDoor", {PERSISTENT, INT, "1"}},
+    {"MuteSeatbelt", {PERSISTENT, INT, "1"}},
 
     {"CarrotException", {CLEAR_ON_MANAGER_START, STRING}},
 
