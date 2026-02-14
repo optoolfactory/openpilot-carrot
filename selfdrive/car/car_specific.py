@@ -4,7 +4,9 @@ from opendbc.car.car_helpers import interfaces
 from opendbc.car.interfaces import MAX_CTRL_SPEED
 from opendbc.car.toyota.values import ToyotaFlags
 
-from openpilot.selfdrive.selfdrived.events import Events
+from openpilot.selfdrive.selfdrived.events import Events, ET
+
+from openpilot.common.params import Params
 
 ButtonType = structs.CarState.ButtonEvent.Type
 GearShifter = structs.CarState.GearShifter
@@ -183,5 +185,17 @@ class CarSpecificEvents:
         events.add(EventName.pcmEnable)
       elif not CS.cruiseState.enabled:
         events.add(EventName.pcmDisable)
+
+
+    if not self.CP.pcmCruise:
+      if CS.activateCruise > 0 and CS_prev.activateCruise <= 0:
+        if not events.contains(ET.NO_ENTRY):
+          events.add(EventName.buttonEnable)
+      elif CS.activateCruise < 0 and CS_prev.activateCruise >= 0:
+        events.add(EventName.buttonCancel)
+      if CS.softHoldActive > 0:
+        events.add(EventName.softHold)
+      elif len(CS.logCarrot) > 0:
+        events.add(EventName.carStateLog)
 
     return events

@@ -10,14 +10,18 @@ from opendbc.car.hyundai.carcontroller import CarController
 from opendbc.car.hyundai.carstate import CarState
 from opendbc.car.hyundai.radar_interface import RadarInterface
 
+from opendbc.carrot.hyundai.carrot_interface import CarrotCarInterface
+from openpilot.common.params import Params
+
 ButtonType = structs.CarState.ButtonEvent.Type
 Ecu = structs.CarParams.Ecu
 
 # Cancel button can sometimes be ACC pause/resume button, main button can also enable on some cars
 ENABLE_BUTTONS = (ButtonType.accelCruise, ButtonType.decelCruise, ButtonType.cancel, ButtonType.mainCruise)
 
+SteerControlType = structs.CarParams.SteerControlType
 
-class CarInterface(CarInterfaceBase):
+class CarInterface(CarrotCarInterface):
   CarState = CarState
   CarController = CarController
   RadarInterface = RadarInterface
@@ -28,6 +32,11 @@ class CarInterface(CarInterfaceBase):
   def _get_params(ret: structs.CarParams, candidate, fingerprint, car_fw, alpha_long, is_release, docs) -> structs.CarParams:
     ret.brand = "hyundai"
 
+    camera_scc = Params().get_int("HyundaiCameraSCC") > 0
+    if camera_scc > 0:
+      ret.flags |= HyundaiFlags.CAMERA_SCC.value
+      ret.flags |= HyundaiFlags.CANFD_CAMERA_SCC.value
+      
     # "LKA steering" if LKAS or LKAS_ALT messages are seen coming from the camera.
     # Generally means our LKAS message is forwarded to another ECU (commonly ADAS ECU)
     # that finally retransmits our steering command in LFA or LFA_ALT to the MDPS.
@@ -61,6 +70,10 @@ class CarInterface(CarInterfaceBase):
         if not ret.flags & HyundaiFlags.RADAR_SCC:
           ret.flags |= HyundaiFlags.CANFD_CAMERA_SCC.value
 
+      if 0x1cf not in fingerprint[CAN.ECAN]:
+        ret.flags |= HyundaiFlags.CANFD_ALT_BUTTONS.value
+      if 0xCB in fingerprint[CAN.CAM]: # LFA_ALT
+        ret.flags |= HyundaiFlags.ANGLE_CONTROL.value
       # Some LKA steering cars have alternative messages for gear checks
       # ICE cars do not have 0x130; GEARS message on 0x40 or 0x70 instead
       if 0x130 not in fingerprint[CAN.ECAN]:
@@ -114,7 +127,10 @@ class CarInterface(CarInterfaceBase):
     ret.centerToFront = ret.wheelbase * 0.4
     ret.steerActuatorDelay = 0.1
     ret.steerLimitTimer = 0.4
-    CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
+    if ret.flags & HyundaiFlags.ANGLE_CONTROL:
+      ret.steerControlType = SteerControlType.angle
+    else:
+      CarInterfaceBase.configure_torque_tune(candidate, ret.lateralTuning)
 
     if ret.flags & HyundaiFlags.ALT_LIMITS:
       ret.safetyConfigs[-1].safetyParam |= HyundaiSafetyFlags.ALT_LIMITS.value
@@ -127,13 +143,19 @@ class CarInterface(CarInterfaceBase):
 
     # Common longitudinal control setup
 
+    ret.alphaLongitudinalAvailable = True 
+
     ret.radarUnavailable = RADAR_START_ADDR not in fingerprint[1] or Bus.radar not in DBC[ret.carFingerprint]
-    ret.openpilotLongitudinalControl = alpha_long and ret.alphaLongitudinalAvailable
+    ret.openpilotLongitudinalControl = (alpha_long and ret.alphaLongitudinalAvailable) or camera_scc
     ret.pcmCruise = not ret.openpilotLongitudinalControl
-    ret.startingState = True
+    ret.startingState = False # True carrot
     ret.vEgoStarting = 0.1
     ret.startAccel = 1.0
-    ret.longitudinalActuatorDelay = 0.5
+    ret.longitudinalActuatorDelay = 0.2 # carrot
+
+    ret.vEgoStopping = 0.1 # carrot
+    ret.longitudinalTuning.kpBP = [0.] # carrot
+    ret.longitudinalTuning.kpV = [1.] # carrot
 
     if ret.openpilotLongitudinalControl:
       ret.safetyConfigs[-1].safetyParam |= HyundaiSafetyFlags.LONG.value
@@ -158,6 +180,9 @@ class CarInterface(CarInterfaceBase):
 
   @staticmethod
   def init(CP, can_recv, can_send, communication_control=None):
+
+    Params().put_int('LongitudinalPersonalityMax', 4)
+
     # 0x80 silences response
     if communication_control is None:
       communication_control = bytes([uds.SERVICE_TYPE.COMMUNICATION_CONTROL, 0x80 | uds.CONTROL_TYPE.DISABLE_RX_DISABLE_TX, uds.MESSAGE_TYPE.NORMAL])

@@ -305,6 +305,7 @@ class SelfdriveD:
     if not REPLAY and self.rk.lagging:
       self.events.add(EventName.selfdrivedLagging)
     if self.sm['radarState'].radarErrors.canError:
+      print("RADAR CAN ERROR")
       self.events.add(EventName.canError)
     elif self.sm['radarState'].radarErrors.radarUnavailableTemporary:
       self.events.add(EventName.radarTempUnavailable)
@@ -315,6 +316,7 @@ class SelfdriveD:
     if CS.canTimeout:
       self.events.add(EventName.canBusMissing)
     elif not CS.canValid:
+      print("CAN INVALID")
       self.events.add(EventName.canError)
 
     # generic catch-all. ideally, a more specific event should be added above instead

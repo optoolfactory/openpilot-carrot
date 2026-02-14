@@ -131,6 +131,8 @@ struct OnroadEvent @0xc4fa6047f024e718 {
     userBookmark @95;
     excessiveActuation @96;
     audioFeedback @97;
+    softHold @99;
+    carStateLog @100;
 
     soundsUnavailableDEPRECATED @47;
   }
@@ -140,6 +142,7 @@ enum LongitudinalPersonality {
   aggressive @0;
   standard @1;
   relaxed @2;
+  moreRelaxed @3;
 }
 
 struct InitData {
@@ -1136,6 +1139,14 @@ struct ModelDataV2 {
     hardBrakePredicted @7 :Bool;
     laneChangeState @8 :LaneChangeState;
     laneChangeDirection @9 :LaneChangeDirection;
+    laneWidthLeft @10 :Float32;
+    laneWidthRight @11 :Float32;
+    distanceToRoadEdgeLeft @12 :Float32;
+    distanceToRoadEdgeRight @13 :Float32;
+    desire @14 :Desire;
+    laneChangeProb @15 :Float32;
+    desireLog @16 : Text;
+    modelTurnSpeed @17 :Float32;
 
 
     # deprecated
@@ -1184,6 +1195,7 @@ struct ModelDataV2 {
     desiredCurvature @0 :Float32;
     desiredAcceleration @1 :Float32;
     shouldStop @2 :Bool;
+    desiredVelocity @3 :Float32;
   }
 }
 
@@ -1255,6 +1267,8 @@ struct LongitudinalPlan @0xe00b5b3eba12876c {
   allowThrottle @38: Bool;
   allowBrake @39: Bool;
 
+  vTargetNow @40: Float32;
+  jTargetNow @41: Float32;
 
   solverExecutionTime @35 :Float32;
 

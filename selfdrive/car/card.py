@@ -18,7 +18,8 @@ from opendbc.car.fw_versions import ObdCallback
 from opendbc.car.car_helpers import get_car, interfaces
 from opendbc.car.interfaces import CarInterfaceBase, RadarInterfaceBase
 from openpilot.selfdrive.pandad import can_capnp_to_list, can_list_to_can_capnp
-from openpilot.selfdrive.car.cruise import VCruiseHelper
+#from openpilot.selfdrive.car.cruise import VCruiseHelper
+from openpilot.selfdrive.carrot.vcruise.carrot_vcruise import VCruiseCarrot
 
 REPLAY = "REPLAY" in os.environ
 
@@ -64,7 +65,7 @@ class Car:
 
   def __init__(self, CI=None, RI=None) -> None:
     self.can_sock = messaging.sub_sock('can', timeout=20)
-    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents'])
+    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents', 'modelV2', 'radarState'])
     self.pm = messaging.PubMaster(['sendcan', 'carState', 'carParams', 'carOutput', 'liveTracks'])
 
     self.can_rcv_cum_timeout_counter = 0
@@ -79,7 +80,7 @@ class Car:
 
     self.can_callbacks = can_comm_callbacks(self.can_sock, self.pm.sock['sendcan'])
 
-    is_release = self.params.get_bool("IsReleaseBranch")
+    is_release = True #self.params.get_bool("IsReleaseBranch")
 
     if CI is None:
       # wait for one pandaState and one CAN packet
@@ -149,7 +150,7 @@ class Car:
     self.params.put_nonblocking("CarParamsCache", cp_bytes)
     self.params.put_nonblocking("CarParamsPersistent", cp_bytes)
 
-    self.v_cruise_helper = VCruiseHelper(self.CP)
+    self.v_cruise_helper = VCruiseCarrot(self.CP) #VCruiseHelper(self.CP)
 
     self.is_metric = self.params.get_bool("IsMetric")
     self.experimental_mode = self.params.get_bool("ExperimentalMode")
@@ -180,14 +181,26 @@ class Car:
     if can_rcv_valid and REPLAY:
       self.can_log_mono_time = messaging.log_from_bytes(can_strs[0]).logMonoTime
 
-    self.v_cruise_helper.update_v_cruise(CS, self.sm['carControl'].enabled, self.is_metric)
-    if self.sm['carControl'].enabled and not self.CC_prev.enabled:
-      # Use CarState w/ buttons from the step selfdrived enables on
-      self.v_cruise_helper.initialize_v_cruise(self.CS_prev, self.experimental_mode)
+    out = self.v_cruise_helper.update_v_cruise(CS, self.sm, self.is_metric)
+    #self.v_cruise_helper.update_v_cruise(CS, self.sm['carControl'].enabled, self.is_metric)
+    #if self.sm['carControl'].enabled and not self.CC_prev.enabled:
+    #  # Use CarState w/ buttons from the step selfdrived enables on
+    #  self.v_cruise_helper.initialize_v_cruise(self.CS_prev, self.experimental_mode)
+
+    if out.paddle_decel_active:
+      v_cruise_kph = v_cruise_cluster_kph = 0
+    else:
+      v_cruise_kph = out.v_cruise_kph
+      v_cruise_cluster_kph = out.v_cruise_cluster_kph
+    
 
     # TODO: mirror the carState.cruiseState struct?
-    CS.vCruise = float(self.v_cruise_helper.v_cruise_kph)
-    CS.vCruiseCluster = float(self.v_cruise_helper.v_cruise_cluster_kph)
+    CS.vCruise = float(v_cruise_kph)
+    CS.vCruiseCluster = float(v_cruise_cluster_kph)
+    CS.softHoldActive = out.soft_hold_active
+    CS.activateCruise = out.activate_cruise
+    CS.carrotCruise = out.carrot_cruise
+    CS.logCarrot = out.log
 
     return CS, RD
 
@@ -234,7 +247,8 @@ class Car:
     if self.sm.all_alive(['carControl']):
       # send car controls over can
       now_nanos = self.can_log_mono_time if REPLAY else int(time.monotonic() * 1e9)
-      self.last_actuators_output, can_sends = self.CI.apply(CC, now_nanos)
+      MD = self.sm['modelV2'] if self.sm.valid['modelV2'] else None
+      self.last_actuators_output, can_sends = self.CI.apply(CC, now_nanos, MD)
       self.pm.send('sendcan', can_list_to_can_capnp(can_sends, msgtype='sendcan', valid=CS.canValid))
 
       self.CC_prev = CC

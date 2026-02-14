@@ -230,6 +230,17 @@ struct CarState {
   fuelGauge @41 :Float32; # battery or fuel tank level from [0.0, 1.0]
   charging @43 :Bool;
 
+  vCluRatio @61 :Float32;
+  softHoldActive @62 :Int16;    #0: not active, 1: active ready, 2: activated
+  activateCruise @63 :Int16;
+  carrotCruise @64 : Int16;
+  pcmCruiseGap @65 :Int16;      #0: can't read, 1,2,3,4: gap setting
+  speedLimit @66 :Float32;
+  speedLimitDistance @67 :Float32;
+  gearStep @68 :Int16;          
+  leftLaneLine @69 : Int16; # -1: no lane, 0: dashed, 1: solid, +10: white, +20: yellow, ex) 21: solid yellow
+  rightLaneLine @70 : Int16; # -1: no lane, 0: dashed, 1: solid, +10: white, +20: yellow, ex) 21: solid yellow
+  logCarrot @71 :Text;
   struct WheelSpeeds {
     # optional wheel speeds
     fl @0 :Float32;
@@ -280,13 +291,15 @@ struct CarState {
       setCruise @9;
       resumeCruise @10;
       gapAdjustCruise @11;
+      paddleLeft @12;
+      paddleRight @13;
     }
   }
 
   # deprecated
   errorsDEPRECATED @0 :List(OnroadEventDEPRECATED.EventName);
-  gasDEPRECATED @3 :Float32;        # this is user pedal only
-  brakeLightsDEPRECATED @19 :Bool;
+  gas @3 :Float32;        # this is user pedal only
+  brakeLights @19 :Bool;
   steeringRateLimitedDEPRECATED @29 :Bool;
   canMonoTimesDEPRECATED @12: List(UInt64);
   canRcvTimeoutDEPRECATED @49 :Bool;
@@ -374,6 +387,9 @@ struct CarControl {
     brake @1: Float32; # [0.0, 1.0]
     torqueOutputCan @8: Float32;   # value sent over can to the car
     speed @6: Float32;  # m/s
+
+    jerk @9: Float32;  # m/s^3
+    aTarget @10: Float32;  # m/s^2
 
     enum LongControlState @0xe40f3a917d908282{
       off @0;

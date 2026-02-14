@@ -377,6 +377,10 @@ def personality_changed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging
   personality = str(personality).title()
   return NormalPermanentAlert(f"Driving Personality: {personality}", duration=1.5)
 
+def carstate_log_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
+  vals = f"CS:{CS.logCarrot}"
+  return Alert(vals, "", AlertStatus.normal, AlertSize.small, Priority.HIGHEST, VisualAlert.none, AudibleAlert.none, 0.5)
+
 
 def invalid_lkas_setting_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   text = "Toggle stock LKAS on or off to engage"
@@ -1015,12 +1019,23 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.WARNING: personality_changed_alert,
   },
 
+
   EventName.userBookmark: {
     ET.PERMANENT: NormalPermanentAlert("Bookmark Saved", duration=1.5),
   },
 
   EventName.audioFeedback: {
     ET.PERMANENT: audio_feedback_alert,
+  },
+  EventName.softHold: {
+    ET.WARNING: Alert(
+      "SoftHold",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .1),
+  },
+  EventName.carStateLog: {
+    ET.PERMANENT: carstate_log_alert,
   },
 }
 

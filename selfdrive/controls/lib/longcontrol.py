@@ -11,7 +11,7 @@ LongCtrlState = car.CarControl.Actuators.LongControlState
 
 
 def long_control_state_trans(CP, active, long_control_state, v_ego,
-                             should_stop, brake_pressed, cruise_standstill):
+                             should_stop, brake_pressed, cruise_standstill, a_ego, stopping_accel, radarState):
   stopping_condition = should_stop
   starting_condition = (not should_stop and
                         not cruise_standstill and
@@ -39,7 +39,13 @@ def long_control_state_trans(CP, active, long_control_state, v_ego,
 
     elif long_control_state in [LongCtrlState.starting, LongCtrlState.pid]:
       if stopping_condition:
-        long_control_state = LongCtrlState.stopping
+        stopping_accel = stopping_accel if stopping_accel < 0.0 else -0.5
+        leadOne = radarState.leadOne
+        fcw_stop = leadOne.status and leadOne.dRel < 4.0
+        if a_ego > stopping_accel or fcw_stop: # and v_ego < 1.0:
+          long_control_state = LongCtrlState.stopping
+        if long_control_state == LongCtrlState.starting:
+          long_control_state = LongCtrlState.stopping
       elif started_condition:
         long_control_state = LongCtrlState.pid
   return long_control_state
@@ -53,24 +59,47 @@ class LongControl:
                              rate=1 / DT_CTRL)
     self.last_output_accel = 0.0
 
+
+    self.stopping_accel = -0.5
+    self.j_lead = 0.0
+
+    self.use_accel_pid = False
+    if CP.brand == "toyota":
+      self.use_accel_pid = True
+
   def reset(self):
     self.pid.reset()
 
-  def update(self, active, CS, a_target, should_stop, accel_limits):
+  def update(self, active, CS, long_plan, accel_limits, t_since_plan, radarState):
+
+    soft_hold_active = CS.softHoldActive > 0
+    a_target_ff = long_plan.aTarget
+    v_target_now = long_plan.vTargetNow
+    j_target_now = long_plan.jTargetNow
+    should_stop = long_plan.shouldStop
+
     """Update longitudinal control. This updates the state machine and runs a PID loop"""
     self.pid.neg_limit = accel_limits[0]
     self.pid.pos_limit = accel_limits[1]
 
     self.long_control_state = long_control_state_trans(self.CP, active, self.long_control_state, CS.vEgo,
                                                        should_stop, CS.brakePressed,
-                                                       CS.cruiseState.standstill)
+                                                       CS.cruiseState.standstill, CS.aEgo, self.stopping_accel, radarState)
+    if active and soft_hold_active:
+      self.long_control_state = LongCtrlState.stopping
+
     if self.long_control_state == LongCtrlState.off:
       self.reset()
       output_accel = 0.
 
     elif self.long_control_state == LongCtrlState.stopping:
       output_accel = self.last_output_accel
-      if output_accel > self.CP.stopAccel:
+
+      if soft_hold_active:
+        output_accel = self.CP.stopAccel
+
+      stopAccel = self.stopping_accel if self.stopping_accel < 0.0 else self.CP.stopAccel
+      if output_accel > stopAccel:
         output_accel = min(output_accel, 0.0)
         output_accel -= self.CP.stoppingDecelRate * DT_CTRL
       self.reset()
@@ -80,9 +109,12 @@ class LongControl:
       self.reset()
 
     else:  # LongCtrlState.pid
-      error = a_target - CS.aEgo
+      if self.use_accel_pid:
+        error = a_target_ff - CS.aEgo
+      else:
+        error = v_target_now - CS.vEgo
       output_accel = self.pid.update(error, speed=CS.vEgo,
-                                     feedforward=a_target)
+                                     feedforward=a_target_ff)
 
     self.last_output_accel = np.clip(output_accel, accel_limits[0], accel_limits[1])
-    return self.last_output_accel
+    return self.last_output_accel, a_target_ff, j_target_now

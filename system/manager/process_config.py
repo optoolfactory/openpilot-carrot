@@ -61,6 +61,8 @@ def or_(*fns):
 def and_(*fns):
   return lambda *args: operator.and_(*(fn(*args) for fn in fns))
 
+def enable_webrtc(started, params, CP: car.CarParams) -> bool:
+  return False #params.get_int("DisableDM") == 2
 procs = [
   DaemonProcess("manage_athenad", "system.athena.manage_athenad", "AthenadPid"),
 
@@ -110,9 +112,10 @@ procs = [
 
   # debug procs
   NativeProcess("bridge", "cereal/messaging", ["./bridge"], notcar),
-  PythonProcess("webrtcd", "system.webrtc.webrtcd", notcar),
+  PythonProcess("webrtcd", "system.webrtc.webrtcd", or_(notcar, and_(only_onroad, enable_webrtc))),
   PythonProcess("webjoystick", "tools.bodyteleop.web", notcar),
   PythonProcess("joystick", "tools.joystick.joystick_control", and_(joystick, iscar)),
+  PythonProcess("carrot_server", "selfdrive.carrot.carrot_server", always_run),
 ]
 
 managed_processes = {p.name: p for p in procs}

@@ -55,6 +55,7 @@ struct sample_t vehicle_speed;
 bool vehicle_moving = false;
 bool acc_main_on = false;  // referred to as "ACC off" in ISO 15622:2018
 int cruise_button_prev = 0;
+int cruise_main_prev = 0;
 bool safety_rx_checks_invalid = false;
 
 // for safety modes with torque steering control
@@ -238,6 +239,11 @@ bool safety_tx_hook(CANPacket_t *msg) {
   if (whitelisted) {
     safety_allowed = current_hooks->tx(msg);
   }
+  if(relay_malfunction) print("relay_malfunction...\n");
+  if(!safety_allowed) print("safety_not_allowed\n");
+  if(!whitelisted) print("whitelisted.. no\n");
+  if(!relay_malfunction && whitelisted && safety_allowed);
+  else { puth(msg->addr); print("\n"); }
 
   return !relay_malfunction && whitelisted && safety_allowed;
 }
@@ -269,7 +275,6 @@ int safety_fwd_hook(int bus_num, int addr) {
       }
     }
   }
-
   if (!blocked && (current_hooks->fwd != NULL)) {
     blocked = current_hooks->fwd(bus_num, addr);
   }
@@ -367,6 +372,7 @@ static void stock_ecu_check(bool stock_ecu_detected) {
   // check if stock ECU is on bus broken by car harness
   if ((safety_mode_cnt > RELAY_TRNS_TIMEOUT) && stock_ecu_detected) {
     relay_malfunction_set();
+    print("stock_ecu_detected\n");
   }
 }
 

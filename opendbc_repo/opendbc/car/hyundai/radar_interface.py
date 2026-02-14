@@ -5,6 +5,8 @@ from opendbc.car import Bus, structs
 from opendbc.car.interfaces import RadarInterfaceBase
 from opendbc.car.hyundai.values import DBC
 
+from opendbc.carrot.hyundai.carrot_radar_interface import CarrotRadarInterface
+
 RADAR_START_ADDR = 0x500
 RADAR_MSG_COUNT = 32
 
@@ -19,7 +21,7 @@ def get_radar_can_parser(CP):
   return CANParser(DBC[CP.carFingerprint][Bus.radar], messages, 1)
 
 
-class RadarInterface(RadarInterfaceBase):
+class RadarInterface(CarrotRadarInterface):
   def __init__(self, CP):
     super().__init__(CP)
     self.updated_messages = set()
@@ -27,7 +29,11 @@ class RadarInterface(RadarInterfaceBase):
     self.track_id = 0
 
     self.radar_off_can = CP.radarUnavailable
-    self.rcp = get_radar_can_parser(CP)
+
+    self._carrot_init(CP)
+    if not self.canfd:
+      self.rcp = get_radar_can_parser(CP)
+    
 
   def update(self, can_strings):
     if self.radar_off_can or (self.rcp is None):
@@ -45,6 +51,9 @@ class RadarInterface(RadarInterfaceBase):
     return rr
 
   def _update(self, updated_messages):
+    if self.canfd:
+      return self._carrot_update(updated_messages)
+      
     ret = structs.RadarData()
     if self.rcp is None:
       return ret
