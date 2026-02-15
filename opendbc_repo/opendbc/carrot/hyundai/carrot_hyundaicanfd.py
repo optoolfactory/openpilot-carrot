@@ -334,8 +334,6 @@ def activate_scc_lfa(ret, packer, CAN, frame, CC, CS, lfahda_cluster):
           values["CRUISE_BUTTONS"] = 2
       elif CC.enabled and (not MainMode_ACC) and 10 < frame % 200 <= 16 and CS.out.vEgo > 3.:
         values["ADAPTIVE_CRUISE_MAIN_BTN"] = 1
-      else:
-        values["ADAPTIVE_CRUISE_MAIN_BTN"] = 0
 
       ret.append(packer.make_can_msg(CS.cruise_btns_msg_canfd, CAN.CAM, values))
   
