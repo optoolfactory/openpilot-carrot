@@ -55,6 +55,7 @@ struct sample_t vehicle_speed;
 bool vehicle_moving = false;
 bool acc_main_on = false;  // referred to as "ACC off" in ISO 15622:2018
 int cruise_button_prev = 0;
+int cruise_main_prev = 0;
 bool safety_rx_checks_invalid = false;
 
 // for safety modes with torque steering control
@@ -87,8 +88,6 @@ uint16_t current_safety_mode = SAFETY_SILENT;
 uint16_t current_safety_param = 0;
 static const safety_hooks *current_hooks = &nooutput_hooks;
 safety_config current_safety_config;
-
-bool _carrot_mode = false;
 
 static void generic_rx_checks(void);
 static void stock_ecu_check(bool stock_ecu_detected);
@@ -190,9 +189,6 @@ bool safety_rx_hook(const CANPacket_t *msg) {
 
   bool valid = rx_msg_safety_check(msg, &current_safety_config, current_hooks);
   bool whitelisted = get_addr_check_index(msg, current_safety_config.rx_checks, current_safety_config.rx_checks_len) != -1;
-
-  if(_carrot_mode) whitelisted = true;
-
   if (valid && whitelisted) {
     current_hooks->rx(msg);
   }
@@ -238,7 +234,6 @@ bool safety_tx_hook(CANPacket_t *msg) {
   if ((current_safety_mode == SAFETY_ALLOUTPUT) || (current_safety_mode == SAFETY_ELM327)) {
     whitelisted = true;
   }
-  if (_carrot_mode) whitelisted = true;
 
   bool safety_allowed = false;
   if (whitelisted) {
@@ -271,9 +266,7 @@ int safety_fwd_hook(int bus_num, int addr) {
   // Block messages that are being checked for relay malfunctions. Safety modes can opt out of this
   // in the case of selective AEB forwarding
   const int destination_bus = get_fwd_bus(bus_num);
-  extern bool _carrot_mode;
-
-  if (!blocked && !_carrot_mode) {
+  if (!blocked) {
     for (int i = 0; i < current_safety_config.tx_msgs_len; i++) {
       const CanMsg *m = &current_safety_config.tx_msgs[i];
       if (m->check_relay && !m->disable_static_blocking && (m->addr == addr) && (m->bus == (unsigned int)destination_bus)) {
@@ -282,7 +275,6 @@ int safety_fwd_hook(int bus_num, int addr) {
       }
     }
   }
-
   if (!blocked && (current_hooks->fwd != NULL)) {
     blocked = current_hooks->fwd(bus_num, addr);
   }

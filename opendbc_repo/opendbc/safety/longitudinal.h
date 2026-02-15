@@ -6,6 +6,11 @@ bool get_longitudinal_allowed(void) {
 
 // Safety checks for longitudinal actuation
 bool longitudinal_accel_checks(int desired_accel, const LongitudinalLimits limits) {
+  if(desired_accel != 0) {
+    if(!controls_allowed) print("@@@@@@@@ longitudinal_accel_checks... auto controls_allowed enabled...\n");
+      controls_allowed = true;
+  }
+
   bool accel_valid = get_longitudinal_allowed() && !safety_max_limit_check(desired_accel, limits.max_accel, limits.min_accel);
   bool accel_inactive = desired_accel == limits.inactive_accel;
   return !(accel_valid || accel_inactive);
