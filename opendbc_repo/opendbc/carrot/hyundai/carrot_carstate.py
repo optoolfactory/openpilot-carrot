@@ -1,6 +1,9 @@
 from opendbc.car.interfaces import CarStateBase
 from openpilot.common.params import Params
 from opendbc.car import Bus, create_button_events, structs, DT_CTRL
+from opendbc.car.hyundai.values import HyundaiFlags
+
+ButtonType = structs.CarState.ButtonEvent.Type
 
 class CarrotCarState(CarStateBase):
   def _carrot_init(self, CP):
@@ -24,6 +27,8 @@ class CarrotCarState(CarStateBase):
     self.adrv_200 = None
     self.adrv_1ea = None
     self.cruise_buttons_msg = None
+    self.paddle_button_prev = 0
+
 
   def _carrot_monitor_fingerprint(self, can_parsers):
     self.cp = can_parsers[Bus.pt]
@@ -31,6 +36,22 @@ class CarrotCarState(CarStateBase):
     self.cp_alt = can_parsers[Bus.alt] if Bus.alt in can_parsers else None
 
     if self.controls_ready_count <= 200:
+      def add_if_seen(parser, name):
+        msg = parser.dbc.name_to_msg.get(name)
+        if not msg:
+          print(f"{name} not in DBC")
+          return
+        if msg.address not in parser.seen_addresses:
+          return
+        if msg.address in parser.addresses:
+          return
+        parser._add_message(name)   # ← 이름으로 등록
+
+      def add_and_cache(parser, name: str, attr: str):
+        add_if_seen(parser, name)
+        if name in parser.vl:   # 등록 성공했을 때만
+          setattr(self, attr, parser.vl[name])
+
       if self._params.get_bool("ControlsReady"):
         self.controls_ready_count += 1
 
@@ -39,62 +60,48 @@ class CarrotCarState(CarStateBase):
         if self.cp_alt is not None:
           self.cp_alt.enable_capture = True
       elif self.controls_ready_count == 100: # after 1sec
-        print("cp_cam.seen_addresses =", self.cp_cam.seen_addresses)
-        print("cp.seen_addresses =", self.cp.seen_addresses)
         self.cp.enable_capture = self.cp_cam.enable_capture = False
         if self.cp_alt is not None:
-          print("cp_alt.seen_addresses =", self.cp_alt.seen_addresses)
           self.cp_alt.enable_capture = False
-
         if 69 in self.cp.seen_addresses:
           self.gear_msg_canfd = "GEAR"
         if 442 in self.cp.seen_addresses:
           self.cp_bsm = self.cp
         elif 442 in self.cp_cam.seen_addresses:
           self.cp_bsm = self.cp_cam
+      elif self.controls_ready_count == 101:
+        print("cp_cam.seen_addresses =", self.cp_cam.seen_addresses)
+      elif self.controls_ready_count == 102:
+        print("cp.seen_addresses =", self.cp.seen_addresses)
+      elif self.controls_ready_count == 103:
+        if self.cp_alt is not None:
+          print("cp_alt.seen_addresses =", self.cp_alt.seen_addresses)
+        else:
+          print("cp_alt.seen_addresses = None")
+      elif self.controls_ready_count == 104:
+        add_and_cache(self.cp, "MDPS", "mdps")
+        add_and_cache(self.cp, "STEER_TOUCH_2AF", "steer_touch_2af")
+        add_and_cache(self.cp, "TCS", "tcs")
+      elif self.controls_ready_count == 105:
+        add_and_cache(self.cp_cam, "ADRV_0x161", "adrv_161")
+        add_and_cache(self.cp_cam, "LFA_ALT", "lfa_alt")
+        add_and_cache(self.cp_cam, "LFA", "lfa")
+      elif self.controls_ready_count == 106:
+        add_and_cache(self.cp_cam, "CCNC_0x162", "ccnc_162")
+        add_and_cache(self.cp_cam, "LFAHDA_CLUSTER", "lfahda_cluster")
+        add_and_cache(self.cp_cam, "SCC_CONTROL", "scc_control")
+      elif self.controls_ready_count == 107:
+        add_and_cache(self.cp_cam, "ADRV_0x200", "adrv_200")
+        add_and_cache(self.cp_cam, "ADRV_0x1ea", "adrv_1ea")
+        add_and_cache(self.cp, self.cruise_btns_msg_canfd, "cruise_buttons_msg")
 
-        def add_if_seen(parser, name):
-          msg = parser.dbc.name_to_msg.get(name)
-          if not msg:
-            print(f"{name} not in DBC")
-            return
-          if msg.address not in parser.seen_addresses:
-            return
-          if msg.address in parser.addresses:
-            return
-          parser._add_message(name)   # ← 이름으로 등록
-
-        add_if_seen(self.cp, "MDPS")
-        add_if_seen(self.cp, "STEER_TOUCH_2AF")
-        add_if_seen(self.cp, "TCS")
-        add_if_seen(self.cp_cam, "ADRV_0x161")
-        add_if_seen(self.cp_cam, "LFA_ALT")
-        add_if_seen(self.cp_cam, "LFA")
-        add_if_seen(self.cp_cam, "CCNC_0x162")
-        add_if_seen(self.cp_cam, "LFAHDA_CLUSTER")
-        add_if_seen(self.cp_cam, "SCC_CONTROL")
-        add_if_seen(self.cp_cam, "ADRV_0x200")
-        add_if_seen(self.cp_cam, "ADRV_0x1ea")
-        
-
-  def _carrot_update_rx(self):
-    self.mdps = self.cp.vl.get("MDPS")
-    self.steer_touch_2af = self.cp.vl.get("STEER_TOUCH_2AF")
-    self.tcs = self.cp.vl.get("TCS")
-    self.adrv_161 = self.cp_cam.vl.get("ADRV_0x161")
-    self.lfa_alt = self.cp_cam.vl.get("LFA_ALT")
-    self.lfa = self.cp_cam.vl.get("LFA")
-    self.ccnc_162 = self.cp_cam.vl.get("CCNC_0x162")
-    self.lfahda_cluster = self.cp_cam.vl.get("LFAHDA_CLUSTER")
-    self.scc_control = self.cp_cam.vl.get("SCC_CONTROL")
-    self.adrv_200 = self.cp_cam.vl.get("ADRV_0x200")
-    self.adrv_1ea = self.cp_cam.vl.get("ADRV_0x1ea")
-    self.cruise_buttons_msg = self.cp.vl.get(self.cruise_btns_msg_canfd)
-    
   def _carrot_update_canfd(self, ret):
-    self._carrot_update_rx()
 
     ret.cruiseState.available = self.scc_control is not None and self.scc_control["MainMode_ACC"] == 1
+
+    if self.CP.flags & HyundaiFlags.ANGLE_CONTROL:
+      ret.steeringAngleDeg = self.cp.vl["MDPS"]["STEERING_ANGLE_2"]
+
     # TPMS
     #tpms_unit = self.cp.vl["TPMS"]["UNIT"] * 0.725 if int(self.cp.vl["TPMS"]["UNIT"]) > 0 else 1.
     #ret.tpms.fl = tpms_unit * self.cp.vl["TPMS"]["PRESSURE_FL"]
@@ -110,5 +117,14 @@ class CarrotCarState(CarStateBase):
 
     # brakeLights
     #ret.brakeLights = ret.brakePressed or self.cp.vl["TCS"]["BrakeLight"] == 1
+
+
+    paddle_button = self.paddle_button_prev
+    if self.cruise_btns_msg_canfd == "CRUISE_BUTTONS":
+      paddle_button = 1 if self.cp.vl["CRUISE_BUTTONS"]["LEFT_PADDLE"] == 1 else 2 if self.cp.vl["CRUISE_BUTTONS"]["RIGHT_PADDLE"] == 1 else 0
+    elif self.gear_msg_canfd == "GEAR":
+      paddle_button = 1 if self.cp.vl["GEAR"]["LEFT_PADDLE"] == 1 else 2 if self.cp.vl["GEAR"]["RIGHT_PADDLE"] == 1 else 0
+
+    ret.buttonEvents += create_button_events(paddle_button, self.paddle_button_prev, {1: ButtonType.paddleLeft, 2: ButtonType.paddleRight})
   
     return ret

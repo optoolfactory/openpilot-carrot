@@ -38,8 +38,8 @@ def create_fake_mdps_active(ret, frame, packer, CAN, CS, angle_control):
 
 def create_fake_steering_touch(ret, frame, packer, CAN, CS):
   if frame % 10 == 0:
-    if CS.teer_touch_2af is not None:
-      steer_touch = copy.copy(CS.teer_touch_2af)
+    if CS.steer_touch_2af is not None:
+      steer_touch = copy.copy(CS.steer_touch_2af)
       if frame % 1000 < 40:
         steer_touch["TOUCH_DETECT"] = 3
         steer_touch["TOUCH1"] = 50
