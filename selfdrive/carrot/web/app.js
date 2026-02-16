@@ -1194,6 +1194,7 @@ async function carWsDisconnect() {
 
 async function updateQuickLink() {
   const el = document.getElementById("quickLink");
+  console.log("[QuickLink] update start");
   if (!el) return;
 
   try {
@@ -1203,6 +1204,7 @@ async function updateQuickLink() {
     if (!githubId) {
       el.style.display = "";
       el.textContent = "GithubUsername empty (bulkGet ok)";
+      console.log("[QuickLink] GithubUsername empty");
       return;
     }
 
