@@ -74,7 +74,7 @@ def create_steering_messages_camera_scc(frame, packer, CAN, CC, lat_active, appl
 
     if CS.lfa is not None:
       
-      if frame % 100 == 0:
+      if frame % 50 == 0:
         if CS.lfa["FCA_SYSWARN"] != 0:
           print("FCA_SYSWARN")
         if CS.ccnc_162 is not None:
