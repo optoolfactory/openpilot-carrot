@@ -3,7 +3,7 @@ from typing import Optional
 
 from openpilot.common.params import Params
 from opendbc.car.common.conversions import Conversions as CV
-from opendbc.car import GearShifter, ButtonType
+from opendbc.car import structs
 
 from .params_mgr import ParamsManager
 from .button_handler import ButtonHandler
@@ -15,6 +15,8 @@ from .vcruise_output import VCruiseOutput
 
 
 V_CRUISE_UNSET = 255  # 필요하면 openpilot constants로 교체하세요
+GearShifter = structs.CarState.GearShifter
+ButtonType = structs.CarState.ButtonEvent.Type
 
 
 class VCruiseCarrot:
