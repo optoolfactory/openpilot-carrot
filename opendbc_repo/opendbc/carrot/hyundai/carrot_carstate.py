@@ -125,11 +125,13 @@ class CarrotCarState(CarStateBase):
     elif self.gear_msg_canfd == "GEAR":
       paddle_button = 1 if self.cp.vl["GEAR"]["LEFT_PADDLE"] == 1 else 2 if self.cp.vl["GEAR"]["RIGHT_PADDLE"] == 1 else 0
 
-    ret.buttonEvents = [
-      *list(ret.buttonEvents),
-      *create_button_events(paddle_button, self.paddle_button_prev,
-                            {1: ButtonType.paddleLeft, 2: ButtonType.paddleRight}),
-    ]
+    new_events = create_button_events(
+      paddle_button, self.paddle_button_prev,
+      {1: ButtonType.paddleLeft, 2: ButtonType.paddleRight}
+    )
+    base_events = list(ret.buttonEvents)
+    ret.buttonEvents = base_events + new_events
+    
     self.paddle_button_prev = paddle_button
   
     return ret
