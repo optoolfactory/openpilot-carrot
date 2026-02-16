@@ -80,6 +80,9 @@ def create_steering_messages_camera_scc(frame, packer, CAN, CC, lat_active, appl
         if CS.ccnc_162 is not None:
           if CS.ccnc_162["FAULT_FSS"] != 0:
             print("FAULT_FSS")
+        if CS.adrv_1ea is not None:
+          if CS.adrv_1ea["HD_MODE2"] != 0:
+            print("lane change assist warning")
           
       values = copy.copy(CS.lfa)
       values.pop("COUNTER", None)
