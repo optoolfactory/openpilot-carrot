@@ -1256,6 +1256,8 @@ struct LongitudinalPlan @0xe00b5b3eba12876c {
   allowThrottle @38: Bool;
   allowBrake @39: Bool;
 
+  vTargetNow @40: Float32;
+  jTargetNow @41: Float32;
 
   solverExecutionTime @35 :Float32;
 

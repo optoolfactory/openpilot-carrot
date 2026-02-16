@@ -156,17 +156,22 @@ class LongitudinalPlanner:
 
     if sm['selfdriveState'].experimentalMode:
       output_a_target = min(output_a_target_e2e, output_a_target_mpc)
+      output_v_target_now = min(output_v_target_mpc, output_v_target_now_e2e)
       self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc
       if output_a_target < output_a_target_mpc:
         self.mpc.source = LongitudinalPlanSource.e2e
     else:
       output_a_target = output_a_target_mpc
+      output_v_target_now = output_v_target_mpc
       self.output_should_stop = output_should_stop_mpc
 
-    for idx in range(2):
-      accel_clip[idx] = np.clip(accel_clip[idx], self.prev_accel_clip[idx] - 0.05, self.prev_accel_clip[idx] + 0.05)
-    self.output_a_target = np.clip(output_a_target, accel_clip[0], accel_clip[1])
-    self.prev_accel_clip = accel_clip
+    #for idx in range(2):
+    #  accel_clip[idx] = np.clip(accel_clip[idx], self.prev_accel_clip[idx] - 0.05, self.prev_accel_clip[idx] + 0.05)
+    #self.output_a_target = np.clip(output_a_target, accel_clip[0], accel_clip[1])
+    #self.prev_accel_clip = accel_clip
+    self.output_a_target = output_a_target
+    self.output_v_target_now = output_v_target_now
+    self.output_j_target_now = self.j_desired_trajectory[0]
 
   def publish(self, sm, pm):
     plan_send = messaging.new_message('longitudinalPlan')
@@ -187,6 +192,8 @@ class LongitudinalPlanner:
     longitudinalPlan.fcw = self.fcw
 
     longitudinalPlan.aTarget = float(self.output_a_target)
+    longitudinalPlan.vTargetNow = float(self.output_v_target_now)
+    longitudinalPlan.jTargetNow = float(self.output_j_target_now)
     longitudinalPlan.shouldStop = bool(self.output_should_stop)
     longitudinalPlan.allowBrake = True
     longitudinalPlan.allowThrottle = bool(self.allow_throttle)
