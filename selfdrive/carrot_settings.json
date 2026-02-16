@@ -2,6 +2,45 @@
   "apilot": 20220111,
   "params": [
     {
+    {
+      "group": "조향튜닝",
+      "name": "LatSmoothSec",
+      "title": "LatSmoothSec(13)x0.01",
+      "descr": "조향필터링값 높으면 부드러운조향",
+      "egroup": "LAT",
+      "etitle": "LatSmoothSec(13)",
+      "edescr": "Lat smoothing values — Higher values smoother",
+      "min": 1,
+      "max": 30,
+      "default": 13,
+      "unit": 1
+    },
+    {
+      "group": "조향튜닝",
+      "name": "LatSuspendAngleDeg",
+      "title": "자동조향일시중지각도(300)",
+      "descr": "조향각이 커지면 자동조향을 일시중지. 15도 이내도 조향각이 돌아오면 재개함.",
+      "egroup": "LAT",
+      "etitle": "AutoSteering Suspend Angle(300)",
+      "edescr": "Auto steering pauses at large steering angles and resumes when it returns within 15.",
+      "min": 45,
+      "max": 300,
+      "default": 300,
+      "unit": 10
+    },
+    {
+      "group": "주행튜닝",
+      "name": "VEgoStopping",
+      "title": "정지출발민감도(50)x0.01",
+      "descr": "값이 낮을수록 빠르게 출발함\n 너무낮추면 추돌위험이 있을수 있음\n (5 권장)",
+      "egroup": "LONG",
+      "etitle": "VEgoStopping(50)x0.01",
+      "edescr": "Lower values result in quicker starts; setting too low may increase collision risk. (5 recommended)",
+      "min": 1,
+      "max": 100,
+      "default": 50,
+      "unit": 5
+    },
       "group": "시작",
       "name": "HyundaiCameraSCC",
       "title": "HYUNDAI: CAMERA SCC",
@@ -12,6 +51,19 @@
       "min": 0,
       "max": 3,
       "default": 0,
+    {
+      "group": "주행튜닝",
+      "name": "StoppingAccel",
+      "title": "정지시작가속도x0.01(0)",
+      "descr": "정지시작가속도 조정, 0: 기존방식",
+      "egroup": "LONG",
+      "etitle": "StoppingStartAccelx0.01(0)",
+      "edescr": "stopping acceleration, 0: Traditional method",
+      "min": -100,
+      "max": 0,
+      "default": 0,
+      "unit": 10
+    },
       "unit": 1
     }
   ]
