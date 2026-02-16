@@ -142,21 +142,25 @@ class CarState(CarrotCarState):
     ret.espDisabled = cp.vl["TCS11"]["TCS_PAS"] == 1
     ret.espActive = cp.vl["TCS11"]["ABS_ACT"] == 1
     ret.accFaulted = cp.vl["TCS13"]["ACCEnable"] != 0  # 0 ACC CONTROL ENABLED, 1-3 ACC CONTROL DISABLED
+    ret.brakeLights = bool(cp.vl["TCS13"]["BrakeLight"] or ret.brakePressed)
 
     if self.CP.flags & (HyundaiFlags.HYBRID | HyundaiFlags.EV | HyundaiFlags.FCEV):
       if self.CP.flags & HyundaiFlags.FCEV:
-        ret.gasPressed = cp.vl["FCEV_ACCELERATOR"]["ACCELERATOR_PEDAL"] > 0
+        ret.gas = cp.vl["FCEV_ACCELERATOR"]["ACCELERATOR_PEDAL"] / 254.
       elif self.CP.flags & HyundaiFlags.HYBRID:
-        ret.gasPressed = cp.vl["E_EMS11"]["CR_Vcu_AccPedDep_Pos"] > 0
+        ret.gas = cp.vl["E_EMS11"]["CR_Vcu_AccPedDep_Pos"] / 254.
       else:
-        ret.gasPressed = cp.vl["E_EMS11"]["Accel_Pedal_Pos"] > 0
+        ret.gas = cp.vl["E_EMS11"]["Accel_Pedal_Pos"] / 254.
+      ret.gasPressed = ret.gas > 0
     else:
+      ret.gas = cp.vl["EMS12"]["PV_AV_CAN"] / 100.
       ret.gasPressed = bool(cp.vl["EMS16"]["CF_Ems_AclAct"])
 
     # Gear Selection via Cluster - For those Kia/Hyundai which are not fully discovered, we can use the Cluster Indicator for Gear Selection,
     # as this seems to be standard over all cars, but is not the preferred method.
     if self.CP.flags & (HyundaiFlags.HYBRID | HyundaiFlags.EV):
       gear = cp.vl["ELECT_GEAR"]["Elect_Gear_Shifter"]
+      ret.gearStep = cp.vl["ELECT_GEAR"]["Elect_Gear_Step"]
     elif self.CP.flags & HyundaiFlags.FCEV:
       gear = cp.vl["EMS20"]["HYDROGEN_GEAR_SHIFTER"]
     elif self.CP.flags & HyundaiFlags.CLUSTER_GEARS:
@@ -165,6 +169,7 @@ class CarState(CarrotCarState):
       gear = cp.vl["TCU12"]["CUR_GR"]
     else:
       gear = cp.vl["LVR12"]["CF_Lvr_Gear"]
+      ret.gearStep = cp.vl["LVR11"]["CF_Lvr_GearInf"]
 
     ret.gearShifter = self.parse_gear_shifter(self.shifter_values.get(gear))
 
@@ -218,7 +223,9 @@ class CarState(CarrotCarState):
     speed_factor = CV.KPH_TO_MS if self.is_metric else CV.MPH_TO_MS
 
     if self.CP.flags & (HyundaiFlags.EV | HyundaiFlags.HYBRID):
-      ret.gasPressed = cp.vl[self.accelerator_msg_canfd]["ACCELERATOR_PEDAL"] > 1e-5
+      offset = 255. if self.CP.flags & HyundaiFlags.EV else 1023.
+      ret.gas = cp.vl[self.accelerator_msg_canfd]["ACCELERATOR_PEDAL"] / offset
+      ret.gasPressed = ret.gas > 1e-5
     else:
       ret.gasPressed = bool(cp.vl[self.accelerator_msg_canfd]["ACCELERATOR_PEDAL_PRESSED"])
 

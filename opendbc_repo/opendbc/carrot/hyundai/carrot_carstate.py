@@ -4,6 +4,7 @@ from opendbc.car import Bus, create_button_events, structs, DT_CTRL
 from opendbc.car.hyundai.values import HyundaiFlags
 
 ButtonType = structs.CarState.ButtonEvent.Type
+GearShifter = structs.CarState.GearShifter
 
 class CarrotCarState(CarStateBase):
   def _carrot_init(self, CP):
@@ -27,6 +28,7 @@ class CarrotCarState(CarStateBase):
     self.adrv_200 = None
     self.adrv_1ea = None
     self.cruise_buttons_msg = None
+    self.gear_step = None
     self.paddle_button_prev = 0
 
 
@@ -94,6 +96,10 @@ class CarrotCarState(CarStateBase):
         add_and_cache(self.cp_cam, "ADRV_0x200", "adrv_200")
         add_and_cache(self.cp_cam, "ADRV_0x1ea", "adrv_1ea")
         add_and_cache(self.cp, self.cruise_btns_msg_canfd, "cruise_buttons_msg")
+      elif self.controls_ready_count == 108:
+        add_and_cache(self.cp, "GEAR", "gear_step")
+        add_and_cache(self.cp, "GEAR_ALT", "gear_step") # gear_alt가 있으면 우선함.
+
 
   def _carrot_update_canfd(self, ret):
 
@@ -118,8 +124,11 @@ class CarrotCarState(CarStateBase):
       ret.rightBlindspot = (bsm_info["FR_INDICATOR"] + bsm_info["INDICATOR_RIGHT_TWO"] + bsm_info["INDICATOR_RIGHT_FOUR"]) > 0
 
     # brakeLights
-    #ret.brakeLights = ret.brakePressed or self.cp.vl["TCS"]["BrakeLight"] == 1
+    ret.brakeLights = ret.brakePressed or self.cp.vl["TCS"]["BrakeLight"] == 1
 
+    ret.gearStep = self.gear_step["GEAR_STEP"] if self.gear_step is not None else 0
+    if 1 <= ret.gearStep <= 8 and ret.gearShifter == GearShifter.unknown:
+      ret.gearShifter = GearShifter.drive
 
     paddle_button = self.paddle_button_prev
     if self.cruise_btns_msg_canfd == "CRUISE_BUTTONS":
