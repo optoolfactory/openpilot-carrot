@@ -13,6 +13,7 @@ let CURRENT_MAKER = null;
 
 const btnHome = document.getElementById("btnHome");
 const btnSetting = document.getElementById("btnSetting");
+const btnFleet = document.getElementById("btnFleet");
 const btnLang = document.getElementById("btnLang");
 const langLabel = document.getElementById("langLabel");
 const btnTools = document.getElementById("btnTools");
@@ -45,6 +46,13 @@ const modelMeta = document.getElementById("modelMeta");
 
 btnHome.onclick = () => showPage("home", true);
 btnSetting.onclick = () => showPage("setting", true);
+
+btnFleet.onclick = () => {
+  const ip = location.hostname;
+  const url = `http://${ip}:8082/`;
+  window.open(url, "_blank", "noopener");
+};
+
 btnLang.onclick = () => toggleLang();
 
 btnChangeCar.onclick = () => showPage("car", true);
@@ -591,6 +599,7 @@ function confirmText(msg, placeholder = "") {
   return String(v).trim();
 }
 
+
 function initToolsPage() {
   // 버튼 바인딩 (한 번만)
   const bindOnce = (id, fn) => {
@@ -683,51 +692,51 @@ function initToolsPage() {
     }
   });
 
-bindOnce("btnBackupSettings", async () => {
-  try {
-    const j = await runTool("backup_settings");
-    if (j.file) window.location.href = j.file; //  다운로드
-  } catch (e) {
-    toolsMetaSet("error");
-    toolsOutSet("backup failed: " + e.message);
-    alert(e.message);
-  }
-});
-
-bindOnce("btnRestoreSettings", async () => {
-  const inp = document.getElementById("restoreFile");
-  if (!inp || !inp.files || !inp.files[0]) {
-    alert("Select a backup json file first.");
-    return;
-  }
-
-  if (!confirm("Restore settings from file?\n\nThis will overwrite many Params values.")) return;
-
-  try {
-    toolsMetaSet("uploading...");
-    toolsOutSet("...");
-
-    const fd = new FormData();
-    fd.append("file", inp.files[0]);
-
-    const r = await fetch("/api/params_restore", { method: "POST", body: fd });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.ok) throw new Error(j.error || ("HTTP " + r.status));
-
-    toolsMetaSet("restore done");
-    toolsOutSet(JSON.stringify(j.result, null, 2));
-
-    if (confirm("Restore done.\nReboot now?")) {
-      await runTool("reboot");
-      toolsMetaSet("rebooting...");
-      toolsOutSet("reboot requested");
+  bindOnce("btnBackupSettings", async () => {
+    try {
+      const j = await runTool("backup_settings");
+      if (j.file) window.location.href = j.file; //  다운로드
+    } catch (e) {
+      toolsMetaSet("error");
+      toolsOutSet("backup failed: " + e.message);
+      alert(e.message);
     }
-  } catch (e) {
-    toolsMetaSet("error");
-    toolsOutSet("restore failed: " + e.message);
-    alert(e.message);
-  }
-});
+  });
+
+  bindOnce("btnRestoreSettings", async () => {
+    const inp = document.getElementById("restoreFile");
+    if (!inp || !inp.files || !inp.files[0]) {
+      alert("Select a backup json file first.");
+      return;
+    }
+
+    if (!confirm("Restore settings from file?\n\nThis will overwrite many Params values.")) return;
+
+    try {
+      toolsMetaSet("uploading...");
+      toolsOutSet("...");
+
+      const fd = new FormData();
+      fd.append("file", inp.files[0]);
+
+      const r = await fetch("/api/params_restore", { method: "POST", body: fd });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.error || ("HTTP " + r.status));
+
+      toolsMetaSet("restore done");
+      toolsOutSet(JSON.stringify(j.result, null, 2));
+
+      if (confirm("Restore done.\nReboot now?")) {
+        await runTool("reboot");
+        toolsMetaSet("rebooting...");
+        toolsOutSet("reboot requested");
+      }
+    } catch (e) {
+      toolsMetaSet("error");
+      toolsOutSet("restore failed: " + e.message);
+      alert(e.message);
+    }
+  });
 
   bindOnce("btnReboot", async () => {
     if (!confirm("Reboot now?")) return;
@@ -740,6 +749,23 @@ bindOnce("btnRestoreSettings", async () => {
     } catch (e) {
       toolsMetaSet("error");
       toolsOutSet("reboot failed: " + e.message);
+      alert(e.message);
+    }
+  });
+
+  bindOnce("btnSysCmdRun", async () => {
+    const inp = document.getElementById("sysCmdInput");
+    const cmd = (inp?.value || "").trim();
+    if (!cmd) return;
+
+    toolsOutSet("running: " + cmd + "\n");
+
+    try {
+      const j = await runTool("shell_cmd", { cmd });
+      // j.out에 stdout/stderr 합친 결과
+      toolsOutSet(j.out || "(no output)");
+    } catch (e) {
+      toolsOutSet("error: " + e.message);
       alert(e.message);
     }
   });
@@ -1149,7 +1175,7 @@ function carWsConnect() {
     }
   };
 
-  CAR_WS.onerror = () => {
+  CAR_WS.onerror = (e) => {
     console.log("[CAR_WS] error", e);
   };
 
