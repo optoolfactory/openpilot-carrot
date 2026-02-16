@@ -206,7 +206,7 @@ def create_tcs_messages(packer, CAN, CS):
     #values["NEW_SIGNAL_1"] = 0 # accel과 관련..  옆두부 꺼지는것과 관련? 확인필요
     #values["ACC_REQ"] = 1 # 옆두부 꺼지는것과 관련? 확인필요.. 항상 켜지게함..
     values["NEW_SIGNAL_1"] = 0 if values["ACC_REQ"] == 1 else 1 # 옆두부..
-    #ret.append(packer.make_can_msg("TCS", CAN.CAM, values))
+    ret.append(packer.make_can_msg("TCS", CAN.CAM, values))
   return ret
 
 def alt_cruise_buttons(packer, CP, CAN, buttons, cruise_btns_msg, cnt):
