@@ -156,7 +156,7 @@ class CarInterface(CarrotCarInterface):
     ret.vEgoStopping = 0.1 # carrot
     ret.longitudinalTuning.kpBP = [0.] # carrot
     ret.longitudinalTuning.kpV = [1.] # carrot
-    ret.longitudinalTuning.kf = 1.0 # carrot
+
     if ret.openpilotLongitudinalControl:
       ret.safetyConfigs[-1].safetyParam |= HyundaiSafetyFlags.LONG.value
     if ret.flags & HyundaiFlags.HYBRID:
