@@ -9,11 +9,6 @@ class LeadState:
 
 
 class LeadSafetyStop:
-  """
-  안전정지 가능 여부를 간단히 판단.
-  - ego/lead 모두 같은 감속률로 멈춘다고 가정.
-  - d_final = d_rel - d_stop_ego - d_stop_rel
-  """
   def __init__(self, decel_rate: float = 1.5):
     self.decel_rate = float(decel_rate)
 

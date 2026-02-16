@@ -4,11 +4,6 @@ import numpy as np
 from openpilot.common.params import Params
 
 class PersonalityController:
-  """
-  gapAdjustCruise 버튼:
-  - pcmCruiseGap(차량이 제공하는 gap)이 있으면 그 값을 우선
-  - 없으면 params의 LongitudinalPersonality를 순환
-  """
   def __init__(self):
     self.params = Params()
 

@@ -14,9 +14,6 @@ class GasBrakeTracker:
 
   def update(self, CS, enabled_last: bool, v_cruise_kph: float,
              auto_cruise_control: int, pcm_cruise: bool):
-    """
-    - 원 코드의 핵심만: gas_tok, brake 카운트, soft_hold_active
-    """
     # gas
     if CS.gasPressed:
       self.gas_pressed_count = max(1, self.gas_pressed_count + 1)

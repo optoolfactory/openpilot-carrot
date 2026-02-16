@@ -19,9 +19,7 @@ class CruiseActions:
 
   def request(self, enable: int, cancel_timer_sec: float, reason: str,
               auto_cruise_control: int, auto_cruise_control_cancel_timer: int) -> str:
-    """
-    return: log 메시지(비워도 됨)
-    """
+    # return: log 메시지(비워도 됨)
     if self.cruise_cancel_state:
       return reason + " > Cancel state"
 
