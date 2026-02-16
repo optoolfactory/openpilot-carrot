@@ -60,8 +60,6 @@ class LongControl:
     self.last_output_accel = 0.0
 
 
-    self.params = Params()
-    self.readParamCount = 0
     self.stopping_accel = -0.5
     self.j_lead = 0.0
 
@@ -79,19 +77,6 @@ class LongControl:
     v_target_now = long_plan.vTargetNow
     j_target_now = long_plan.jTargetNow
     should_stop = long_plan.shouldStop
-
-    self.readParamCount += 1
-    if self.readParamCount >= 100:
-      self.readParamCount = 0
-      #self.stopping_accel = self.params.get_float("StoppingAccel") * 0.01
-    #elif self.readParamCount == 10:
-    #  if len(self.CP.longitudinalTuning.kpBP) == 1 and len(self.CP.longitudinalTuning.kiBP)==1:
-    #    longitudinalTuningKpV = self.params.get_float("LongTuningKpV") * 0.01
-    #    longitudinalTuningKiV = self.params.get_float("LongTuningKiV") * 0.001
-    #    self.pid._k_p = (self.CP.longitudinalTuning.kpBP, [longitudinalTuningKpV])
-    #    self.pid._k_i = (self.CP.longitudinalTuning.kiBP, [longitudinalTuningKiV])
-    #    self.pid._k_f = self.params.get_float("LongTuningKf") * 0.01
-
 
     """Update longitudinal control. This updates the state machine and runs a PID loop"""
     self.pid.neg_limit = accel_limits[0]
