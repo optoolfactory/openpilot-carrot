@@ -25,6 +25,7 @@ def is_emergency_steering(CS):
 def create_fake_mdps_active(ret, frame, packer, CAN, CS, angle_control):
   if CS.mdps is not None:
     mdps = copy.copy(CS.mdps)
+    mdps.pop("COUNTER", None)
     if angle_control:
       if CS.lfa_alt is not None:
         mdps["LFA2_ACTIVE"] = CS.lfa_alt["LKAS_ANGLE_ACTIVE"]
@@ -65,6 +66,7 @@ def create_steering_messages_camera_scc(frame, packer, CAN, CC, lat_active, appl
         values = CS.lfa_alt
       else:
         values = copy.copy(CS.lfa_alt) #{} #CS.lfa_alt_info
+        values.pop("COUNTER", None)
         values["LKAS_ANGLE_ACTIVE"] = 2 if CC.latActive else 1
         values["LKAS_ANGLE_CMD"] = -apply_angle
         values["LKAS_ANGLE_MAX_TORQUE"] = max_torque if CC.latActive else 0
@@ -80,6 +82,7 @@ def create_steering_messages_camera_scc(frame, packer, CAN, CC, lat_active, appl
             print("FAULT_FSS")
           
       values = copy.copy(CS.lfa)
+      values.pop("COUNTER", None)
       if not emergency_steering:
         values["LKA_MODE"] = 0
         values["LKA_ICON"] = 2 if CC.latActive else 1
@@ -192,6 +195,7 @@ def create_tcs_messages(packer, CAN, CS):
   ret = []
   if CS.tcs is not None:
     values = copy.copy(CS.tcs)
+    values.pop("COUNTER", None)
     values["DriverBraking"] = 0
     values["NEW_SIGNAL_20"] = 0
     values["NEW_SIGNAL_11"] = 0
@@ -325,6 +329,7 @@ def activate_scc_lfa(ret, packer, CAN, frame, CC, CS, lfahda_cluster):
     
     if CS.cruise_buttons_msg is not None:
       values = copy.copy(CS.cruise_buttons_msg)
+      values.pop("COUNTER", None)
 
       if lfahda_cluster["HDA_LFA_SymSta"] == 0 and 0 < frame % 200 < 12:
         values["LDA_BTN"] = 1
@@ -363,6 +368,7 @@ def create_ccnc_messages(CP, packer, CAN, frame, CC, CS, hud_control,
       hdp_active = False
 
       values = copy.copy(CS.adrv_161)
+      values.pop("COUNTER", None)
 
       values["SETSPEED"] = (6 if hdp_active else 3 if cruise_enabled else 1) if main_enabled else 0
       values["SETSPEED_HUD"] = (5 if hdp_active else 3 if cruise_enabled else 1) if main_enabled else 0
@@ -439,11 +445,13 @@ def create_ccnc_messages(CP, packer, CAN, frame, CC, CS, hud_control,
 
     if CS.adrv_200 is not None:
       values = copy.copy(CS.adrv_200)
+      values.pop("COUNTER", None)
       values["TauGapSet"] = hud_control.leadDistanceBars
       ret.append(packer.make_can_msg("ADRV_0x200", CAN.ECAN, values))
 
     if CS.adrv_1ea is not None:
       values = copy.copy(CS.adrv_1ea)
+      values.pop("COUNTER", None)
 
       # blinker hold
       values['LEFT_BLINK_HOLD'] = 1 if lane_changing == 3 else 0
