@@ -928,7 +928,22 @@ async def ws_carstate(request: web.Request) -> web.WebSocketResponse:
         "apm": " ",
       }
 
-      await ws.send_str(json.dumps(payload))
+      try:
+        await ws.send_str(json.dumps(payload))
+      except (asyncio.CancelledError, GeneratorExit):
+        raise
+      except (ConnectionResetError, BrokenPipeError, web.HTTPException):
+        break
+      except Exception as e:
+        # aiohttp에서 클라이언트가 끊길 때 나는 대표 예외
+        if isinstance(e, (aiohttp.client_exceptions.ClientConnectionResetError,)):
+          break
+        # 또는 메시지로 판별(버전마다 타입이 다를 수 있어서)
+        if "Cannot write to closing transport" in str(e):
+          break
+        # 진짜 에러만 찍고 싶으면 여기서만 로그
+        # traceback.print_exc()
+        break
       await asyncio.sleep(0.1)  # 10Hz
   except Exception:
     traceback.print_exc()
