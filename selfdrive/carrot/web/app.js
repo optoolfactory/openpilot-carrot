@@ -1226,7 +1226,10 @@ async function updateQuickLink() {
 function startAll() {
   showPage("home", false);
   rtcInitAuto();
-  updateQuickLink().catch(() => {});
+  updateQuickLink().catch((e) => {
+    console.log("[QuickLink] error:", e);
+    alert("QuickLink error: " + (e?.message || e));
+  });
 
   if (window.DrivingHud) {
     window.DrivingHud.init();
