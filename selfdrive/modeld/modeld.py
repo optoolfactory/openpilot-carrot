@@ -309,17 +309,12 @@ def main(demo=False):
 
   frame = 0
   lat_smooth_seconds = LAT_SMOOTH_SECONDS
-  vEgoStopping = params.get_float("VEgoStopping") * 0.01
   while True:
     frame += 1
     if frame % 100 == 0:
       lat_smooth_seconds = params.get_float("LatSmoothSec") * 0.01
-      vEgoStopping = params.get_float("VEgoStopping") * 0.01
       
-    if custom_lat_delay > 0.0:
-      lat_delay = custom_lat_delay + lat_smooth_seconds + 0.1
-    else:
-      lat_delay = sm["liveDelay"].lateralDelay + lat_smooth_seconds + 0.1
+    lat_delay = sm["liveDelay"].lateralDelay + lat_smooth_seconds + 0.1
 
     # Keep receiving frames until we are at least 1 frame ahead of previous extra frame
     while meta_main.timestamp_sof < meta_extra.timestamp_sof + 25000000:
@@ -403,7 +398,7 @@ def main(demo=False):
       drivingdata_send = messaging.new_message('drivingModelData')
       posenet_send = messaging.new_message('cameraOdometry')
 
-      action = get_action_from_model(model_output, prev_action, lat_delay + DT_MDL, long_delay + DT_MDL, v_ego, lat_smooth_seconds, vEgoStopping)
+      action = get_action_from_model(model_output, prev_action, lat_delay + DT_MDL, long_delay + DT_MDL, v_ego, lat_smooth_seconds, CP.vEgoStopping)
       prev_action = action
       fill_model_msg(drivingdata_send, modelv2_send, model_output, action,
                      publish_state, meta_main.frame_id, meta_extra.frame_id, frame_id,

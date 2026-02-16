@@ -151,11 +151,12 @@ class CarInterface(CarrotCarInterface):
     ret.startingState = False # True carrot
     ret.vEgoStarting = 0.1
     ret.startAccel = 1.0
-    ret.longitudinalActuatorDelay = 0.5
+    ret.longitudinalActuatorDelay = 0.2 # carrot
 
-    ret.longitudinalTuning.kpBP = [0.]
-    ret.longitudinalTuning.kpV = [1.]
-    ret.longitudinalTuning.kf = 1.0
+    ret.vEgoStopping = 0.1 # carrot
+    ret.longitudinalTuning.kpBP = [0.] # carrot
+    ret.longitudinalTuning.kpV = [1.] # carrot
+    ret.longitudinalTuning.kf = 1.0 # carrot
     if ret.openpilotLongitudinalControl:
       ret.safetyConfigs[-1].safetyParam |= HyundaiSafetyFlags.LONG.value
     if ret.flags & HyundaiFlags.HYBRID:

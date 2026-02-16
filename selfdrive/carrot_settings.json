@@ -2,7 +2,6 @@
   "apilot": 20220111,
   "params": [
     {
-    {
       "group": "조향튜닝",
       "name": "LatSmoothSec",
       "title": "LatSmoothSec(13)x0.01",
@@ -29,18 +28,6 @@
       "unit": 10
     },
     {
-      "group": "주행튜닝",
-      "name": "VEgoStopping",
-      "title": "정지출발민감도(50)x0.01",
-      "descr": "값이 낮을수록 빠르게 출발함\n 너무낮추면 추돌위험이 있을수 있음\n (5 권장)",
-      "egroup": "LONG",
-      "etitle": "VEgoStopping(50)x0.01",
-      "edescr": "Lower values result in quicker starts; setting too low may increase collision risk. (5 recommended)",
-      "min": 1,
-      "max": 100,
-      "default": 50,
-      "unit": 5
-    },
       "group": "시작",
       "name": "HyundaiCameraSCC",
       "title": "HYUNDAI: CAMERA SCC",
@@ -51,6 +38,8 @@
       "min": 0,
       "max": 3,
       "default": 0,
+      "unit": 1
+    },
     {
       "group": "주행튜닝",
       "name": "StoppingAccel",
@@ -63,8 +52,6 @@
       "max": 0,
       "default": 0,
       "unit": 10
-    },
-      "unit": 1
     }
   ]
 }
