@@ -343,7 +343,7 @@ def activate_scc_lfa(ret, packer, CAN, frame, CC, CS, lfahda_cluster):
       elif CC.enabled and (not MainMode_ACC) and 10 < frame % 200 <= 16 and CS.out.vEgo > 3.:
         values["ADAPTIVE_CRUISE_MAIN_BTN"] = 1
 
-      #ret.append(packer.make_can_msg(CS.cruise_btns_msg_canfd, CAN.CAM, values))
+      ret.append(packer.make_can_msg(CS.cruise_btns_msg_canfd, CAN.CAM, values))
   
 def create_ccnc_messages(CP, packer, CAN, frame, CC, CS, hud_control,
                          disp_angle, left_lane_warning, right_lane_warning):
