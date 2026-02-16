@@ -180,6 +180,9 @@ class CarInterface(CarrotCarInterface):
 
   @staticmethod
   def init(CP, can_recv, can_send, communication_control=None):
+
+    Params().put_int('LongitudinalPersonalityMax', 4)
+
     # 0x80 silences response
     if communication_control is None:
       communication_control = bytes([uds.SERVICE_TYPE.COMMUNICATION_CONTROL, 0x80 | uds.CONTROL_TYPE.DISABLE_RX_DISABLE_TX, uds.MESSAGE_TYPE.NORMAL])

@@ -230,8 +230,14 @@ struct CarState {
   fuelGauge @41 :Float32; # battery or fuel tank level from [0.0, 1.0]
   charging @43 :Bool;
 
-  softHoldActive @61 :Int16;    #0: not active, 1: active ready, 2: activated
-  activateCruise @62 :Int16;
+  vCluRatio @61 :Float32;
+  softHoldActive @62 :Int16;    #0: not active, 1: active ready, 2: activated
+  activateCruise @63 :Int16;
+  carrotCruise @64 : Int16;
+  pcmCruiseGap @65 :Int16;      #0: can't read, 1,2,3,4: gap setting
+  speedLimit @66 :Float32;
+  speedLimitDistance @67 :Float32;
+  gearStep @68 :Int16;          
   struct WheelSpeeds {
     # optional wheel speeds
     fl @0 :Float32;

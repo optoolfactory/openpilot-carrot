@@ -98,6 +98,8 @@ class CarrotCarState(CarStateBase):
   def _carrot_update_canfd(self, ret):
 
     ret.cruiseState.available = self.scc_control is not None and self.scc_control["MainMode_ACC"] == 1
+    vEgoClu, aEgoClu = self.update_clu_speed_kf(ret.vEgoCluster)
+    ret.vCluRatio = (ret.vEgo / vEgoClu) if (vEgoClu > 3. and ret.vEgo > 3.) else 1.0
 
     if self.CP.flags & HyundaiFlags.ANGLE_CONTROL:
       ret.steeringAngleDeg = self.cp.vl["MDPS"]["STEERING_ANGLE_2"]

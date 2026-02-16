@@ -1,69 +1,57 @@
 import math
+from typing import Tuple
 
-from cereal import car
-from openpilotcommon.params import Params
+from opendbc.car import DT_CTRL
 from opendbc.car.common.conversions import Conversions as CV
+from opendbc.car import ButtonType
 
-ButtonType = car.CarState.ButtonEvent.Type
-
-class LogBuffer:
-  __slots__ = ("_timer", "_timeout", "text")
-  def __init__(self, dt=0.01, hold_sec=3.0):
-    self._timeout = int(hold_sec / dt)
-    self._timer = 0
-    self.text = ""
-
-  def tick(self):
-    if self._timer > 0:
-      self._timer -= 1
-      if self._timer <= 0:
-        self.text = ""
-
-  def set(self, msg: str):
-    self.text = msg
-    self._timer = self._timeout
-  
-
-class ButtonInterpreter:
-  __slots__ = ("long_pressed", "button_cnt", "button_prev", "button_long_time")
-
+class ButtonHandler:
   def __init__(self):
     self.long_pressed = False
     self.button_cnt = 0
     self.button_prev = ButtonType.unknown
     self.button_long_time = 40
 
-  def interpret(self, inp, pc, v_cruise_kph: float, is_metric: bool):
-    buttonEvents = inp.buttonEvents
+  def _tick(self):
+    if self.button_cnt > 0:
+      self.button_cnt += 1
+
+  def process(self, button_events, v_cruise_kph: float, is_metric: bool,
+              speed_up_unit_basic: int, speed_down_unit: int) -> Tuple[float, int, bool]:
+    """
+    return: (button_kph, button_type, long_pressed)
+    - button_type: 0이면 없음, 아니면 ButtonType 값
+    """
+    self._tick()
 
     button_kph = v_cruise_kph
     button_type = 0
 
-    SPEED_UP_UNIT = pc.cruise_speed_unit_basic
-    SPEED_DOWN_UNIT = pc.cruise_speed_unit if pc.cruise_button_mode in (1, 2, 3) else pc.cruise_speed_unit_basic
+    SPEED_UP_UNIT = speed_up_unit_basic
+    SPEED_DOWN_UNIT = speed_down_unit
+
     V_CRUISE_DELTA = 10
 
-    if self.button_cnt > 0:
-      self.button_cnt += 1
-
-    for b in buttonEvents:
+    for b in button_events:
       bt = b.type
 
+      # Paddle: press 순간 즉시 이벤트
       if bt in (ButtonType.paddleLeft, ButtonType.paddleRight) and b.pressed:
         button_type = bt
         self.long_pressed = False
         self.button_cnt = 0
         continue
 
+      # press 시작
       if b.pressed and self.button_cnt == 0 and bt in (
         ButtonType.accelCruise, ButtonType.decelCruise,
         ButtonType.gapAdjustCruise, ButtonType.cancel,
-        ButtonType.lfaButton
       ):
         self.button_cnt = 1
         self.button_prev = bt
         self.button_long_time = 40 if bt in (ButtonType.accelCruise, ButtonType.decelCruise) else 70
 
+      # release
       elif (not b.pressed) and self.button_cnt > 0 and bt == self.button_prev:
         if bt == ButtonType.cancel:
           button_type = bt
@@ -79,9 +67,11 @@ class ButtonInterpreter:
         self.long_pressed = False
         self.button_cnt = 0
 
+    # long press
     if self.button_cnt > self.button_long_time:
       self.long_pressed = True
       bt = self.button_prev
+
       if bt in (ButtonType.accelCruise, ButtonType.decelCruise):
         mod = button_kph % V_CRUISE_DELTA
         if bt == ButtonType.accelCruise:
@@ -90,7 +80,9 @@ class ButtonInterpreter:
           button_kph -= V_CRUISE_DELTA - (-mod % V_CRUISE_DELTA)
         button_type = bt
         self.button_cnt %= self.button_long_time
+
       else:
+        # gap/cancel long press는 “1회 이벤트”만 주도록 유지
         if self.button_cnt < self.button_long_time + 2:
           button_type = bt
 

@@ -131,6 +131,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"Version", {PERSISTENT, STRING}},
     
     // Carrot
+    {"LongitudinalPersonalityMax", {PERSISTENT, INT, "3"}},
     {"CarSelected3", {PERSISTENT, STRING}},
     {"LatSmoothSec", {PERSISTENT, INT, "13"}},
     {"LatSuspendAngleDeg", {PERSISTENT, INT, "300"}},
