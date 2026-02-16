@@ -129,8 +129,10 @@ class CarrotCarState(CarStateBase):
       paddle_button, self.paddle_button_prev,
       {1: ButtonType.paddleLeft, 2: ButtonType.paddleRight}
     )
-    base_events = list(ret.buttonEvents)
-    ret.buttonEvents = base_events + new_events
+    def add_events(builder_list, extra_events):
+      base = [structs.CarState.ButtonEvent(pressed=e.pressed, type=e.type) for e in builder_list]
+      return base + extra_events
+    ret.buttonEvents = add_events(ret.buttonEvents, new_events)
     
     self.paddle_button_prev = paddle_button
   
