@@ -35,7 +35,7 @@ def create_fake_mdps_active(ret, frame, packer, CAN, CS, angle_control):
 
       if frame % 1000 < 40:
         mdps["STEERING_COL_TORQUE"] += 220
-    ret.append(packer.make_can_msg("MDPS", CAN.CAM, mdps))
+    #ret.append(packer.make_can_msg("MDPS", CAN.CAM, mdps))
 
 def create_fake_steering_touch(ret, frame, packer, CAN, CS):
   if frame % 10 == 0:
@@ -206,7 +206,7 @@ def create_tcs_messages(packer, CAN, CS):
     #values["NEW_SIGNAL_1"] = 0 # accel과 관련..  옆두부 꺼지는것과 관련? 확인필요
     #values["ACC_REQ"] = 1 # 옆두부 꺼지는것과 관련? 확인필요.. 항상 켜지게함..
     values["NEW_SIGNAL_1"] = 0 if values["ACC_REQ"] == 1 else 1 # 옆두부..
-    ret.append(packer.make_can_msg("TCS", CAN.CAM, values))
+    #ret.append(packer.make_can_msg("TCS", CAN.CAM, values))
   return ret
 
 def alt_cruise_buttons(packer, CP, CAN, buttons, cruise_btns_msg, cnt):
@@ -343,7 +343,7 @@ def activate_scc_lfa(ret, packer, CAN, frame, CC, CS, lfahda_cluster):
       elif CC.enabled and (not MainMode_ACC) and 10 < frame % 200 <= 16 and CS.out.vEgo > 3.:
         values["ADAPTIVE_CRUISE_MAIN_BTN"] = 1
 
-      ret.append(packer.make_can_msg(CS.cruise_btns_msg_canfd, CAN.CAM, values))
+      #ret.append(packer.make_can_msg(CS.cruise_btns_msg_canfd, CAN.CAM, values))
   
 def create_ccnc_messages(CP, packer, CAN, frame, CC, CS, hud_control,
                          disp_angle, left_lane_warning, right_lane_warning):
