@@ -1,4 +1,5 @@
-from opendbc.car import GearShifter
+from opendbc.car import structs
+GearShifter = structs.CarState.GearShifter
 
 class GasBrakeTracker:
   def __init__(self):
