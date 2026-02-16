@@ -35,7 +35,7 @@ def create_fake_mdps_active(ret, frame, packer, CAN, CS, angle_control):
 
       if frame % 1000 < 40:
         mdps["STEERING_COL_TORQUE"] += 220
-    #ret.append(packer.make_can_msg("MDPS", CAN.CAM, mdps))
+    ret.append(packer.make_can_msg("MDPS", CAN.CAM, mdps))
 
 def create_fake_steering_touch(ret, frame, packer, CAN, CS):
   if frame % 10 == 0:
