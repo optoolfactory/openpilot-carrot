@@ -332,7 +332,7 @@ def activate_scc_lfa(ret, packer, CAN, frame, CC, CS, lfahda_cluster):
     
     if CS.cruise_buttons_msg is not None:
       values = copy.copy(CS.cruise_buttons_msg)
-      values.pop("COUNTER", None)
+      #values.pop("COUNTER", None)
 
       if lfahda_cluster["HDA_LFA_SymSta"] == 0 and 0 < frame % 200 < 12:
         values["LDA_BTN"] = 1
