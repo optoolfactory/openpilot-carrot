@@ -1015,12 +1015,20 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.WARNING: personality_changed_alert,
   },
 
+
   EventName.userBookmark: {
     ET.PERMANENT: NormalPermanentAlert("Bookmark Saved", duration=1.5),
   },
 
   EventName.audioFeedback: {
     ET.PERMANENT: audio_feedback_alert,
+  },
+  EventName.softHold: {
+    ET.WARNING: Alert(
+      "SoftHold",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .1),
   },
 }
 
