@@ -53,10 +53,6 @@ class CruiseActions:
                                 cruise_button_mode: int,
                                 cruise_speed_min: int, cruise_speed_max: int,
                                 cruise_speed_unit: int) -> float:
-    """
-    cruise speed table 제거 버전.
-    - 기본: 최소 30 이상, 그 다음은 cruise_speed_unit 간격으로 올림
-    """
     if v_cruise_kph < 30:
       v = 30
     else:
