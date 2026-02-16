@@ -18,10 +18,8 @@ class ButtonHandler:
 
   def process(self, button_events, v_cruise_kph: float, is_metric: bool,
               speed_up_unit_basic: int, speed_down_unit: int) -> Tuple[float, int, bool]:
-    """
-    return: (button_kph, button_type, long_pressed)
-    - button_type: 0이면 없음, 아니면 ButtonType 값
-    """
+    #return: (button_kph, button_type, long_pressed)
+    #- button_type: 0이면 없음, 아니면 ButtonType 값
     self._tick()
 
     button_kph = v_cruise_kph
