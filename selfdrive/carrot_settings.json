@@ -169,6 +169,58 @@
       "max": 3,
       "default": 0,
       "unit": 1
+    },
+    {
+      "group": "차량간격",
+      "name": "EnableSpeedTF",
+      "title": "속도별 차간거리 설정(0)",
+      "descr": "-1:0/30/60/90km/h 단계\n-2:0/40/80/120km/h 단계\n-3:0/50/100/150km/h 단계\n1~50%:100km/h 이하 TF 감소",
+      "egroup": "FDIST",
+      "etitle": "EnableSpeedTF(0)",
+      "edescr": "-1:0/30/60/90km/h steps\n-2:0/40/80/120km/h steps\n-3:0/50/100/150km/h steps\n1~50%:Reduce TF below 100km/h",
+      "min": -3,
+      "max": 50,
+      "default": 0,
+      "unit": 1
+    },
+    {
+      "group": "차량간격",
+      "name": "CruiseTFRatio",
+      "title": "차간거리 비율설정(100%)",
+      "descr": "차간거리 비율을 설정, 낮을수록 차간거리가 가까와짐",
+      "egroup": "FDIST",
+      "etitle": "TF Scale Factor(100%)",
+      "edescr": "Adjust TF gap scaling. Lower values reduce following distance.",
+      "min": 20,
+      "max": 200,
+      "default": 100,
+      "unit": 10
+    },
+    {
+      "group": "크루즈",
+      "name": "CruiseAccelRatio",
+      "title": "가속 비율설정(100%)",
+      "descr": "크루즈 최대 가속도를 조절하는 비율, 낮을 수록 서서히 가속함.",
+      "egroup": "CRUISE",
+      "etitle": "CruiseAccelRatio(100%)",
+      "edescr": "Adjust cruise acceleration. Lower values make accel smoother and less aggressive.",
+      "min": 20,
+      "max": 200,
+      "default": 100,
+      "unit": 10
+    },
+    {
+      "group": "감속제어",
+      "name": "TrafficLightDetectMode",
+      "title": "신호감지 기능",
+      "descr": "0:신호감지안함\n 1:신호정지만 감지\n 2:신호정지/출발 모두",
+      "egroup": "SPEED",
+      "etitle": "TrafficLightDetectMode",
+      "edescr": "0:None,1:Stopping only, 2:Stop & Go",
+      "min": 0,
+      "max": 2,
+      "default": 2,
+      "unit": 1
     }
   ]
 }

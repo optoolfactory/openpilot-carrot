@@ -15,6 +15,7 @@ from openpilot.selfdrive.controls.lib.drive_helpers import CONTROL_N, get_accel_
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX, V_CRUISE_UNSET
 from openpilot.common.swaglog import cloudlog
 from openpilot.common.params import Params
+from openpilot.selfdrive.carrot.carrot_planner import CarrotPlanner
 
 A_CRUISE_MAX_VALS = [1.6, 1.2, 0.8, 0.6]
 A_CRUISE_MAX_BP = [0., 10.0, 25., 40.]
@@ -58,12 +59,19 @@ class LongitudinalPlanner:
     self.v_desired_filter = FirstOrderFilter(init_v, 2.0, self.dt)
     self.prev_accel_clip = [ACCEL_MIN, ACCEL_MAX]
     self.output_a_target = 0.0
+    self.output_v_target_now = 0.0
+    self.output_j_target_now = 0.0
     self.output_should_stop = False
 
     self.v_desired_trajectory = np.zeros(CONTROL_N)
     self.a_desired_trajectory = np.zeros(CONTROL_N)
     self.j_desired_trajectory = np.zeros(CONTROL_N)
     self.params = Params()
+ 
+    self.vCluRatio = 1.0
+    self.v_cruise_kph = 0.0
+    self.carrot_planner = CarrotPlanner()
+
 
   @staticmethod
   def parse_model(model_msg):
@@ -93,7 +101,13 @@ class LongitudinalPlanner:
 
     v_ego = sm['carState'].vEgo
     v_cruise_kph = min(sm['carState'].vCruise, V_CRUISE_MAX)
-    v_cruise = v_cruise_kph * CV.KPH_TO_MS
+    experimental_mode = sm['selfdriveState'].experimentalMode
+    if experimental_mode:
+      self.v_cruise_kph = v_cruise_kph
+    else:
+      self.v_cruise_kph, experimental_mode = carrot_planner.update(sm, v_cruise_kph)
+    v_cruise = self.v_cruise_kph * CV.KPH_TO_MS
+
     vCluRatio = sm['carState'].vCluRatio
     if vCluRatio > 0.5:
       self.vCluRatio = vCluRatio
@@ -111,7 +125,11 @@ class LongitudinalPlanner:
     # No change cost when user is controlling the speed, or when standstill
     prev_accel_constraint = not (reset_state or sm['carState'].standstill)
 
-    accel_clip = [ACCEL_MIN, get_max_accel(v_ego)]
+    #accel_clip = [ACCEL_MIN, get_max_accel(v_ego)]
+    cruise_accel_ratio = self.carrot_planner.get_cruise_accel_ratio()
+    max_accel = get_max_accel(v_ego) * cruise_accel_ratio
+    max_accel = np.clip(max_accel, 0.1, ACCEL_MAX)
+    accel_clip = [ACCEL_MIN, max_accel]
     steer_angle_without_offset = sm['carState'].steeringAngleDeg - sm['liveParameters'].angleOffsetDeg
     accel_clip = limit_accel_in_turns(v_ego, steer_angle_without_offset, accel_clip, self.CP)
 
@@ -134,7 +152,7 @@ class LongitudinalPlanner:
     if force_slow_decel:
       v_cruise = 0.0
 
-    self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality)
+    self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality, jerk_factor = self.carrot_planner.jerk_factor)
     self.mpc.set_cur_state(self.v_desired_filter.x, self.a_desired)
     self.mpc.update(sm['radarState'], v_cruise, personality=sm['selfdriveState'].personality)
 
@@ -158,7 +176,7 @@ class LongitudinalPlanner:
     output_a_target_e2e = sm['modelV2'].action.desiredAcceleration
     output_should_stop_e2e = sm['modelV2'].action.shouldStop
 
-    if sm['selfdriveState'].experimentalMode:
+    if experimental_mode:
       output_a_target = min(output_a_target_e2e, output_a_target_mpc)
       output_v_target_now = min(output_v_target_mpc, output_v_target_now_e2e)
       self.output_should_stop = output_should_stop_e2e or output_should_stop_mpc
@@ -201,5 +219,13 @@ class LongitudinalPlanner:
     longitudinalPlan.shouldStop = bool(self.output_should_stop)
     longitudinalPlan.allowBrake = True
     longitudinalPlan.allowThrottle = bool(self.allow_throttle)
+
+    longitudinalPlan.xState = self.carrot_planner.xState.value
+    longitudinalPlan.trafficState = self.carrot_planner.trafficState.value
+    longitudinalPlan.cruiseTarget = self.v_cruise_kph
+    longitudinalPlan.tFollow = float(self.mpc.t_follow)
+    #longitudinalPlan.desiredDistance = float(self.mpc.desired_distance)
+    longitudinalPlan.events = self.carrot_planner.events.to_msg()
+    longitudinalPlan.myDrivingMode = self.carrot_planner.myDrivingMode.value
 
     pm.send('longitudinalPlan', plan_send)
