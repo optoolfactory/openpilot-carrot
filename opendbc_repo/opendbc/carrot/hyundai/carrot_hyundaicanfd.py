@@ -127,12 +127,11 @@ def create_lfahda_cluster(packer, CS, CAN, long_active, lat_active):
     return []
   return [packer.make_can_msg("LFAHDA_CLUSTER", CAN.ECAN, values)]
 
-def create_acc_control_scc2(packer, CAN, enabled, accel_last, accel, stopping, gas_override, set_speed, hud_control, CS):
+def create_acc_control_scc2(packer, CAN, enabled, accel_last, accel, stopping, gas_override, set_speed, hud_control, hyundai_jerk, CS):
   softHoldActive = CS.out.softHoldActive
   enabled = (enabled or softHoldActive > 0) and CS.paddle_button_prev == 0
   acc_mode = 0 if not enabled else (2 if gas_override else 1)
   
-  """
   if hyundai_jerk.carrot_cruise == 1:
     acc_mode = 4 if enabled else 0
     enabled = False
@@ -143,16 +142,13 @@ def create_acc_control_scc2(packer, CAN, enabled, accel_last, accel, stopping, g
 
   jerk_u = hyundai_jerk.jerk_u
   jerk_l = hyundai_jerk.jerk_l
-  """
 
-  jerk_u = 3
-  jerk_l = 5
   jn = jerk_l / 50
   if not enabled or gas_override:
     a_val, a_raw = 0, 0
   else:
     a_raw = accel
-    a_val = np.clip(accel, accel_last - jn, accel_last + jn)
+    a_val = accel #np.clip(accel, accel_last - jn, accel_last + jn)
 
   if CS.scc_control is None:
     return None
