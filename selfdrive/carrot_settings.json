@@ -28,6 +28,45 @@
       "unit": 10
     },
     {
+      "group": "조향일반",
+      "name": "LaneChangeNeedTorque",
+      "title": "차선변경 조향토크 사용",
+      "descr": "-1:자동차선변경사용안함, 0: 즉시 차선변경, 1: 핸들토크필요",
+      "egroup": "LAT",
+      "etitle": "LaneChange use steering torque",
+      "edescr": "0:immediate, 1: need torque(nudge), -1: auto lane change off",
+      "min": -1,
+      "max": 1,
+      "default": 0,
+      "unit": 1
+    },
+    {
+      "group": "조향일반",
+      "name": "LaneChangeDelay",
+      "title": "차선변경 지연시간x0.1s(0)",
+      "descr": "방향지시등을 켜고 설정시간 후 차선변경합니다.",
+      "egroup": "LAT",
+      "etitle": "LaneChange delayx0.1s(0)",
+      "edescr": "Changes lanes after the set time once the turn signal is activated",
+      "min": 0,
+      "max": 100,
+      "default": 0,
+      "unit": 10
+    },
+    {
+      "group": "조향일반",
+      "name": "LaneChangeBsd",
+      "title": "차선변경 BSD",
+      "descr": "0: BSD검출(조향토크허용)\n 1: 조향토크불허\n-1: BSD사용안함",
+      "egroup": "LAT",
+      "etitle": "LaneChange BSD",
+      "edescr": "0:BSD detect(allow steer torque), 1: block steer torque, -1: ignore BSD",
+      "min": -1,
+      "max": 1,
+      "default": 0,
+      "unit": 1
+    },
+    {
       "group": "시작",
       "name": "HyundaiCameraSCC",
       "title": "HYUNDAI: CAMERA SCC",

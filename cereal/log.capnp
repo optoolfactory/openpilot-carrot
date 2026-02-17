@@ -1138,6 +1138,14 @@ struct ModelDataV2 {
     hardBrakePredicted @7 :Bool;
     laneChangeState @8 :LaneChangeState;
     laneChangeDirection @9 :LaneChangeDirection;
+    laneWidthLeft @10 :Float32;
+    laneWidthRight @11 :Float32;
+    distanceToRoadEdgeLeft @12 :Float32;
+    distanceToRoadEdgeRight @13 :Float32;
+    desire @14 :Desire;
+    laneChangeProb @15 :Float32;
+    desireLog @16 : Text;
+    modelTurnSpeed @17 :Float32;
 
 
     # deprecated

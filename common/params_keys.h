@@ -137,4 +137,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LatSuspendAngleDeg", {PERSISTENT, INT, "300"}},
     {"HyundaiCameraSCC", {PERSISTENT, INT, "0"}},
     {"FingerPrints", {PERSISTENT | CLEAR_ON_MANAGER_START, STRING}},
+    {"LaneChangeNeedTorque", {PERSISTENT, INT, "0"}},
+    {"LaneChangeDelay", {PERSISTENT, INT, "0"}},
+    {"LaneChangeBsd", {PERSISTENT, INT, "0"}},
 };
