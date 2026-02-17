@@ -133,6 +133,27 @@ struct OnroadEvent @0xc4fa6047f024e718 {
     audioFeedback @97;
     softHold @99;
     carStateLog @100;
+    trafficStopping @101;
+    audioPrompt @102;
+    audioRefuse @103;
+    stopStop @104;
+    audioLaneChange @105;
+    audioTurn @106;
+    trafficSignGreen @107;
+    trafficSignChanged @108;
+    turningLeft @109;
+    turningRight @110;
+    audio1 @111;
+    audio2 @112;
+    audio3 @113;
+    audio4 @114;
+    audio5 @115;
+    audio6 @116;
+    audio7 @117;
+    audio8 @118;
+    audio9 @119;
+    audio10 @120;
+    audio0 @121;
 
     soundsUnavailableDEPRECATED @47;
   }
@@ -1267,8 +1288,15 @@ struct LongitudinalPlan @0xe00b5b3eba12876c {
   allowThrottle @38: Bool;
   allowBrake @39: Bool;
 
-  vTargetNow @40: Float32;
-  jTargetNow @41: Float32;
+  xState @40: Int32;
+  trafficState @41: Int32;
+  events @42:List(OnroadEvent);
+  vTargetNow @43: Float32;
+  cruiseTarget @44: Float32;
+  jTargetNow @45: Float32;
+  tFollow @46: Float32;
+  desiredDistanceNotUsed @47: Float32;
+  myDrivingMode @48: Int32;
 
   solverExecutionTime @35 :Float32;
 

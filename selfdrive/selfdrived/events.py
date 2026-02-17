@@ -1037,6 +1037,92 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   EventName.carStateLog: {
     ET.PERMANENT: carstate_log_alert,
   },
+  EventName.trafficStopping: {
+    ET.WARNING: EngagementAlert(AudibleAlert.stopping),
+    #ET.WARNING: Alert(
+    #  "신호 감속정지중입니다.",
+    #  "",
+    #  AlertStatus.normal, AlertSize.small,
+    #  Priority.LOW, VisualAlert.none, AudibleAlert.stopping, 3.),
+  },
+  EventName.audioPrompt: {
+     ET.WARNING: EngagementAlert(AudibleAlert.prompt),
+  },
+  EventName.audioRefuse: {
+     ET.WARNING: EngagementAlert(AudibleAlert.refuse),
+  },
+  EventName.stopStop: {
+     ET.WARNING: EngagementAlert(AudibleAlert.stopStop),
+  },
+  EventName.audioLaneChange: {
+     ET.WARNING: EngagementAlert(AudibleAlert.laneChange),
+  },
+  EventName.audioTurn: {
+     ET.WARNING: EngagementAlert(AudibleAlert.audioTurn),
+  },
+  EventName.trafficSignGreen: {
+    ET.WARNING: EngagementAlert(AudibleAlert.trafficSignGreen),
+    #ET.WARNING: Alert(
+    #  "출발합니다.",
+    #  "",
+    #  AlertStatus.normal, AlertSize.small,
+    #  Priority.LOW, VisualAlert.none, AudibleAlert.trafficSignGreen, 3.),
+  },
+  EventName.trafficSignChanged: {
+    ET.WARNING: Alert(
+      "신호가바뀌었어요.",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.trafficSignChanged, 1.),
+  },
+  EventName.turningLeft: {
+    ET.WARNING: Alert(
+      "Turning Left",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .1),
+  },
+
+  EventName.turningRight: {
+    ET.WARNING: Alert(
+      "Turning Right",
+      "",
+      AlertStatus.normal, AlertSize.small,
+      Priority.LOW, VisualAlert.none, AudibleAlert.none, .1),
+  },
+  EventName.audio1: {
+     ET.WARNING: EngagementAlert(AudibleAlert.audio1),
+  },
+  EventName.audio2: {
+     ET.WARNING: EngagementAlert(AudibleAlert.audio2),
+  },
+  EventName.audio3: {
+     ET.WARNING: EngagementAlert(AudibleAlert.audio3),
+  },
+  EventName.audio4: {
+     ET.WARNING: EngagementAlert(AudibleAlert.audio4),
+  },
+  EventName.audio5: {
+     ET.WARNING: EngagementAlert(AudibleAlert.audio5),
+  },
+  EventName.audio6: {
+     ET.WARNING: EngagementAlert(AudibleAlert.audio6),
+  },
+  EventName.audio7: {
+     ET.WARNING: EngagementAlert(AudibleAlert.audio7),
+  },
+  EventName.audio8: {
+     ET.WARNING: EngagementAlert(AudibleAlert.audio8),
+  },
+  EventName.audio9: {
+     ET.WARNING: EngagementAlert(AudibleAlert.audio9),
+  },
+  EventName.audio10: {
+     ET.WARNING: EngagementAlert(AudibleAlert.audio10),
+  },
+  EventName.audio0: {
+     ET.WARNING: EngagementAlert(AudibleAlert.longDisengaged),
+  },
 }
 
 

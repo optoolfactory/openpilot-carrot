@@ -4,7 +4,7 @@ from cereal import log
 from openpilot.common.params import Params
 import numpy as np
 from openpilot.common.realtime import DT_MDL
-from openpilot.common.conversions import Conversions as CV
+from openpilot.common.constants import CV
 from openpilot.common.filter_simple import MyMovingAverage
 from openpilot.selfdrive.selfdrived.events import Events
 

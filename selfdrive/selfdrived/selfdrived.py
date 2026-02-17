@@ -181,6 +181,8 @@ class SelfdriveD:
     if not self.CP.notCar:
       self.events.add_from_msg(self.sm['driverMonitoringState'].events)
 
+    self.events.add_from_msg(self.sm['longitudinalPlan'].events)  ## carrot
+
     # Add car events, ignore if CAN isn't valid
     if CS.canValid:
       car_events = self.car_events.update(CS, self.CS_prev, self.sm['carControl']).to_msg()
