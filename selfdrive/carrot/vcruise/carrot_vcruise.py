@@ -192,6 +192,8 @@ class VCruiseCarrot:
           self.cfg.auto_cruise_control,
           self.autoCruiseControl_cancel_timer
         )
+        if self.act.activate_cruise <= 0:
+          self.gb.soft_hold_active = 0
         if msg:
           self._add_log(msg)
           
