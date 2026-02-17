@@ -238,6 +238,8 @@ struct CarState {
   speedLimit @66 :Float32;
   speedLimitDistance @67 :Float32;
   gearStep @68 :Int16;          
+  leftLaneLine @69 : Int16; # -1: no lane, 0: dashed, 1: solid, +10: white, +20: yellow, ex) 21: solid yellow
+  rightLaneLine @70 : Int16; # -1: no lane, 0: dashed, 1: solid, +10: white, +20: yellow, ex) 21: solid yellow
   struct WheelSpeeds {
     # optional wheel speeds
     fl @0 :Float32;

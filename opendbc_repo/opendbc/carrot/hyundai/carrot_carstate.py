@@ -29,6 +29,8 @@ class CarrotCarState(CarStateBase):
     self.adrv_1ea = None
     self.cruise_buttons_msg = None
     self.gear_step = None
+    self.lane_info = None
+
     self.paddle_button_prev = 0
 
 
@@ -99,6 +101,10 @@ class CarrotCarState(CarStateBase):
       elif self.controls_ready_count == 108:
         add_and_cache(self.cp, "GEAR", "gear_step")
         add_and_cache(self.cp, "GEAR_ALT", "gear_step") # gear_alt가 있으면 우선함.
+      elif self.controls_ready_count == 109:
+        if self.cp_alt is not None:
+          add_and_cache(self.cp_alt, "CAM_0x362", "lane_info")
+          add_and_cache(self.cp_alt, "CAM_0x2a4", "lane_info")
 
 
   def _carrot_update_canfd(self, ret):
@@ -129,6 +135,18 @@ class CarrotCarState(CarStateBase):
     ret.gearStep = self.gear_step["GEAR_STEP"] if self.gear_step is not None else 0
     if 1 <= ret.gearStep <= 8 and ret.gearShifter == GearShifter.unknown:
       ret.gearShifter = GearShifter.drive
+
+    if self.lane_info is not None:
+      #left_lane_prob = self.lane_info["LEFT_LANE_PROB"]
+      #right_lane_prob = self.lane_info["RIGHT_LANE_PROB"]
+      left_lane_type = self.lane_info["LEFT_LANE_TYPE"] # 0: dashed, 1: solid, 2: undecided, 3: road edge, 4: DLM Inner Solid, 5: DLM InnerDashed, 6:DLM Inner Undecided, 7: Botts Dots, 8: Barrier
+      right_lane_type = self.lane_info["RIGHT_LANE_TYPE"]
+      left_lane_color = self.lane_info["LEFT_LANE_COLOR"]
+      right_lane_color = self.lane_info["RIGHT_LANE_COLOR"]
+      left_lane_info = left_lane_color * 10 + left_lane_type
+      right_lane_info = right_lane_color * 10 + right_lane_type
+      ret.leftLaneLine = left_lane_info
+      ret.rightLaneLine = right_lane_info
 
     paddle_button = self.paddle_button_prev
     if self.cruise_btns_msg_canfd == "CRUISE_BUTTONS":
