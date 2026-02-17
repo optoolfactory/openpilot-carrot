@@ -329,7 +329,7 @@ class LongitudinalMpc:
     v_lead = np.clip(v_lead, 0.0, 1e8)
     a_lead = np.clip(a_lead, -10., 5.)
     lead_xv = self.extrapolate_lead(x_lead, v_lead, a_lead, a_lead_tau)
-    return lead_xv
+    return lead_xv, v_lead
 
   def update(self, carrot, radarstate, v_cruise, personality=log.LongitudinalPersonality.standard):
     v_ego = self.x0[1]
@@ -338,11 +338,10 @@ class LongitudinalMpc:
     #v_ego = self.x0[1]
     self.status = radarstate.leadOne.status or radarstate.leadTwo.status
 
-    lead_xv_0 = self.process_lead(radarstate.leadOne)
-    lead_xv_1 = self.process_lead(radarstate.leadTwo)
-    v_cruise = carrot.v_cruise
+    lead_xv_0, lead_v_0 = self.process_lead(radarstate.leadOne)
+    lead_xv_1, _ = self.process_lead(radarstate.leadTwo)
     stop_x = carrot.stop_dist
-    desired_distance = desired_follow_distance(v_ego, lead_xv_0, carrot.comfort_brake, carrot.stop_distance, t_follow)
+    desired_distance = desired_follow_distance(v_ego, lead_v_0, carrot.comfort_brake, carrot.stop_distance, t_follow)
     t_follow = carrot.dynamic_t_follow(t_follow, radarstate.leadOne, desired_distance, self.a_prev)
 
     # To estimate a safe distance from a moving lead, we calculate how much stopping
@@ -377,8 +376,8 @@ class LongitudinalMpc:
     self.params[:,3] = np.copy(self.a_prev)
     self.params[:,4] = t_follow
     self.params[:,5] = LEAD_DANGER_FACTOR
-    self.params[:,6] = comfort_brake
-    self.params[:,7] = stop_distance
+    self.params[:,6] = carrot.comfort_brake
+    self.params[:,7] = carrot.stop_distance
 
     self.t_follow = t_follow
 

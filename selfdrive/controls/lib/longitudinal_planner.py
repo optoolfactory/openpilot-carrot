@@ -105,7 +105,7 @@ class LongitudinalPlanner:
     if experimental_mode:
       self.v_cruise_kph = v_cruise_kph
     else:
-      self.v_cruise_kph, experimental_mode = carrot_planner.update(sm, v_cruise_kph)
+      self.v_cruise_kph, experimental_mode = self.carrot_planner.update(sm, v_cruise_kph)
     v_cruise = self.v_cruise_kph * CV.KPH_TO_MS
 
     vCluRatio = sm['carState'].vCluRatio
@@ -154,7 +154,7 @@ class LongitudinalPlanner:
 
     self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality, jerk_factor = self.carrot_planner.jerk_factor)
     self.mpc.set_cur_state(self.v_desired_filter.x, self.a_desired)
-    self.mpc.update(sm['radarState'], v_cruise, personality=sm['selfdriveState'].personality)
+    self.mpc.update(self.carrot_planner, sm['radarState'], v_cruise, personality=sm['selfdriveState'].personality)
 
     self.v_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.v_solution)
     self.a_desired_trajectory = np.interp(CONTROL_N_T_IDX, T_IDXS_MPC, self.mpc.a_solution)
@@ -175,6 +175,7 @@ class LongitudinalPlanner:
                                                                         action_t=action_t, vEgoStopping=self.CP.vEgoStopping)
     output_a_target_e2e = sm['modelV2'].action.desiredAcceleration
     output_should_stop_e2e = sm['modelV2'].action.shouldStop
+    output_v_target_now_e2e = sm['modelV2'].action.desiredVelocity
 
     if experimental_mode:
       output_a_target = min(output_a_target_e2e, output_a_target_mpc)
@@ -187,10 +188,10 @@ class LongitudinalPlanner:
       output_v_target_now = output_v_target_mpc
       self.output_should_stop = output_should_stop_mpc
 
-    #for idx in range(2):
-    #  accel_clip[idx] = np.clip(accel_clip[idx], self.prev_accel_clip[idx] - 0.05, self.prev_accel_clip[idx] + 0.05)
-    #self.output_a_target = np.clip(output_a_target, accel_clip[0], accel_clip[1])
-    #self.prev_accel_clip = accel_clip
+    for idx in range(2):
+      accel_clip[idx] = np.clip(accel_clip[idx], self.prev_accel_clip[idx] - 0.05, self.prev_accel_clip[idx] + 0.05)
+    self.output_a_target = np.clip(output_a_target, accel_clip[0], accel_clip[1])
+    self.prev_accel_clip = accel_clip
     self.output_a_target = output_a_target
     self.output_v_target_now = output_v_target_now
     self.output_j_target_now = self.j_desired_trajectory[0]
