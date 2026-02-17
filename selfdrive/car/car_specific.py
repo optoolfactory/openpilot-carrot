@@ -4,7 +4,9 @@ from opendbc.car.car_helpers import interfaces
 from opendbc.car.interfaces import MAX_CTRL_SPEED
 from opendbc.car.toyota.values import ToyotaFlags
 
-from openpilot.selfdrive.selfdrived.events import Events
+from openpilot.selfdrive.selfdrived.events import Events, ET
+
+from openpilot.common.params import Params
 
 ButtonType = structs.CarState.ButtonEvent.Type
 GearShifter = structs.CarState.GearShifter
