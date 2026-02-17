@@ -194,6 +194,24 @@ class VCruiseCarrot:
         )
         if msg:
           self._add_log(msg)
+          
+    v_cruise_kph = self._handle_gas_tok(CS, CC, v_cruise_kph)
+    if self.gb.gas_pressed_count > self.gb.gas_tok_timer:
+      # 가속 중인데 차량이 감속중이면(브레이크랑 섞였거나) 크루즈 off
+      if CS.aEgo < -0.5:
+        msg = self.act.request(
+          -1, 5.0,
+          "Cruise off (gas pressed while braking)",
+          self.cfg.auto_cruise_control,
+          self.autoCruiseControl_cancel_timer
+        )
+        if msg:
+          self._add_log(msg)
+
+      # 현재 속도에 동기화
+      if self.cfg.auto_gas_sync_speed and (self.v_ego_kph_set > v_cruise_kph):
+        v_cruise_kph = self.v_ego_kph_set
+    
     # paddle mode(원 코드 핵심만)
     if self.cfg.paddle_mode > 0 and button_type in (ButtonType.paddleLeft, ButtonType.paddleRight):
       # paddle_mode==3 같은 동작을 유지하고 싶으면 여기서 분기
@@ -250,3 +268,34 @@ class VCruiseCarrot:
     self.output.v_cruise_cluster_kph = self.v_cruise_cluster_kph
     
     return self.output
+
+  def _handle_gas_tok(self, CS, CC, v_cruise_kph: float) -> float:
+    # tok 조건 + 최소 속도 조건
+    if (not self.gb.gas_tok) or (self.v_ego_kph_set < self.cfg.auto_gas_tok_speed):
+      return v_cruise_kph
+
+    if not CC.enabled:
+      # 크루즈 OFF 상태면 → ON 요청
+      msg = self.act.request(
+        1, -1,
+        "Cruise on (gas tok)",
+        self.cfg.auto_cruise_control,
+        self.autoCruiseControl_cancel_timer
+      )
+      if msg:
+        self._add_log(msg)
+
+      # 현재 속도가 더 높으면 set speed 끌어올림
+      if self.v_ego_kph_set > v_cruise_kph:
+        v_cruise_kph = self.v_ego_kph_set
+
+    else:
+      # 크루즈 ON 상태면 → set speed 올림(원 코드에서는 _v_cruise_desired 계열)
+      v_cruise_kph = self.act.compute_desired_set_speed(
+        v_cruise_kph, self.v_ego_kph_set,
+        self.cfg.cruise_button_mode,
+        self.cfg.cruise_speed_min, self.cfg.cruise_speed_max,
+        self.cfg.cruise_speed_unit
+      )
+
+    return v_cruise_kph
