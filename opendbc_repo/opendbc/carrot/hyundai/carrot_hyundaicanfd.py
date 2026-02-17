@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 from opendbc.car.common.conversions import Conversions as CV
+from opendbc.car.hyundai.values import HyundaiFlags
 
 def hyundai_crc8(data: bytes) -> int:
   poly = 0x2F
@@ -127,11 +128,10 @@ def create_lfahda_cluster(packer, CS, CAN, long_active, lat_active):
   return [packer.make_can_msg("LFAHDA_CLUSTER", CAN.ECAN, values)]
 
 def create_acc_control_scc2(packer, CAN, enabled, accel_last, accel, stopping, gas_override, set_speed, hud_control, CS):
-  #enabled = (enabled or CS.softHoldActive > 0) and CS.paddle_button_prev == 0
-
+  softHoldActive = CS.out.softHoldActive
+  enabled = (enabled or softHoldActive > 0) and CS.paddle_button_prev == 0
   acc_mode = 0 if not enabled else (2 if gas_override else 1)
-  softHoldActive = 0
-
+  
   """
   if hyundai_jerk.carrot_cruise == 1:
     acc_mode = 4 if enabled else 0
@@ -212,7 +212,7 @@ def create_tcs_messages(packer, CAN, CS):
 def alt_cruise_buttons(packer, CP, CAN, buttons, cruise_btns_msg, cnt):
   cruise_btns_msg["CRUISE_BUTTONS"] = buttons
   cruise_btns_msg["COUNTER"] = (cruise_btns_msg["COUNTER"] + 1 + cnt) % 256
-  bus = CAN.ECAN if CP.flags & HyundaiFlags.CANFD_HDA2 else CAN.CAM
+  bus = CAN.ECAN if CP.flags & HyundaiFlags.CANFD_LKA_STEERING else CAN.CAM
   return packer.make_can_msg("CRUISE_BUTTONS_ALT", bus, cruise_btns_msg)
 
 def _clip_int(x, lo, hi):
@@ -349,8 +349,8 @@ def create_ccnc_messages(CP, packer, CAN, frame, CC, CS, hud_control,
                          disp_angle, left_lane_warning, right_lane_warning):
   ret = []
 
-  #md = CS.MD
-  desire, lane_changing = 0, 0 #_get_desire_and_lane_changing(md)
+  md = CS.MD
+  desire, lane_changing = _get_desire_and_lane_changing(md)
 
   HDA_CntrlModSta = CS.lfahda_cluster["HDA_CntrlModSta"] if CS.lfahda_cluster is not None else False
 
