@@ -182,6 +182,18 @@ class VCruiseCarrot:
         v_cruise_kph = button_kph
         self.act.v_cruise_kph_at_brake = 0
 
+    if not CC.enabled:
+      if self.gb.brake_pressed_count == -1 and self.gb.soft_hold_active == 1:
+        # brake released after soft hold
+        self.gb.soft_hold_active = 2  # latched
+        msg = self.act.request(
+          1, -1,
+          "Cruise on (soft hold)",
+          self.cfg.auto_cruise_control,
+          self.autoCruiseControl_cancel_timer
+        )
+        if msg:
+          self._add_log(msg)
     # paddle mode(원 코드 핵심만)
     if self.cfg.paddle_mode > 0 and button_type in (ButtonType.paddleLeft, ButtonType.paddleRight):
       # paddle_mode==3 같은 동작을 유지하고 싶으면 여기서 분기
