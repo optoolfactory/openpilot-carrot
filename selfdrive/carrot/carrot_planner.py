@@ -603,7 +603,7 @@ class DrivingModeDetector:
       distance = 200
       if leadOne.status:
         lead_speed = leadOne.vLead * CV.MS_TO_KPH
-        lead_accel = leadOne.aLead
+        lead_accel = leadOne.aLeadK
         distance = leadOne.dRel
 
       # ---- 진입 조건(OR로 묶기) ----
