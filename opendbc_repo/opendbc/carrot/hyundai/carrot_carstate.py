@@ -37,6 +37,8 @@ class CarrotCarState(CarStateBase):
     self.totalDistance = 0.0
     self.speedLimitDistance = 0
 
+    self.main_button_last = 0
+    self.main_enabled = False
 
   def _carrot_monitor_fingerprint(self, can_parsers):
     self.cp = can_parsers[Bus.pt]
@@ -122,9 +124,13 @@ class CarrotCarState(CarStateBase):
       self.speedLimitDistance = self.totalDistance
     ret.speedLimitDistance = self.speedLimitDistance - self.totalDistance
 
+  def update_main_buttons(self):
+    if self.main_buttons[-1] != self.main_button_last and not self.main_buttons[-1]:
+      self.main_enabled = not self.main_enabled
+    self.main_button_last = self.main_buttons[-1]
+    
   def _carrot_update_canfd(self, ret):
-
-    ret.cruiseState.available = self.scc_control is not None and self.scc_control["MainMode_ACC"] == 1
+    ret.cruiseState.available = self.main_enabled #self.scc_control is not None and self.scc_control["MainMode_ACC"] == 1
     vEgoClu, aEgoClu = self.update_clu_speed_kf(ret.vEgoCluster)
     ret.vCluRatio = (ret.vEgo / vEgoClu) if (vEgoClu > 3. and ret.vEgo > 3.) else 1.0
 
@@ -174,6 +180,7 @@ class CarrotCarState(CarStateBase):
       ret.leftLaneLine = left_lane_info
       ret.rightLaneLine = right_lane_info
 
+    # paddle buttons
     paddle_button = self.paddle_button_prev
     if self.cruise_btns_msg_canfd == "CRUISE_BUTTONS":
       paddle_button = 1 if self.cp.vl["CRUISE_BUTTONS"]["LEFT_PADDLE"] == 1 else 2 if self.cp.vl["CRUISE_BUTTONS"]["RIGHT_PADDLE"] == 1 else 0
@@ -188,7 +195,9 @@ class CarrotCarState(CarStateBase):
       base = [structs.CarState.ButtonEvent(pressed=e.pressed, type=e.type) for e in builder_list]
       return base + extra_events
     ret.buttonEvents = add_events(ret.buttonEvents, new_events)
+    # paddle buttons end..
     
     self.paddle_button_prev = paddle_button
+    self.update_main_buttons()
   
     return ret

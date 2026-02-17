@@ -200,6 +200,7 @@ class Car:
     CS.softHoldActive = out.soft_hold_active
     CS.activateCruise = out.activate_cruise
     CS.carrotCruise = out.carrot_cruise
+    CS.logCarrot = out.log
 
     return CS, RD
 

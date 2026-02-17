@@ -9,3 +9,4 @@ class VCruiseOutput:
   paddle_decel_active: bool = False
   v_cruise_cluster_kph: float = 0.0
   v_cruise_display_kph: float = 0.0 
+  log: str = ""

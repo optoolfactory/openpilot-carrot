@@ -195,5 +195,7 @@ class CarSpecificEvents:
         events.add(EventName.buttonCancel)
       if CS.softHoldActive > 0:
         events.add(EventName.softHold)
+      elif len(CS.logCarrot) > 0:
+        events.add(EventName.carStateLog)
 
     return events

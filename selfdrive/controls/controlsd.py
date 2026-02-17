@@ -168,7 +168,9 @@ class Controls:
     CC.cruiseControl.resume = CC.enabled and CS.cruiseState.standstill and not self.sm['longitudinalPlan'].shouldStop
 
     hudControl = CC.hudControl
-    hudControl.setSpeed = float(CS.vCruiseCluster * CV.KPH_TO_MS)
+    vCluRatio = CS.vCluRatio if CS.vCluRatio > 0.5 else 1.0
+    hudControl.setSpeed = float(CS.vCruiseCluster * CV.KPH_TO_MS) / vCluRatio
+
     hudControl.speedVisible = CC.enabled
     hudControl.lanesVisible = CC.enabled
     hudControl.leadVisible = self.sm['longitudinalPlan'].hasLead

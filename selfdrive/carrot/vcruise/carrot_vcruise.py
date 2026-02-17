@@ -266,7 +266,7 @@ class VCruiseCarrot:
     self.output.paddle_decel_active = self.act.paddle_decel_active
     self.output.v_cruise_kph = self.v_cruise_kph
     self.output.v_cruise_cluster_kph = self.v_cruise_cluster_kph
-    
+    self.output.log = self.log
     return self.output
 
   def _handle_gas_tok(self, CS, CC, v_cruise_kph: float) -> float:
