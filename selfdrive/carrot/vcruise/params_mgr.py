@@ -27,7 +27,6 @@ class VCruiseConfig:
   speed_from_pcm: int = 0
   cruise_speed_unit: int = 10
   cruise_speed_unit_basic: int = 1
-  activate_cruise_after_brake: bool = False
   cruise_on_dist: float = 0.0
 
   longitudinal_personality_max: int = 3
@@ -43,20 +42,19 @@ class ParamsManager:
     unit_factor = 1.0 if is_metric else CV.MPH_TO_KPH
 
     cfg = VCruiseConfig()
-    cfg.auto_cruise_control = 1 #self.params.get_int("AutoCruiseControl")
+    cfg.auto_cruise_control = self.params.get_int("AutoCruiseControl")
 
-    cfg.auto_gas_tok_speed = 20 #self.params.get_float("AutoGasTokSpeed") * unit_factor
-    cfg.auto_gas_sync_speed = True #bool(self.params.get_bool("AutoGasSyncSpeed"))
+    cfg.auto_gas_tok_speed = self.params.get_float("AutoGasTokSpeed") * unit_factor
+    cfg.auto_gas_sync_speed = bool(self.params.get_bool("AutoGasSyncSpeed"))
 
     cfg.speed_from_pcm = 0 #self.params.get_int("SpeedFromPCM")
-    cfg.cruise_speed_unit = 10 #int(self.params.get_int("CruiseSpeedUnit"))
-    cfg.cruise_speed_unit_basic = 1 #int(self.params.get_int("CruiseSpeedUnitBasic"))
+    cfg.cruise_speed_unit = int(self.params.get_int("CruiseSpeedUnit"))
+    cfg.cruise_speed_unit_basic = int(self.params.get_int("CruiseSpeedUnitBasic"))
     cfg.paddle_mode = 0 #int(self.params.get_int("PaddleMode"))
-    cfg.cruise_button_mode = 0 #int(self.params.get_int("CruiseButtonMode"))
+    cfg.cruise_button_mode = int(self.params.get_int("CruiseButtonMode"))
     cfg.cancel_button_mode = 0 #int(self.params.get_int("CancelButtonMode"))
     cfg.cruise_on_dist = 400 #float(self.params.get_float("CruiseOnDist") * 0.01)
 
-    cfg.activate_cruise_after_brake = True #bool(self.params.get_bool("ActivateCruiseAfterBrake"))
     cfg.longitudinal_personality_max = self.params.get_int("LongitudinalPersonalityMax")
 
     return cfg

@@ -133,6 +133,13 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     // Carrot
     {"LongitudinalPersonalityMax", {PERSISTENT, INT, "3"}},
     {"CarSelected3", {PERSISTENT, STRING}},
+    {"RecordRoadCam", {PERSISTENT, INT, "0"}},
+    {"AutoCruiseControl", {PERSISTENT, INT, "0"}},
+    {"AutoGasTokSpeed", {PERSISTENT, INT, "0"}},
+    {"AutoGasSyncSpeed", {PERSISTENT, INT, "1"}},
+    {"CruiseButtonMode", {PERSISTENT, INT, "0"}},
+    {"CruiseSpeedUnit", {PERSISTENT, INT, "10"}},
+    {"CruiseSpeedUnitBasic", {PERSISTENT, INT, "1"}},
     {"LatSmoothSec", {PERSISTENT, INT, "13"}},
     {"LatSuspendAngleDeg", {PERSISTENT, INT, "300"}},
     {"HyundaiCameraSCC", {PERSISTENT, INT, "0"}},
@@ -140,4 +147,5 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LaneChangeNeedTorque", {PERSISTENT, INT, "0"}},
     {"LaneChangeDelay", {PERSISTENT, INT, "0"}},
     {"LaneChangeBsd", {PERSISTENT, INT, "0"}},
+    {"ActivateCruiseAfterBrake", {CLEAR_ON_MANAGER_START, INT, "0"}},
 };
