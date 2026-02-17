@@ -5,7 +5,6 @@ from openpilot.common.params import Params
 import numpy as np
 from openpilot.common.realtime import DT_MDL
 from openpilot.common.constants import CV
-from openpilot.common.utils import MovingAverage
 from openpilot.selfdrive.selfdrived.events import Events
 from collections import deque
 
