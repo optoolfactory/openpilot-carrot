@@ -170,7 +170,7 @@ class VCruiseCarrot:
         self.act.v_cruise_kph_at_brake = 0
 
       elif button_type == ButtonType.gapAdjustCruise:
-        new_p = self.personality.cycle(CS.pcmCruiseGap)
+        new_p = self.personality.cycle(CS.pcmCruiseGap, self.cfg)
         self._add_log(f"Personality -> {new_p}")
     else:
       # long pressed: accel/decel만 속도 점프 허용

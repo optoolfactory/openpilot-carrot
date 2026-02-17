@@ -30,6 +30,8 @@ class VCruiseConfig:
   activate_cruise_after_brake: bool = False
   cruise_on_dist: float = 0.0
 
+  longitudinal_personality_max: int = 3
+
 
 class ParamsManager:
   def __init__(self):
@@ -55,5 +57,6 @@ class ParamsManager:
     cfg.cruise_on_dist = 400 #float(self.params.get_float("CruiseOnDist") * 0.01)
 
     cfg.activate_cruise_after_brake = True #bool(self.params.get_bool("ActivateCruiseAfterBrake"))
+    cfg.longitudinal_personality_max = self.params.get_int("LongitudinalPersonalityMax")
 
     return cfg
