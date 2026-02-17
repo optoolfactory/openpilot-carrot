@@ -113,6 +113,11 @@ def linear_resample(samples, original_rate, new_rate):
 
 class Soundd:
   def __init__(self):
+    self.params = Params()
+    #self.soundVolumeAdjust = 1.0
+    self.carrot_count_down = 0
+
+    self.lang = self.params.get('LanguageSetting')
     self.load_sounds()
 
     self.current_alert = AudibleAlert.none
@@ -130,12 +135,13 @@ class Soundd:
     for sound in sound_list:
       filename, play_count, volume = sound_list[sound]
 
-      if self.lang == "main_ko":
-        wavefile = wave.open(BASEDIR + "/selfdrive/assets/sounds/" + filename, 'r')
-      elif self.lang == "main_zh-CHS":
-        wavefile = wave.open(BASEDIR + "/selfdrive/assets/sounds_chs/" + filename, 'r')
-      else:
-        wavefile = wave.open(BASEDIR + "/selfdrive/assets/sounds_eng/" + filename, 'r')
+      wavefile = wave.open(BASEDIR + "/selfdrive/assets/sounds/" + filename, 'r')
+      #if self.lang == "main_ko":
+      #  wavefile = wave.open(BASEDIR + "/selfdrive/assets/sounds/" + filename, 'r')
+      #elif self.lang == "main_zh-CHS":
+      #  wavefile = wave.open(BASEDIR + "/selfdrive/assets/sounds_chs/" + filename, 'r')
+      #else:
+      #  wavefile = wave.open(BASEDIR + "/selfdrive/assets/sounds_eng/" + filename, 'r')
 
       #assert wavefile.getnchannels() == 1
       assert wavefile.getsampwidth() == 2
