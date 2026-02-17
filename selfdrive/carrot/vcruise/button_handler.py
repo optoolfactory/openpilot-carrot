@@ -24,8 +24,11 @@ class ButtonHandler:
 
     # button mode
     # 0: up/down: cruise_speed_unit_basic, long up/down: speed unit
+    # 1: up: speed unit, down: cruise_speed_unit_basic, long up/down: speed unit
+    # 2: up/down: cruise_speed_unit, long up/down: cruise_speed_unit
+    # 3: not used.
     SPEED_UP_UNIT = cfg.cruise_speed_unit_basic
-    SPEED_DOWN_UNIT = cfg.cruise_speed_unit if cfg.cruise_button_mode in [1, 2, 3] else cfg.cruise_speed_unit_basic
+    SPEED_DOWN_UNIT = cfg.cruise_speed_unit if cfg.cruise_button_mode in [1, 2] else cfg.cruise_speed_unit_basic
 
     V_CRUISE_DELTA = cfg.cruise_speed_unit # 10
 
