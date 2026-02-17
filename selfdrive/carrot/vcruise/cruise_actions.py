@@ -13,6 +13,8 @@ class CruiseActions:
     self.paddle_decel_active = False
     self.pause_auto_speed_up = False  # road speed limit 삭제했지만 “가속 자동 재개” 억제 플래그는 남겨둠(원하면 제거 가능)
 
+    self.carrot_cruise_active = False
+
   def step_timers(self):
     self.cancel_timer = max(0, self.cancel_timer - 1)
     self.activate_cruise = 0

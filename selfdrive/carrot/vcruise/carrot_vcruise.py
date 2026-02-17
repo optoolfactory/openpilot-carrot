@@ -132,11 +132,8 @@ class VCruiseCarrot:
     if not long_pressed:
       if button_type == ButtonType.accelCruise:
         self.act.pause_auto_speed_up = False
-        if self.act.cruise_ready or (not CC.enabled) or CS.cruiseState.standstill:
-          # enable 성격
-          msg = self.act.request(1, -1, "Cruise on (button)", self.cfg.auto_cruise_control, self.autoCruiseControl_cancel_timer)
-          if msg:
-            self._add_log(msg)
+        if self.act.cruise_ready or (not CC.enabled) or CS.cruiseState.standstill or self.act.carrot_cruise_active:
+          pass
         elif self.act.v_cruise_kph_at_brake > 0 and v_cruise_kph < self.act.v_cruise_kph_at_brake:
           v_cruise_kph = self.act.v_cruise_kph_at_brake
           self.act.v_cruise_kph_at_brake = 0
@@ -149,6 +146,7 @@ class VCruiseCarrot:
             self.cfg.cruise_speed_min, self.cfg.cruise_speed_max,
             self.cfg.cruise_speed_unit
           )
+        self.act.carrot_cruise_active = False
 
       elif button_type == ButtonType.decelCruise:
         self.act.pause_auto_speed_up = True
@@ -160,18 +158,21 @@ class VCruiseCarrot:
           self.act.paddle_decel_active = True
         elif not CC.enabled:
           v_cruise_kph = max(self.v_ego_kph_set, self.cfg.cruise_speed_min)
+        elif self.v_ego_kph_set > v_cruise_kph + 2 and self.cfg.cruise_button_mode in [2, 3]:
+          v_cruise_kph = max(self.v_ego_kph_set, self.cfg.cruise_speed_min)
+        elif self.cfg.cruise_button_mode in [0, 1]:
+          v_cruise_kph = button_kph
+        elif self.v_ego_kph_set < 1.0:
+          self.act.carrot_cruise_active = True
+        elif self.v_ego_kph_set > self.cfg.cruise_speed_min and v_cruise_kph > self.v_ego_kph_set:
+          v_cruise_kph = self.v_ego_kph_set
         else:
-          # 감속 버튼: 단순히 버튼 계산값 적용 or 현재속도에 맞춤
-          if self.v_ego_kph_set > self.cfg.cruise_speed_min and v_cruise_kph > self.v_ego_kph_set:
-            v_cruise_kph = self.v_ego_kph_set
-          elif self.cfg.cruise_button_mode in (0, 1):
-            v_cruise_kph = button_kph
-
+          self.act.carrot_cruise_active = True
         self.act.v_cruise_kph_at_brake = 0
 
       elif button_type == ButtonType.gapAdjustCruise:
         new_p = self.personality.cycle(CS.pcmCruiseGap, self.cfg)
-        self._add_log(f"Personality -> {new_p}")
+        #self._add_log(f"Personality -> {new_p}")
     else:
       # long pressed: accel/decel만 속도 점프 허용
       if button_type == ButtonType.accelCruise:
@@ -263,7 +264,7 @@ class VCruiseCarrot:
     
     self.output.soft_hold_active = self.gb.soft_hold_active
     self.output.activate_cruise = self.act.activate_cruise
-    self.output.carrot_cruise = 1 if self.act.paddle_decel_active else 0
+    self.output.carrot_cruise = 1 if self.act.carrot_cruise_active else 0
 
     self.output.paddle_decel_active = self.act.paddle_decel_active
     self.output.v_cruise_kph = self.v_cruise_kph
