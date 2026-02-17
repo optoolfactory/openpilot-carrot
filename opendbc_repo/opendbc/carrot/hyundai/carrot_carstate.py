@@ -2,6 +2,7 @@ from opendbc.car.interfaces import CarStateBase
 from openpilot.common.params import Params
 from opendbc.car import Bus, create_button_events, structs, DT_CTRL
 from opendbc.car.hyundai.values import HyundaiFlags
+from opendbc.car.common.conversions import Conversions as CV
 
 ButtonType = structs.CarState.ButtonEvent.Type
 GearShifter = structs.CarState.GearShifter
@@ -30,8 +31,11 @@ class CarrotCarState(CarStateBase):
     self.cruise_buttons_msg = None
     self.gear_step = None
     self.lane_info = None
+    self.speed_limit_info = None
 
     self.paddle_button_prev = 0
+    self.totalDistance = 0.0
+    self.speedLimitDistance = 0
 
 
   def _carrot_monitor_fingerprint(self, can_parsers):
@@ -105,7 +109,18 @@ class CarrotCarState(CarStateBase):
         if self.cp_alt is not None:
           add_and_cache(self.cp_alt, "CAM_0x362", "lane_info")
           add_and_cache(self.cp_alt, "CAM_0x2a4", "lane_info")
+      elif self.controls_ready_count == 110:
+        add_and_cache(self.cp, "HDA_INFO_4A3", "speed_limit_info")
 
+  def update_speed_limit(self, ret, speed_limit_cam):
+    self.totalDistance += ret.vEgo * DT_CTRL
+    if ret.speedLimit > 0 and not ret.gasPressed and speed_limit_cam:
+      if self.speedLimitDistance <= self.totalDistance:
+        self.speedLimitDistance = self.totalDistance + ret.speedLimit * 6
+      self.speedLimitDistance = max(self.totalDistance + 1, self.speedLimitDistance)
+    else:
+      self.speedLimitDistance = self.totalDistance
+    ret.speedLimitDistance = self.speedLimitDistance - self.totalDistance
 
   def _carrot_update_canfd(self, ret):
 
@@ -135,6 +150,17 @@ class CarrotCarState(CarStateBase):
     ret.gearStep = self.gear_step["GEAR_STEP"] if self.gear_step is not None else 0
     if 1 <= ret.gearStep <= 8 and ret.gearShifter == GearShifter.unknown:
       ret.gearShifter = GearShifter.drive
+
+    speed_limit_cam = False
+    if self.speed_limit_info is not None:
+      speedLimit = self.speed_limit_info["SPEED_LIMIT"]
+      if not self.is_metric:
+        speedLimit *= CV.MPH_TO_KPH
+      ret.speedLimit = speedLimit if speedLimit < 255 else 0
+      if int(self.speed_limit_info["MapSource"]) == 2:
+        speed_limit_cam = True
+    self.update_speed_limit(ret, speed_limit_cam)
+
 
     if self.lane_info is not None:
       #left_lane_prob = self.lane_info["LEFT_LANE_PROB"]
