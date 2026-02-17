@@ -16,19 +16,18 @@ class ButtonHandler:
     if self.button_cnt > 0:
       self.button_cnt += 1
 
-  def process(self, button_events, v_cruise_kph: float, is_metric: bool,
-              speed_up_unit_basic: int, speed_down_unit: int) -> Tuple[float, int, bool]:
-    #return: (button_kph, button_type, long_pressed)
-    #- button_type: 0이면 없음, 아니면 ButtonType 값
+  def process(self, button_events, v_cruise_kph: float, is_metric: bool, cfg) -> Tuple[float, int, bool]:
     self._tick()
 
     button_kph = v_cruise_kph
     button_type = 0
 
-    SPEED_UP_UNIT = speed_up_unit_basic
-    SPEED_DOWN_UNIT = speed_down_unit
+    # button mode
+    # 0: up/down: cruise_speed_unit_basic, long up/down: speed unit
+    SPEED_UP_UNIT = cfg.cruise_speed_unit_basic
+    SPEED_DOWN_UNIT = cfg.cruise_speed_unit if cfg.cruise_button_mode in [1, 2, 3] else cfg.cruise_speed_unit_basic
 
-    V_CRUISE_DELTA = 10
+    V_CRUISE_DELTA = cfg.cruise_speed_unit # 10
 
     for b in button_events:
       bt = b.type

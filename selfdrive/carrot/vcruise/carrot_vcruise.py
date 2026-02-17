@@ -120,10 +120,7 @@ class VCruiseCarrot:
       self._add_log(f"{self.v_cruise_kph} Cruise speed at brake")
 
     # 버튼 처리
-    button_kph, button_type, long_pressed = self.buttons.process(
-      CS.buttonEvents, self.v_cruise_kph, self.is_metric,
-      self.cfg.cruise_speed_unit_basic, self.cfg.cruise_speed_unit
-    )
+    button_kph, button_type, long_pressed = self.buttons.process(CS.buttonEvents, self.v_cruise_kph, self.is_metric, self.cfg)
 
     self.act.apply_button_side_effects(button_type)
 
