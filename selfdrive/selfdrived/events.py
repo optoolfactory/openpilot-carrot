@@ -378,7 +378,7 @@ def personality_changed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging
   return NormalPermanentAlert(f"Driving Personality: {personality}", duration=1.5)
 
 def carstate_log_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
-  return NormalPermanentAlert(CS.logCarrot, duration=1.5)
+  return Alert(CS.logCarrot, "", AlertStatus.normal, AlertSize.small, Priority.LOW, VisualAlert.none, AudibleAlert.none, 0.2)
 
 
 def invalid_lkas_setting_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
