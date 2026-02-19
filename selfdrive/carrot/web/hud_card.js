@@ -129,8 +129,16 @@
   function setSys(cpuTempC, memPct, diskPct, diskLabel){
     setText("hudCpuVal", (cpuTempC==null || !isFinite(cpuTempC)) ? "--°C" : `${cpuTempC.toFixed(0)}°C`);
     setText("hudMemVal", (memPct==null || !isFinite(memPct)) ? "--%" : `${memPct.toFixed(0)}%`);
-    setText("hudDiskVal", (diskPct==null || !isFinite(diskPct)) ? "--%" : `${diskPct.toFixed(0)}%`);
-    if (diskLabel) setText("hudDiskLabel", diskLabel);
+
+    // VOLT 표시로 변경
+    if (diskPct == null || !isFinite(diskPct)) {
+      setText("hudDiskVal", "--V");
+    } else {
+      const volt = Number(diskPct) / 100.0;
+      setText("hudDiskVal", `${volt.toFixed(1)}V`);
+    }
+
+    if (diskLabel) setText("hudDiskLabel", "VOLT");
   }
 
   const DrivingHud = {
