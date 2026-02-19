@@ -14,8 +14,21 @@ void sound_tick(void) {
   if (sound_idle_count > 0U) {
     sound_idle_count--;
     if (sound_idle_count == 0U) {
-      current_board->set_amp_enabled(false);
+      // stop DMA first
       register_clear_bits(&DMA1_Stream1->CR, DMA_SxCR_EN);
+      while (DMA1_Stream1->CR & DMA_SxCR_EN) {}
+      
+      // force DAC to silence (mid-scale)
+      DAC1->DHR12R1 = (1UL << 11);
+      
+      // clear TX buffers to silence
+      for (uint16_t i = 0U; i < SOUND_TX_BUF_SIZE; i++) {
+        sound_tx_buf[0][i] = (1UL << 11);
+        sound_tx_buf[1][i] = (1UL << 11);
+      }
+      
+      // then disable amp
+      current_board->set_amp_enabled(false);
     }
   }
 
@@ -105,6 +118,7 @@ void sound_init(void) {
   REGISTER_INTERRUPT(DMA1_Stream0_IRQn, DMA1_Stream0_IRQ_Handler, 128U, FAULT_INTERRUPT_RATE_SOUND_DMA)
 
   // Init DAC
+  DAC1->DHR12R1 = (1UL << 11);
   register_set(&DAC1->MCR, 0U, 0xFFFFFFFFU);
   register_set(&DAC1->CR, DAC_CR_TEN1 | (4U << DAC_CR_TSEL1_Pos) | DAC_CR_DMAEN1, 0xFFFFFFFFU);
   register_set_bits(&DAC1->CR, DAC_CR_EN1);
