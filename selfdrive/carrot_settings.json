@@ -267,7 +267,7 @@
       "title": "LatSmoothSec(13)x0.01",
       "descr": "조향필터링값\n 높으면 부드러운조향",
       "egroup": "LAT",
-      "etitle": "LatSmoothSec(30)",
+      "etitle": "LatSmoothSec(13)",
       "edescr": "Lat smoothing values — Higher values smoother",
       "min": 1,
       "max": 30,
@@ -1596,7 +1596,7 @@
       "egroup": "FDIST",
       "etitle": "Dynamic TFollow LaneChange(100)%",
       "edescr": "Temporarily reduces the gap between vehicles when starting a lane change",
-      "min": 0,
+      "min": 20,
       "max": 100,
       "default": 0,
       "unit": 5
