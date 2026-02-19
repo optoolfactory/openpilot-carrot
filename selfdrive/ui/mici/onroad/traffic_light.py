@@ -4,7 +4,7 @@ from openpilot.selfdrive.ui.mici.onroad import SIDE_PANEL_WIDTH
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.system.ui.widgets import Widget
 from openpilot.common.filter_simple import FirstOrderFilter
-from openpilot.selfdrive.ui.mici.confidence_ball import draw_circle_gradient
+from openpilot.selfdrive.ui.mici.onroad.confidence_ball import draw_circle_gradient
 
 
 class TrafficLight(Widget):
