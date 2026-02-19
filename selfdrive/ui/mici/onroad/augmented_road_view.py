@@ -252,6 +252,7 @@ class AugmentedRoadView(CameraView):
 
     # Custom UI extension point - add custom overlays here
     # Use self._content_rect for positioning within camera bounds
+    self._traffic_light.render(self.rect)
     if not self._traffic_light.is_visible():
       self._confidence_ball.render(self.rect)
 
