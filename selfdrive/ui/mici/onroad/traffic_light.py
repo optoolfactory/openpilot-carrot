@@ -15,7 +15,7 @@ class TrafficLight(Widget):
     self._green_start_time = None
 
     # fade animation (0~1)
-    self._alpha_filter = FirstOrderFilter(0.0, 3.0, 1/60.0)
+    self._alpha_filter = FirstOrderFilter(0.0, 1.0, 1/60.0)
 
   # --------------------------------------------------
 
@@ -36,13 +36,13 @@ class TrafficLight(Widget):
       self._green_start_time = None
 
     elif state == 2:
-      # green max 10 sec
+      # green max 2 sec
       if self._current_state != 2:
         self._green_start_time = time.monotonic()
 
       self._current_state = 2
 
-      if self._green_start_time and (time.monotonic() - self._green_start_time <= 10.0):
+      if self._green_start_time and (time.monotonic() - self._green_start_time <= 2.0):
         visible = True
       else:
         visible = False
@@ -72,7 +72,7 @@ class TrafficLight(Widget):
     center_x = content_rect.x + content_rect.width - self._radius
     center_y = self.rect.y + self._radius
 
-    # 색상 (confidence ball 스타일 유지)
+    # 
     if self._current_state == 1:
       top = rl.Color(255, 80, 80, int(255 * alpha))
       bottom = rl.Color(255, 0, 0, int(255 * alpha))
