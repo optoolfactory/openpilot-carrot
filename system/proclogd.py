@@ -239,11 +239,11 @@ def build_proc_log_message(msg) -> None:
       cmdline[j] = arg
 
     # smaps is expensive (kernel walks page tables); skip small processes, use cache
-    if r['rss'] * PAGE_SIZE > 5 * 1024 * 1024:
-      smaps = _get_smaps_cached(r['pid'])
-      proc.memPss = smaps['pss']
-      proc.memPssAnon = smaps['pss_anon']
-      proc.memPssShmem = smaps['pss_shmem']
+    #if r['rss'] * PAGE_SIZE > 5 * 1024 * 1024:
+    #  smaps = _get_smaps_cached(r['pid'])
+    #  proc.memPss = smaps['pss']
+    #  proc.memPssAnon = smaps['pss_anon']
+    #  proc.memPssShmem = smaps['pss_shmem']
 
   cpu_times = _cpu_times()
   cpu_list = pl.init('cpuTimes', len(cpu_times))
