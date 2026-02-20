@@ -41,7 +41,7 @@ _dbus_call_idx = 0
 
 
 def normalize_ssid(ssid: str) -> str:
-  return ssid.replace("¡¯", "'")  # for iPhone hotspots
+  return ssid.replace("â€™", "'")  # for iPhone hotspots
 
 
 def _wrap_router(router):
