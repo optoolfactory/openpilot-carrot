@@ -252,9 +252,9 @@ class DesireHelper:
         )
       self.desireLog = (
         f"{side.name}:ALC={self.auto_lane_change_enable}, "
-        f"L={side.lane_available},E={side.edge_available}, "
-        f"T={side.lane_available_trigger},A={side.lane_appeared}, "
-        f"OBJ={side.side_object_detected},BSD={side.bsd_hold_counter>0}"
+        #f"L={side.lane_available},E={side.edge_available}, "
+        #f"T={side.lane_available_trigger},A={side.lane_appeared}, "
+        #f"OBJ={side.side_object_detected},BSD={side.bsd_hold_counter>0}"
       )
     else:
       self.auto_lane_change_enable = False
