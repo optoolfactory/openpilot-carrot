@@ -19,6 +19,63 @@ CRUISE_DISABLED_CHAR = '–'
 
 SET_SPEED_PERSISTENCE = 2.5  # seconds
 
+@dataclass(frozen=True)
+class SetSpeedOverrideState:
+  active: bool
+  speed_kph: float
+  label: str
+  speed_color_mode: int # 0: white, 1: green, 2: orange
+  force_persist: bool
+
+
+class SetSpeedOverride:
+
+  def compute(self, sm, set_speed_kph: float) -> SetSpeedOverrideState:
+    # 1) eco (highest)
+    cruise_target = None
+    try:
+      cruise_target = float(sm['longitudinalPlan'].cruiseTarget)
+    except Exception:
+      cruise_target = None
+
+    if cruise_target is not None and cruise_target > (set_speed_kph + 0.5):
+      return SetSpeedOverrideState(
+        active=True,
+        speed_kph=cruise_target,
+        label="eco",
+        speed_color_mode=1,
+        force_persist=True,   # eco 조건 유지되는 동안 계속 표시
+      )
+
+    # 2) apply_speed (desiredSpeed/source)
+    desired_speed = None
+    desired_source = ""
+    try:
+      desired_speed = float(sm['carrotMan'].desiredSpeed)
+      desired_source = str(sm['carrotMan'].desiredSource or "")
+    except Exception:
+      desired_speed = None
+      desired_source = ""
+
+    if desired_speed is not None and desired_speed > 0.0 and desired_speed < set_speed_kph:
+      label = desired_source.strip() or "apply"
+      label = label[:8]  # 너무 길면 UI 깨짐 방지 (원하면 길이 조절)
+      return SetSpeedOverrideState(
+        active=True,
+        speed_kph=desired_speed,
+        label=label,
+        speed_color_mode=2,
+        force_persist=True,   # 조건 유지되는 동안 계속 표시
+      )
+
+    # 3) default
+    return SetSpeedOverrideState(
+      active=False,
+      speed_kph=set_speed_kph,
+      label=tr("MAX"),
+      speed_color_mode=0,
+      force_persist=False,
+    )
 
 @dataclass(frozen=True)
 class FontSizes:
@@ -126,6 +183,8 @@ class HudRenderer(Widget):
     self._wheel_y_filter = FirstOrderFilter(0, 0.1, 1 / gui_app.target_fps)
 
     self._set_speed_alpha_filter = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
+    
+    self._set_speed_override = SetSpeedOverride()
 
   def set_wheel_critical_icon(self, critical: bool):
     """Set the wheel icon to critical or normal state."""
@@ -224,9 +283,17 @@ class HudRenderer(Widget):
       rl.draw_texture(self._txt_exclamation_point, int(exclamation_pos_x), int(exclamation_pos_y), rl.WHITE)
 
   def _draw_set_speed(self, rect: rl.Rectangle) -> None:
+    # override 결정 (eco > apply_speed > default)
+    ov = self._set_speed_override.compute(ui_state.sm, float(self.set_speed))
+
+    # 기본은 2.5초 persistence
+    show_base = (0 < rl.get_time() - self._set_speed_changed_time < SET_SPEED_PERSISTENCE)
+
+    # override(active)면 persistence 무시하고 계속 표시
+    show = (ov.force_persist or show_base) and self._can_draw_top_icons and self._engaged
+    
     """Draw the MAX speed indicator box."""
-    alpha = self._set_speed_alpha_filter.update(0 < rl.get_time() - self._set_speed_changed_time < SET_SPEED_PERSISTENCE and
-                                                self._can_draw_top_icons and self._engaged)
+    alpha = self._set_speed_alpha_filter.update(show)
     if alpha < 1e-2:
       return
 
@@ -238,10 +305,16 @@ class HudRenderer(Widget):
     rl.draw_circle_gradient(int(x + circle_radius), int(y + circle_radius), circle_radius,
                             rl.Color(0, 0, 0, int(255 / 2 * alpha)), rl.BLANK)
 
-    set_speed_color = rl.Color(255, 255, 255, int(255 * 0.9 * alpha))
+    if ov.speed_color_mode == 1:   # eco green
+      set_speed_color = rl.Color(0, 255, 0, int(255 * 0.9 * alpha))
+    elif ov.speed_color_mode == 2: # apply orange
+      set_speed_color = rl.Color(255, 165, 0, int(255 * 0.9 * alpha))
+    else:                          # default white
+      set_speed_color = rl.Color(255, 255, 255, int(255 * 0.9 * alpha))
+      
     max_color = rl.Color(255, 255, 255, int(255 * 0.9 * alpha))
 
-    set_speed = self.set_speed
+    set_speed = ov.speed_kph if ov.active else self.set_speed
     if self.is_cruise_set and not ui_state.is_metric:
       set_speed *= KM_TO_MILE
 
@@ -255,7 +328,7 @@ class HudRenderer(Widget):
       set_speed_color,
     )
 
-    max_text = tr("MAX")
+    max_text = ov.label if ov.active else tr("MAX")
     rl.draw_text_ex(
       self._font_semi_bold,
       max_text,
