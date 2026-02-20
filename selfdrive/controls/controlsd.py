@@ -328,7 +328,8 @@ class Controls:
       self.update()
       CC, lac_log = self.state_control()
       self.publish(CC, lac_log)
-      rk.monitor_time()
+      #rk.monitor_time()
+      rk.keep_time()
 
 
 def main():
