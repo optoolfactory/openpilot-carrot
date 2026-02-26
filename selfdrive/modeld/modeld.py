@@ -27,8 +27,8 @@ from openpilot.selfdrive.controls.lib.desire_helper import DesireHelper
 from openpilot.selfdrive.controls.lib.drive_helpers import get_accel_from_plan, smooth_value, get_curvature_from_plan
 from openpilot.selfdrive.modeld.parse_model_outputs import Parser
 from openpilot.selfdrive.modeld.fill_model_msg import fill_model_msg, fill_pose_msg, PublishState
+from openpilot.common.file_chunker import read_file_chunked
 from openpilot.selfdrive.modeld.constants import ModelConstants, Plan
-from openpilot.selfdrive.modeld.external_pickle import load_external_pickle
 
 
 PROCESS_NAME = "selfdrive.modeld.modeld"
@@ -40,7 +40,7 @@ VISION_METADATA_PATH = Path(__file__).parent / 'models/driving_vision_metadata.p
 POLICY_METADATA_PATH = Path(__file__).parent / 'models/driving_policy_metadata.pkl'
 MODELS_DIR = Path(__file__).parent / 'models'
 
-LAT_SMOOTH_SECONDS = 0.13
+LAT_SMOOTH_SECONDS = 0.0
 LONG_SMOOTH_SECONDS = 0.3
 MIN_LAT_CONTROL_SPEED = 0.3
 
@@ -61,6 +61,7 @@ def get_action_from_model(model_output: dict[str, np.ndarray], prev_action: log.
 
     desired_curvature = get_curvature_from_plan(plan[:,Plan.T_FROM_CURRENT_EULER][:,2],
                                                 plan[:,Plan.ORIENTATION_RATE][:,2],
+                                                plan[:,Plan.POSITION][:, 0],
                                                 ModelConstants.T_IDXS,
                                                 v_ego,
                                                 lat_action_t)
@@ -181,8 +182,8 @@ class ModelState:
     self.parser = Parser()
     self.frame_buf_params : dict[str, tuple[int, int, int, int]] = {}
     self.update_imgs = None
-    self.vision_run = load_external_pickle(VISION_PKL_PATH)
-    self.policy_run = load_external_pickle(POLICY_PKL_PATH)
+    self.vision_run = pickle.loads(read_file_chunked(str(VISION_PKL_PATH)))
+    self.policy_run = pickle.loads(read_file_chunked(str(POLICY_PKL_PATH)))
 
   def slice_outputs(self, model_outputs: np.ndarray, output_slices: dict[str, slice]) -> dict[str, np.ndarray]:
     parsed_model_outputs = {k: model_outputs[np.newaxis, v] for k,v in output_slices.items()}
