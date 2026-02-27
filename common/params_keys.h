@@ -131,7 +131,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"Version", {PERSISTENT, STRING}},
 
     // carrot
-    {"LongitudinalPersonalityMax", {PERSISTENT, INT, "3"}},
+    {"LongitudinalPersonalityMax", {PERSISTENT, INT, "2"}},
     {"NetworkAddress", {CLEAR_ON_MANAGER_START, STRING}},
 
     {"ApiCache_NavDestinations", {PERSISTENT, STRING}},
