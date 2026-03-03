@@ -1314,6 +1314,22 @@
       "cdescr": "如果踩下油门且速度超过设定速度，则更新设定速度"
     },
     {
+      "group": "화면",
+      "name": "ShowPlotMode",
+      "title": "디버그플롯(0)",
+      "descr": "1: 가속도 2: 속도+가속도 3: 모델 4: Lead 5: Lead2",
+      "egroup": "DISP",
+      "etitle": "Show Debug plot(0)",
+      "edescr": "1:Accel,2:Accel+vel,3:Model,4:Lead,5:Lead2",
+      "min": 0,
+      "max": 10,
+      "default": 0,
+      "unit": 1,
+      "cgroup": "显示设置",
+      "ctitle": "显示调试图表 (0)",
+      "cdescr": "1: 加速度, 2: 加速+速度, 3: 模型, 4: 前车, 5: 前车2"
+    },
+    {
       "group": "조향일반",
       "name": "UseLaneLineSpeed",
       "title": "레인모드: 속도(0)",
@@ -1952,22 +1968,6 @@
       "cgroup": "速度控制",
       "ctitle": "转向速度控制模式",
       "cdescr": "0: 不使用, 1: 视觉, 2: 视觉 + 路线, 3: 路线 (始终)"
-    },
-    {
-      "group": "감속제어",
-      "name": "CarrotSmartSpeedControl",
-      "title": "스마트속도제어(속도재생)",
-      "descr": "0: 속도제어안함\n 1: 가속만, 2: 감속만, 3: 모두",
-      "egroup": "SPEED",
-      "etitle": "Smart Speed Control(Replay)",
-      "edescr": "0:not use, 1:accel, 2:decel, 3:all",
-      "min": 0,
-      "max": 3,
-      "default": 0,
-      "unit": 1,
-      "cgroup": "速度控制",
-      "ctitle": "智能速度控制 (回放)",
-      "cdescr": "0: 不使用, 1: 仅加速, 2: 仅减速, 3: 全部"
     },
     {
       "group": "감속제어",

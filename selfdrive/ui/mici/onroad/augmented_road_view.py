@@ -91,6 +91,7 @@ class BookmarkIcon(Widget):
         self._active_icon = self._icon
 
   def _handle_mouse_event(self, mouse_event: MouseEvent):
+    return
     if not ui_state.started:
       return
 
@@ -172,6 +173,7 @@ class AugmentedRoadView(CameraView):
 
     # debug
     self._pm = messaging.PubMaster(['uiDebug'])
+
 
   def is_swiping_left(self) -> bool:
     """Check if currently swiping left (for scroller to disable)."""
@@ -263,6 +265,11 @@ class AugmentedRoadView(CameraView):
       rl.draw_rectangle(int(self.rect.x), int(self.rect.y), int(self.rect.width), int(self.rect.height), rl.Color(0, 0, 0, 175))
       self._offroad_label.render(self._content_rect)
 
+    if gui_app.is_recording():
+      x = int(self._content_rect.x + 16)
+      y = int(self._content_rect.y + self._content_rect.height - 16)
+      rl.draw_circle(x, y, 6, rl.Color(255, 0, 0, 220))
+      
     # publish uiDebug
     msg = messaging.new_message('uiDebug')
     msg.uiDebug.drawTimeMillis = (time.monotonic() - start_draw) * 1000
