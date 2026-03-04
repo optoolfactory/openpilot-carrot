@@ -6,11 +6,11 @@ import pyray as rl
 
 from openpilot.common.params import Params
 from openpilot.system.ui.widgets import Widget
-from openpilot.system.ui.lib.application import gui_app
+from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.selfdrive.ui.ui_state import ui_state
 
 
-PLOT_MAX = 200
+PLOT_MAX = 300
 
 
 def _safe_get(obj, path: str, default=0.0):
@@ -67,6 +67,8 @@ class DebugPlot(Widget):
     self.set_rect(rl.Rectangle(0, 0, gui_app.width, gui_app.height))
 
     self.params = Params()
+
+    self._font_display: rl.Font = gui_app.font(FontWeight.DISPLAY)
 
     # plot state
     self.plot_size = 0
@@ -254,11 +256,9 @@ class DebugPlot(Widget):
     font_size = 30
     pad = 6
 
-    # 기본 위치(기존처럼)
     x = int(prev_x + 12)
     y = int(prev_y + (30 if series_idx > 0 else 0))
 
-    # rect 경계
     left = int(rect.x) + pad
     right = int(rect.x + rect.width) - pad
     top = int(rect.y) + pad
@@ -300,16 +300,13 @@ class DebugPlot(Widget):
     W = int(rect.width)
     H = int(rect.height)
 
-    # 상단 텍스트 영역(제목/범위)을 위한 높이
-    title_h = 46  # 필요하면 40~60 사이 조절
+    title_h = 46 
 
-    # 완전 전체폭 사용
     plot_w = max(1, W)
     self.plot_x = rx + 0.0
     self.plot_y = ry + float(title_h)
-    self.plot_height = float(max(60, H - title_h))  # 남는 전체 높이
+    self.plot_height = float(max(60, H - title_h))  
 
-    # dx: PLOT_MAX 샘플을 전체폭에 꽉 채움
     self.plot_dx = float(max(1.0, plot_w / max(1, (PLOT_MAX - 1))))
 
     # background (transparent)
@@ -355,11 +352,17 @@ class DebugPlot(Widget):
       rl.draw_line(x0, gy, x1, gy, grid_color)
       gy += step
 
-    # axes frame: rect 전체를 반투명 배경으로 (원하면 끄기)
     rl.draw_rectangle(x0, y0, x1 - x0, y1 - y0, rl.Color(0, 0, 0, 70))
 
-    # title + range (rect 상단)
-    rl.draw_text(title, x0 + 10, y0 + 8, 26, rl.WHITE)
+    rl.draw_text_ex(
+      self._font_display,
+      title,
+      rl.Vector2(x0 + 10, y0 + 8),
+      26,
+      0,
+      rl.WHITE
+    )
+
     rl.draw_text(
       f"min={self.plot_min:.2f}  max={self.plot_max:.2f}",
       x0 + 10,

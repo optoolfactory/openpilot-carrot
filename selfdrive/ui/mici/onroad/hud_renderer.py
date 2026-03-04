@@ -504,14 +504,16 @@ class HudRenderer(Widget):
     gap_text = str(gap)
     gap_font = 28
     gap_size = measure_text_cached(self._font_semi_bold, gap_text, gap_font)
-    rl.draw_text_ex(
-      self._font_semi_bold,
-      gap_text,
-      rl.Vector2(gap_center_x - gap_size.x * 0.5, gap_center_y - gap_size.y * 0.5),
-      gap_font,
-      0,
-      rl.WHITE,
-    )
+    self._draw_text_with_outline(gap_text, rl.Vector2(gap_center_x - gap_size.x * 0.5, gap_center_y - gap_size.y * 0.5), gap_font, rl.WHITE, rl.BLACK, thickness=1)
+    
+    # active carrot
+    sm = ui_state.sm
+    active_carrot = sm['carrotMan'].activeCarrot
+    if active_carrot >= 2:
+      x = int(panel_x + panel_w * 0.60)
+      y = int(panel_y + panel_h * 0.82)
+      self._draw_text_with_outline("NAV", rl.Vector2(x, y), 26, rl.GREEN, rl.BLACK, thickness=1)
+
 
     # ----- gear (right side box with letter) -----
     gear = self._get_gear_text()
@@ -547,8 +549,8 @@ class HudRenderer(Widget):
     lane_color = rl.Color(255, 255, 255, 220)  # 흰색
 
     lane_x = box_x + box_w + 80
-    lane_y1 = box_y + 6
-    lane_y2 = box_y + 6 + lane_font + 2
+    lane_y1 = box_y + 2
+    lane_y2 = box_y + 2 + lane_font + 2
 
     # 오른쪽 정렬(gear box 옆에 딱 붙게)
     s1 = measure_text_cached(self._font_semi_bold, line1, lane_font)
