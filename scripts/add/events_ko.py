@@ -230,7 +230,7 @@ def startup_master_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubM
   if "REPLAY" in os.environ:
     branch = "replay"
 
-  return StartupAlert("경고: 이 브랜치는 테스트되지 않았습니다", branch, alert_status=AlertStatus.userPrompt)
+  return StartupAlert("경고: 항상 전방주시를 하고 운전대를 잡아주세요", branch, alert_status=AlertStatus.userPrompt)
 
 def below_engage_speed_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   return NoEntryAlert(f"{get_display_speed(CP.minEnableSpeed, metric)} 이상의 속도에서 활성됩니다")
