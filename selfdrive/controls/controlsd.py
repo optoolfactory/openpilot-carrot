@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import math
+import time
 from numbers import Number
 
 from cereal import car, log
@@ -51,7 +52,7 @@ class Controls:
     self.sm = messaging.SubMaster(['liveDelay', 'liveParameters', 'liveTorqueParameters', 'modelV2', 'selfdriveState',
                                    'liveCalibration', 'livePose', 'longitudinalPlan', 'carState', 'carOutput',
                                    'carrotMan', 'lateralPlan', 'radarState',
-                                   'driverMonitoringState', 'onroadEvents', 'driverAssistance'], poll='selfdriveState')
+                                   'driverMonitoringState', 'onroadEvents', 'driverAssistance'])
     self.pm = messaging.PubMaster(['carControl', 'controlsState'])
 
     self.steer_limited_by_safety = False
@@ -78,12 +79,18 @@ class Controls:
     self.carrot_controls = CarrotControls(self.CP)
 
   def update(self):
-    self.sm.update(15)
-    if self.sm.updated["liveCalibration"]:
-      self.pose_calibrator.feed_live_calib(self.sm['liveCalibration'])
-    if self.sm.updated["livePose"]:
-      device_pose = Pose.from_live_pose(self.sm['livePose'])
-      self.calibrated_pose = self.pose_calibrator.build_calibrated_pose(device_pose)
+    start_t = time.monotonic()
+    while True:
+      self.sm.update(15)
+      if self.sm.updated["liveCalibration"]:
+        self.pose_calibrator.feed_live_calib(self.sm['liveCalibration'])
+      if self.sm.updated["livePose"]:
+        device_pose = Pose.from_live_pose(self.sm['livePose'])
+        self.calibrated_pose = self.pose_calibrator.build_calibrated_pose(device_pose)
+      if self.sm.updated["selfdriveState"]:
+        break
+      if time.monotonic() - start_t > 0.2:
+        break
 
   def state_control(self):
     CS = self.sm['carState']
