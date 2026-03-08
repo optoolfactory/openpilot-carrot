@@ -147,7 +147,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SupportedCars_gm", {PERSISTENT, STRING}},
     {"ShowDebugUI", {PERSISTENT, INT, "0"}},
     {"ShowTpms", {PERSISTENT, INT, "1"}},
-    {"ShowDateTime", {PERSISTENT, INT, "1"}},
+    {"ShowDateTime", {PERSISTENT, INT, "0"}},
     {"ShowPathEnd", {PERSISTENT, INT, "1"}},
     {"ShowCustomBrightness", {PERSISTENT, INT, "100"}},
     {"ShowLaneInfo", {PERSISTENT, INT, "1"}},
@@ -218,7 +218,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"PaddleMode", {PERSISTENT, INT, "0"}},
     {"MyDrivingMode", {PERSISTENT, INT, "3"}},
     {"MyDrivingModeAuto", {PERSISTENT, INT, "0"}},
-    {"TrafficLightDetectMode", {PERSISTENT, INT, "2"}},
+    {"TrafficLightDetectMode", {PERSISTENT, INT, "0"}},
 
     {"SteerActuatorDelay", {PERSISTENT, INT, "0"}},
     {"LatSmoothSec", {PERSISTENT, INT, "13"}},
@@ -271,7 +271,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"TrafficStopDistanceAdjust", {PERSISTENT, INT, "400"}},
 
     {"HapticFeedbackWhenSpeedCamera", {PERSISTENT, INT, "0"}},
-    {"UseLaneLineSpeed", {PERSISTENT, INT, "0"}},
+    {"UseLaneLineSpeed", {PERSISTENT, INT, "21"}},
     {"UseLaneLineCurveSpeed", {PERSISTENT, INT, "0"}},
 
     {"AdjustLaneOffset", {PERSISTENT, INT, "0"}},
@@ -306,13 +306,13 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CustomSteerDeltaUpLC", {PERSISTENT, INT, "0"}},
     {"CustomSteerDeltaDownLC", {PERSISTENT, INT, "0"}},
 
-    {"SpeedFromPCM", {PERSISTENT, INT, "2"}},
+    {"SpeedFromPCM", {PERSISTENT, INT, "1"}},
     {"MaxTimeOffroadMin", {PERSISTENT, INT, "60"}},
 
-    {"DisableDM", {PERSISTENT, INT, "0"}},
+    {"DisableDM", {PERSISTENT, INT, "1"}},
     {"EnableConnect", {PERSISTENT, INT, "0"}},
-    {"MuteDoor", {PERSISTENT, INT, "0"}},
-    {"MuteSeatbelt", {PERSISTENT, INT, "0"}},
+    {"MuteDoor", {PERSISTENT, INT, "1"}},
+    {"MuteSeatbelt", {PERSISTENT, INT, "1"}},
 
     {"CarrotException", {CLEAR_ON_MANAGER_START, STRING}},
 
