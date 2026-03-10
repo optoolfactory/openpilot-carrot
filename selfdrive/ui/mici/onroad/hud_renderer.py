@@ -318,17 +318,17 @@ class HudRenderer(Widget):
 
 
     # ----- current time (right of wheel) -----
-    #now_text = datetime.now().strftime("%H:%M")
+    now_text = datetime.now().strftime("%H:%M")
 
     # 휠 높이 기준으로 폰트 크기 설정
     time_font = int(wheel_txt.height * 1.1)  # 90% 정도 (너무 꽉 차지 않게)
 
-    #time_size = measure_text_cached(self._font_semi_bold, now_text, time_font)
+    time_size = measure_text_cached(self._font_semi_bold, now_text, time_font)
 
-    #time_x = pos_x + wheel_txt.width / 2 + 15
-    #time_y = pos_y - time_size.y / 2
+    time_x = pos_x + wheel_txt.width / 2 + 15
+    time_y = pos_y - time_size.y / 2
 
-    #self._draw_text_with_outline(now_text, rl.Vector2(time_x, time_y), time_font, rl.Color(255, 255, 255, 230), rl.BLACK, thickness=1)
+    self._draw_text_with_outline(now_text, rl.Vector2(time_x, time_y), time_font, rl.Color(255, 255, 255, 230), rl.BLACK, thickness=1)
 
     # ----- steer ratio (right of time) -----
     try:
