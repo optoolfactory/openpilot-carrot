@@ -347,13 +347,13 @@ class HudRenderer(Widget):
     time_y = pos_y - time_size.y / 2
 
     #self._draw_text_with_outline(
-      now_text,
-      rl.Vector2(time_x, time_y),
-      time_font,
-      rl.Color(255, 255, 255, 230),
-      rl.BLACK,
-      thickness=1
-    )
+      #now_text,
+      #rl.Vector2(time_x, time_y),
+      #time_font,
+      #rl.Color(255, 255, 255, 230),
+      #rl.BLACK,
+      #thickness=1
+    #)
 
     info_x = time_x + time_size.x + 25
 
