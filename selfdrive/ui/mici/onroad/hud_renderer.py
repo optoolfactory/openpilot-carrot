@@ -346,7 +346,7 @@ class HudRenderer(Widget):
     time_x = pos_x + wheel_txt.width / 2 + 15
     time_y = pos_y - time_size.y / 2
 
-    self._draw_text_with_outline(
+    #self._draw_text_with_outline(
       now_text,
       rl.Vector2(time_x, time_y),
       time_font,
