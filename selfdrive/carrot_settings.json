@@ -1314,6 +1314,22 @@
       "cdescr": "如果踩下油门且速度超过设定速度，则更新设定速度"
     },
     {
+      "group": "크루즈",
+      "name": "ApplyModelSpeed",
+      "title": "모델 주행속도 적용 비율",
+      "descr": "모델이 계산한 주행속도를 설정한 비율만큼 적용합니다.",
+      "egroup": "CRUISE",
+      "etitle": "Model Speed Apply Ratio",
+      "edescr": "Applies the model-calculated driving speed by the set ratio.",
+      "min": -120,
+      "max": 120,
+      "default": 0,
+      "unit": 1,
+      "cgroup": "巡航设置",
+      "ctitle": "模型车速应用比例",
+      "cdescr": "按设定比例应用模型计算的行驶速度。"
+    },
+    {
       "group": "화면",
       "name": "ShowPlotMode",
       "title": "디버그플롯(0)",
