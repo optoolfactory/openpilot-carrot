@@ -713,7 +713,7 @@ class CAR(Platforms):
                      car_parts=CarParts.common([CarHarness.hyundai_q])),
     ],
     GENESIS_GV80.specs,
-    flags=HyundaiFlags.CANFD_ANGLE_STEERING,
+    flags=HyundaiFlags.ANGLE_CONTROL,
   )  
   GENESIS_GV70_EV_1ST_GEN = HyundaiCanFDPlatformConfig(
     [HyundaiCarDocs("Genesis GV70 EV 2020-2023", "All", car_parts=CarParts.common([CarHarness.hyundai_m]))],
