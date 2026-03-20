@@ -712,7 +712,7 @@ class CAR(Platforms):
       HyundaiCarDocs("Genesis GV80 Coupe (with HDA II & LFA2) 2025", "Highway Driving Assist II & Lane Follow Assist 2",
                      car_parts=CarParts.common([CarHarness.hyundai_q])),
     ],
-    GENESIS_GV80.specs,
+    CarSpecs(mass=2258, wheelbase=2.95, steerRatio=14.14),
     flags=HyundaiFlags.ANGLE_CONTROL,
   )  
   GENESIS_GV70_EV_1ST_GEN = HyundaiCanFDPlatformConfig(
