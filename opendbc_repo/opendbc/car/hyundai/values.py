@@ -691,6 +691,11 @@ class CAR(Platforms):
     [HyundaiCarDocs("Genesis G80 (2.5T Advanced Trim, with HDA II) 2024", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))],
     CarSpecs(mass=2060, wheelbase=3.00, steerRatio=14.0),
   )
+  GENESIS_G80_2ND_GEN_FL_2025 = HyundaiCanFDPlatformConfig(
+    [HyundaiCarDocs("Genesis G80 (2.5T Advanced Trim, with HDA II) 2025", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))],
+    CarSpecs(mass=2060, wheelbase=3.00, steerRatio=14.0),
+    flags=HyundaiFlags.ANGLE_CONTROL,
+  )
   GENESIS_G90 = HyundaiPlatformConfig(
     [HyundaiCarDocs("Genesis G90 2017-20", "All", car_parts=CarParts.common([CarHarness.hyundai_c]))],
     CarSpecs(mass=2200, wheelbase=3.15, steerRatio=12.069),
@@ -700,6 +705,16 @@ class CAR(Platforms):
     CarSpecs(mass=2258, wheelbase=2.95, steerRatio=14.14),
     flags=HyundaiFlags.RADAR_SCC,
   )
+  GENESIS_GV80_2025 = HyundaiCanFDPlatformConfig(
+    [
+      HyundaiCarDocs("Genesis GV80 (3.5T Prestige Trim, with HDA II & LFA2) 2025", "Highway Driving Assist II & Lane Follow Assist 2",
+                     car_parts=CarParts.common([CarHarness.hyundai_q])),
+      HyundaiCarDocs("Genesis GV80 Coupe (with HDA II & LFA2) 2025", "Highway Driving Assist II & Lane Follow Assist 2",
+                     car_parts=CarParts.common([CarHarness.hyundai_q])),
+    ],
+    CarSpecs(mass=2258, wheelbase=2.95, steerRatio=14.14),
+    flags=HyundaiFlags.ANGLE_CONTROL,
+  )  
   GENESIS_GV70_EV_1ST_GEN = HyundaiCanFDPlatformConfig(
     [HyundaiCarDocs("Genesis GV70 EV 2020-2023", "All", car_parts=CarParts.common([CarHarness.hyundai_m]))],
     CarSpecs(mass=2230, wheelbase=2.87, steerRatio=14.6),
