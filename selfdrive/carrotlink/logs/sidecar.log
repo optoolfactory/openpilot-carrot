@@ -1,0 +1,294 @@
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+[sidecar] messaging ready profile=p2 services=18
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p2 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+Warning, evicting all subscribers!
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+Warning, evicting all subscribers!
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers!
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+Warning, evicting all subscribers! endpoint=carState num_readers=15 pid=428723
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
+[sidecar] messaging ready profile=p1 services=11
+[sidecar] params ready
+[sidecar] starting host=0.0.0.0 port=7766 profile=p1 variant=c4_safe repoFlavor=c4
+======== Running on http://0.0.0.0:7766 ========
+(Press CTRL+C to quit)
