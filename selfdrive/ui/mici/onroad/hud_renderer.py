@@ -391,14 +391,14 @@ class HudRenderer(Widget):
           thickness=1
         )
 
-        self._draw_text_with_outline(
-          time_text,
-          rl.Vector2(draw_time_x, time_y),
-          dt_font,
-          rl.Color(255, 255, 255, 230),
-          rl.BLACK,
-          thickness=1
-        )
+        #self._draw_text_with_outline(
+          #time_text,
+          #rl.Vector2(draw_time_x, time_y),
+          #dt_font,
+          #rl.Color(255, 255, 255, 230),
+          #rl.BLACK,
+          #thickness=1
+        #)
 
         time_block_right = time_x + block_w
 
