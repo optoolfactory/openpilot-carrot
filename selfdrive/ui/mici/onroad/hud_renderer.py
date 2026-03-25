@@ -1,3 +1,5 @@
+import json
+import time
 import pyray as rl
 from dataclasses import dataclass
 from typing import Optional
@@ -192,6 +194,7 @@ class HudRenderer(Widget):
     self._set_speed_alpha_filter = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
     
     self._set_speed_override = SetSpeedOverride()
+    self._debug_traffic_light = False
 
   def _draw_text_with_outline(self, text, pos, font_size,
                               text_color,
@@ -316,7 +319,7 @@ class HudRenderer(Widget):
       EXCLAMATION_POINT_SPACING = 10
       exclamation_pos_x = pos_x - self._txt_exclamation_point.width / 2 + wheel_txt.width / 2 + EXCLAMATION_POINT_SPACING
       exclamation_pos_y = pos_y - self._txt_exclamation_point.height / 2
-      rl.draw_texture(self._txt_exclamation_point, int(exclamation_pos_x), int(exclamation_pos_y), rl.WHITE)
+      rl.draw_texture_ex(self._txt_exclamation_point, rl.Vector2(exclamation_pos_x, exclamation_pos_y), 0.0, 1.0, rl.WHITE)
 
 
   def _get_cpu_temp_text(self) -> str:
@@ -336,26 +339,122 @@ class HudRenderer(Widget):
 
 
   def _draw_wheel_side_info(self, wheel_txt, pos_x: int, pos_y: int) -> None:
-    now_text = datetime.now().strftime("%H:%M")
+    now = datetime.now()
+
+    try:
+      show_date_time = int(ui_state.show_date_time)
+    except Exception:
+      show_date_time = 1
+
+    try:
+      show_debug_ui = int(ui_state.show_debug_ui)
+    except Exception:
+      show_debug_ui = 0
 
     time_font = int(wheel_txt.height * 1.1)
+    small_dt_font = max(18, int(time_font * 0.62))   # date+time 2줄용
     side_font = max(18, int(time_font * 0.33))
 
-    time_size = measure_text_cached(self._font_semi_bold, now_text, time_font)
-
     time_x = pos_x + wheel_txt.width / 2 + 15
-    time_y = pos_y - time_size.y / 2
 
-    #self._draw_text_with_outline(
-      now_text,
-      rl.Vector2(time_x, time_y),
-      time_font,
-      rl.Color(255, 255, 255, 230),
-      rl.BLACK,
-      thickness=1
-    )
+    # --------------------------------------------------------------------------
+    # Date / Time
+    # show_date_time: 0=hide, 1=date+time, 2=time only, 3=date only
+    # --------------------------------------------------------------------------
+    time_block_right = time_x
 
-    info_x = time_x + time_size.x + 25
+    if show_date_time != 0:
+      time_text = now.strftime("%H:%M:%S")
+      date_text = now.strftime("%y-%m-%d")
+
+      if show_date_time == 1:
+        # two lines: both use smaller font
+        dt_font = small_dt_font
+
+        date_size = measure_text_cached(self._font_medium, date_text, dt_font)
+        time_size = measure_text_cached(self._font_semi_bold, time_text, dt_font)
+
+        line_gap = max(2, int(dt_font * 0.10))
+        total_h = date_size.y + line_gap + time_size.y
+        base_y = pos_y - total_h / 2
+
+        date_y = base_y
+        time_y = date_y + date_size.y + line_gap
+
+        block_w = max(date_size.x, time_size.x)
+        date_x = time_x + (block_w - date_size.x) / 2
+        draw_time_x = time_x + (block_w - time_size.x) / 2
+
+        self._draw_text_with_outline(
+          date_text,
+          rl.Vector2(date_x, date_y),
+          dt_font,
+          rl.Color(255, 255, 255, 220),
+          rl.BLACK,
+          thickness=1
+        )
+
+        self._draw_text_with_outline(
+          time_text,
+          rl.Vector2(draw_time_x, time_y),
+          dt_font,
+          rl.Color(255, 255, 255, 230),
+          rl.BLACK,
+          thickness=1
+        )
+
+        time_block_right = time_x + block_w
+
+      elif show_date_time == 2:
+        # time only: large font
+        text_font = time_font
+        time_size = measure_text_cached(self._font_semi_bold, time_text, text_font)
+        time_y = pos_y - time_size.y / 2
+
+        self._draw_text_with_outline(
+          time_text,
+          rl.Vector2(time_x, time_y),
+          text_font,
+          rl.Color(255, 255, 255, 230),
+          rl.BLACK,
+          thickness=1
+        )
+
+        time_block_right = time_x + time_size.x
+
+      elif show_date_time == 3:
+        # date only: also large font
+        text_font = time_font
+        date_size = measure_text_cached(self._font_medium, date_text, text_font)
+        date_y = pos_y - date_size.y / 2
+
+        self._draw_text_with_outline(
+          date_text,
+          rl.Vector2(time_x, date_y),
+          text_font,
+          rl.Color(255, 255, 255, 220),
+          rl.BLACK,
+          thickness=1
+        )
+
+        time_block_right = time_x + date_size.x
+
+    # --------------------------------------------------------------------------
+    # Traffic Light (always higher priority than debug UI)
+    # --------------------------------------------------------------------------
+    traffic_x = int(time_block_right + 12)
+    traffic_y = int(pos_y)
+
+    if self._draw_traffic_light_info(traffic_x, traffic_y):
+      return
+
+    # --------------------------------------------------------------------------
+    # Debug UI
+    # --------------------------------------------------------------------------
+    if show_debug_ui == 0:
+      return
+
+    info_x = time_block_right + 25
 
     cpu_text = self._get_cpu_temp_text()
 
@@ -415,7 +514,8 @@ class HudRenderer(Widget):
         rl.BLACK,
         thickness=1
       )
-    
+
+
   def _get_gear_text(self) -> str:
     sm = ui_state.sm
 
@@ -680,3 +780,111 @@ class HudRenderer(Widget):
     unit_text_size = measure_text_cached(self._font_medium, unit_text, FONT_SIZES.speed_unit)
     unit_pos = rl.Vector2(rect.x + rect.width / 2 - unit_text_size.x / 2, 290 - unit_text_size.y / 2)
     rl.draw_text_ex(self._font_medium, unit_text, unit_pos, FONT_SIZES.speed_unit, 0, COLORS.WHITE_TRANSLUCENT)
+
+
+  def _get_traffic_light_info(self):
+    # debug demo
+    if self._debug_traffic_light:
+      demo_list = [
+        {"lamp": "red", "remain": 13, "ts": time.monotonic()},
+        {"lamp": "green", "remain": 8, "ts": time.monotonic()},
+        {"lamp": "left", "remain": 7, "ts": time.monotonic()},
+        {"lamp": "right", "remain": 5, "ts": time.monotonic()},
+        {"lamp": "uturn", "remain": 4, "ts": time.monotonic()},
+      ]
+      idx = int(time.monotonic() // 2) % len(demo_list)
+      return demo_list[idx]
+
+    try:
+      raw = ui_state.params_memory.get("TrafficLight", encoding="utf-8")
+      if not raw:
+        return None
+
+      d = json.loads(raw)
+      lamp = str(d.get("lamp", "")).strip()
+      remain = int(d.get("remain", 0))
+      ts = float(d.get("ts", 0.0))
+
+      if lamp not in ("red", "green", "left", "right", "uturn"):
+        return None
+
+      if remain <= 0:
+        return None
+
+      # 1초마다 들어온다고 했으니, 2.5초 정도 지나면 stale로 보고 숨김
+      if ts > 0.0 and (time.monotonic() - ts) > 2.5:
+        return None
+
+      return {
+        "lamp": lamp,
+        "remain": remain,
+      }
+    except Exception:
+      return None
+
+  def _draw_traffic_light_lamp(self, lamp: str, cx: int, cy: int, size: int) -> None:
+    if lamp == "red":
+      rl.draw_circle(cx, cy, size, rl.Color(255, 70, 70, 245))
+      rl.draw_circle_lines(cx, cy, size, rl.Color(255, 255, 255, 220))
+      return
+
+    if lamp == "green":
+      rl.draw_circle(cx, cy, size, rl.Color(0, 220, 80, 245))
+      rl.draw_circle_lines(cx, cy, size, rl.Color(255, 255, 255, 220))
+      return
+
+    if lamp == "left":
+      txt = "<-"
+      color = rl.Color(0, 255, 100, 240)
+    elif lamp == "right":
+      txt = "->"
+      color = rl.Color(0, 255, 100, 240)
+    elif lamp == "uturn":
+      txt = "U"
+      color = rl.Color(255, 220, 80, 240)
+    else:
+      return
+
+    font_size = int(size * 2.0)
+    text_size = measure_text_cached(self._font_display, txt, font_size)
+    self._draw_text_with_outline(
+      txt,
+      rl.Vector2(cx - text_size.x * 0.5, cy - text_size.y * 0.5),
+      font_size,
+      color,
+      rl.BLACK,
+      thickness=1
+    )
+  
+  def _draw_traffic_light_info(self, pos_x: int, pos_y: int) -> bool:
+    info = self._get_traffic_light_info()
+    if not info:
+      return False
+
+    lamp = info["lamp"]
+    remain = str(info["remain"])
+
+    lamp_size = 24
+    remain_font = 28
+    gap = 5
+
+    remain_size = measure_text_cached(self._font_semi_bold, remain, remain_font)
+
+    lamp_cx = pos_x + lamp_size
+    lamp_cy = int(pos_y)
+
+    self._draw_traffic_light_lamp(lamp, lamp_cx, lamp_cy, lamp_size)
+
+    text_x = lamp_cx + lamp_size + gap
+    text_y = int(pos_y - remain_size.y / 2)
+
+    self._draw_text_with_outline(
+      remain,
+      rl.Vector2(text_x, text_y),
+      remain_font,
+      rl.Color(255, 255, 255, 235),
+      rl.BLACK,
+      thickness=1
+    )
+
+    return True
