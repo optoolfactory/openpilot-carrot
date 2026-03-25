@@ -32,6 +32,7 @@ class UIState:
 
   def _initialize(self):
     self.params = Params()
+    self.params_memory = Params("/dev/shm/params")
     self.sm = messaging.SubMaster(
       [
         "modelV2",
@@ -184,6 +185,11 @@ class UIState:
         self.has_longitudinal_control = self.params.get_bool("AlphaLongitudinalEnabled")
       else:
         self.has_longitudinal_control = self.CP.openpilotLongitudinalControl
+
+    self.show_debug_ui = self.params.get_int("ShowDebugUI")
+    self.show_date_time = self.params.get_int("ShowDateTime")
+    self.show_radar_info = self.params.get_int("ShowRadarInfo")
+
     self._param_update_time = time.monotonic()
 
 
