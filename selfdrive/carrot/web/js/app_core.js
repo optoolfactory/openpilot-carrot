@@ -1,5 +1,26 @@
 const DEBUG_UI = false;
 
+function disableViewportZoomGestures() {
+  const preventGesture = (e) => e.preventDefault();
+
+  ["gesturestart", "gesturechange", "gestureend"].forEach((type) => {
+    document.addEventListener(type, preventGesture, { passive: false });
+  });
+
+  document.addEventListener("touchmove", (e) => {
+    if (e.touches && e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+
+  let lastTouchEnd = 0;
+  document.addEventListener("touchend", (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) e.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
+}
+
+disableViewportZoomGestures();
+
 let SETTINGS = null;
 let CURRENT_GROUP = null;
 let LANG = "ko"; // "ko" | "en" | "zh"
@@ -9,8 +30,11 @@ const UI_STRINGS = {
     home: "홈",
     setting: "설정",
     tools: "도구",
-    fleet: "플릿",
+    terminal: "터미널",
+    fleet: "Fleet",
     lang: "언어",
+    branch_select: "브랜치 선택",
+    branch_current: "현재",
     server_state: "서버 상태",
     quick_link: "퀵 링크",
     car_select: "차량 선택",
@@ -43,6 +67,7 @@ const UI_STRINGS = {
     restore_done_reboot: "복구가 완료되었습니다.\n지금 재부팅하시겠습니까?",
     checkout_confirm: "브랜치를 변경하시겠습니까?",
     branch_changed: "브랜치가 변경되었습니다.",
+    fleet_open_confirm: "Fleet를 여시겠습니까?",
     quick_link_hint: "길게 눌러 링크 저장",
     failed_set_car: "차량 선택 저장 실패: ",
     reboot_failed: "재부팅 실패: ",
@@ -62,19 +87,42 @@ const UI_STRINGS = {
     connected: "연결됨",
     reconnecting: "재연결중...",
     error: "오류",
+    notice: "알림",
+    confirm_title: "확인",
+    input_title: "입력",
+    ok: "확인",
+    cancel: "취소",
     quick_link_empty: "GithubUsername 없음",
     // Tools section titles (keep English)
     section_settings_backup: "Settings",
     section_sys_cmd: "System Command",
     section_output: "Output",
-    sys_cmd_help: "Allowed: git pull/status/branch/log, df, free, uptime",
+    sys_cmd_help: "Allowed: pull, status, branch, log, git ..., df, free, uptime",
+    terminal_session: "tmux carrot-web",
+    terminal_placeholder: "git status",
+    terminal_send: "전송",
+    terminal_reconnect: "재연결",
+    terminal_ctrl_c: "Ctrl+C",
+    terminal_clear: "Clear",
+    terminal_ready: "tmux 준비됨",
+    terminal_disconnected: "연결끊김",
+    terminal_unavailable: "터미널 접속 실패",
+    terminal_offline: "터미널 오프라인",
+    setting_search: "설정 검색",
+    setting_search_placeholder: "이름, 설명, 그룹 검색",
+    setting_search_empty: "검색 결과가 없습니다.",
+    setting_search_idle: "검색어를 입력하면 세부 설정을 찾을 수 있습니다.",
+    setting_search_results: "검색 결과",
   },
   en: {
     home: "Home",
     setting: "Setting",
     tools: "Tools",
+    terminal: "Terminal",
     fleet: "Fleet",
     lang: "Lang",
+    branch_select: "Branch Select",
+    branch_current: "Current",
     server_state: "Server Status",
     quick_link: "Quick Link",
     car_select: "Car Select",
@@ -107,6 +155,7 @@ const UI_STRINGS = {
     restore_done_reboot: "Restore done.\nReboot now?",
     checkout_confirm: "Switch to this branch?",
     branch_changed: "Branch changed.",
+    fleet_open_confirm: "Open Fleet?",
     quick_link_hint: "Long press to save link",
     failed_set_car: "Failed to set car: ",
     reboot_failed: "Reboot failed: ",
@@ -126,18 +175,41 @@ const UI_STRINGS = {
     connected: "Connected",
     reconnecting: "Reconnecting...",
     error: "Error",
+    notice: "Notice",
+    confirm_title: "Confirm",
+    input_title: "Input",
+    ok: "OK",
+    cancel: "Cancel",
     quick_link_empty: "GithubUsername not set",
     section_settings_backup: "Settings",
     section_sys_cmd: "System Command",
     section_output: "Output",
-    sys_cmd_help: "Allowed: git pull/status/branch/log, df, free, uptime",
+    sys_cmd_help: "Allowed: pull, status, branch, log, git ..., df, free, uptime",
+    terminal_session: "tmux carrot-web",
+    terminal_placeholder: "git status",
+    terminal_send: "Send",
+    terminal_reconnect: "Reconnect",
+    terminal_ctrl_c: "Ctrl+C",
+    terminal_clear: "Clear",
+    terminal_ready: "tmux ready",
+    terminal_disconnected: "disconnected",
+    terminal_unavailable: "terminal unavailable",
+    terminal_offline: "terminal offline",
+    setting_search: "Search Settings",
+    setting_search_placeholder: "Search name, description, group",
+    setting_search_empty: "No matching settings found.",
+    setting_search_idle: "Type to find detailed settings.",
+    setting_search_results: "results",
   },
   zh: {
     home: "首页",
     setting: "设置",
     tools: "工具",
+    terminal: "终端",
     fleet: "车队",
     lang: "语言",
+    branch_select: "分支选择",
+    branch_current: "当前",
     server_state: "服务器状态",
     quick_link: "快速链接",
     car_select: "车辆选择",
@@ -170,6 +242,7 @@ const UI_STRINGS = {
     restore_done_reboot: "还原完成。\n现在重启吗？",
     checkout_confirm: "切换到此分支吗？",
     branch_changed: "分支已切换。",
+    fleet_open_confirm: "要打开 Fleet 吗？",
     quick_link_hint: "长按保存链接",
     failed_set_car: "保存车辆选择失败: ",
     reboot_failed: "重启失败: ",
@@ -189,11 +262,31 @@ const UI_STRINGS = {
     connected: "已连接",
     reconnecting: "重连中...",
     error: "错误",
+    notice: "提示",
+    confirm_title: "确认",
+    input_title: "输入",
+    ok: "确定",
+    cancel: "取消",
     quick_link_empty: "GithubUsername 未设置",
     section_settings_backup: "Settings",
     section_sys_cmd: "System Command",
     section_output: "Output",
-    sys_cmd_help: "Allowed: git pull/status/branch/log, df, free, uptime",
+    sys_cmd_help: "Allowed: pull, status, branch, log, git ..., df, free, uptime",
+    terminal_session: "tmux carrot-web",
+    terminal_placeholder: "git status",
+    terminal_send: "发送",
+    terminal_reconnect: "重连",
+    terminal_ctrl_c: "Ctrl+C",
+    terminal_clear: "Clear",
+    terminal_ready: "tmux 已就绪",
+    terminal_disconnected: "连接已断开",
+    terminal_unavailable: "终端不可用",
+    terminal_offline: "终端离线",
+    setting_search: "设置搜索",
+    setting_search_placeholder: "搜索名称、描述、分组",
+    setting_search_empty: "没有匹配的设置项。",
+    setting_search_idle: "输入关键词以查找详细设置。",
+    setting_search_results: "项结果",
   }
 };
 
@@ -319,17 +412,43 @@ let CURRENT_MAKER = null;
 
 const btnHome = document.getElementById("btnHome");
 const btnSetting = document.getElementById("btnSetting");
+const btnTerminal = document.getElementById("btnTerminal");
 const btnFleet = document.getElementById("btnFleet");
 const btnLang = document.getElementById("btnLang");
 const langLabel = document.getElementById("langLabel");
 const btnTools = document.getElementById("btnTools");
 const btnRecordToggle = document.getElementById("btnRecordToggle");
+const btnSettingSearch = document.getElementById("btnSettingSearch");
+const settingSearchBackdrop = document.getElementById("settingSearchBackdrop");
+const settingSearchPanel = document.getElementById("settingSearchPanel");
+const settingSearchTitle = document.getElementById("settingSearchTitle");
+const settingSearchForm = document.getElementById("settingSearchForm");
+const settingSearchInput = document.getElementById("settingSearchInput");
+const btnSettingSearchSubmit = document.getElementById("btnSettingSearchSubmit");
+const settingSearchMeta = document.getElementById("settingSearchMeta");
+const settingSearchResults = document.getElementById("settingSearchResults");
+const appToastHost = document.getElementById("appToastHost");
+const appDialog = document.getElementById("appDialog");
+const appDialogBackdrop = document.getElementById("appDialogBackdrop");
+const appDialogTitle = document.getElementById("appDialogTitle");
+const appDialogBody = document.getElementById("appDialogBody");
+const appDialogInputWrap = document.getElementById("appDialogInputWrap");
+const appDialogInput = document.getElementById("appDialogInput");
+const appDialogCancel = document.getElementById("appDialogCancel");
+const appDialogConfirm = document.getElementById("appDialogConfirm");
+const appBranchPicker = document.getElementById("appBranchPicker");
+const appBranchPickerBackdrop = document.getElementById("appBranchPickerBackdrop");
+const appBranchPickerTitle = document.getElementById("appBranchPickerTitle");
+const appBranchPickerMeta = document.getElementById("appBranchPickerMeta");
+const appBranchPickerList = document.getElementById("appBranchPickerList");
+const appBranchPickerClose = document.getElementById("appBranchPickerClose");
 const swipeContainer = document.getElementById("swipeContainer");
 const PAGE_ELEMENTS = {
   home: document.getElementById("pageHome"),
   setting: document.getElementById("pageSetting"),
   car: document.getElementById("pageCar"),
   tools: document.getElementById("pageTools"),
+  terminal: document.getElementById("pageTerminal"),
   branch: document.getElementById("pageBranch"),
 };
 const PAGE_TRANSITION_CLASSES = [
@@ -348,6 +467,12 @@ const SWIPE_EDGE_RESISTANCE = 0.18;
 let pageTransitionTimer = null;
 let pageTransitionToken = 0;
 let CURRENT_PAGE = "home";
+let appToastSerial = 0;
+let activeAppToast = null;
+let appToastHideTimer = null;
+let appToastRemoveTimer = null;
+let activeAppDialog = null;
+let appDialogSerial = 0;
 
 btnTools.onclick = () => showPage("tools", true, getSwipeTransition(CURRENT_PAGE, "tools"));
 
@@ -380,10 +505,16 @@ const modelMeta = document.getElementById("modelMeta");
 btnHome.onclick = () => showPage("home", true, getSwipeTransition(CURRENT_PAGE, "home"));
 btnRecordToggle.onclick = () => toggleRecord();
 btnSetting.onclick = () => showPage("setting", true, getSwipeTransition(CURRENT_PAGE, "setting"));
+btnTerminal.onclick = () => showPage("terminal", true, getSwipeTransition(CURRENT_PAGE, "terminal"));
 
-btnFleet.onclick = () => {
+btnFleet.onclick = async () => {
   const ip = location.hostname;
   const url = `http://${ip}:8082/`;
+  const ok = await appConfirm(
+    `${getUIText("fleet_open_confirm", "Open Fleet?")}\n\n${url}`,
+    { title: UI_STRINGS[LANG].fleet || "Fleet" },
+  );
+  if (!ok) return;
   window.open(url, "_blank", "noopener");
 };
 
@@ -396,6 +527,7 @@ modelTitle.onclick = () => showCarScreen("makers");
 
 // Branch select
 let BRANCHES = [];
+let CURRENT_BRANCH_NAME = "";
 const branchTitle = document.getElementById("branchTitle");
 const btnBackBranch = document.getElementById("btnBackBranch");
 const branchMeta = document.getElementById("branchMeta");
@@ -451,6 +583,7 @@ function setDisplayedPage(page) {
 }
 
 function getSwipeTransition(fromPage, toPage) {
+  if (fromPage === "terminal" || toPage === "terminal") return null;
   const fromIdx = SWIPE_PAGES.indexOf(fromPage);
   const toIdx = SWIPE_PAGES.indexOf(toPage);
   if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return null;
@@ -634,18 +767,30 @@ function settleSwipe(frame, direction, commit, done) {
 
 function showPage(page, pushHistory = false, transition = null) {
   const prevPage = CURRENT_PAGE;
+  if (prevPage === "terminal" && page !== "terminal" && typeof teardownTerminalPage === "function") {
+    teardownTerminalPage();
+  }
   CURRENT_PAGE = page;
 
   if (transition && prevPage !== page) animatePageTransition(prevPage, page, transition);
   else setDisplayedPage(page);
 
-  btnRecordToggle.style.display = (page === "home") ? "" : "none";
+  document.body.dataset.page = page;
+
   btnHome.classList.toggle("active", page === "home");
   btnSetting.classList.toggle("active", page === "setting");
   btnTools.classList.toggle("active", page === "tools");
+  btnTerminal.classList.toggle("active", page === "terminal");
 
-  // Scroll to top on page change
-  window.scrollTo(0, 0);
+  if (page !== "setting" && typeof closeSettingSearchPanel === "function") {
+    closeSettingSearchPanel({ clear: false });
+  }
+
+  // Terminal uses its own fixed viewport layout. Resetting the window scroll
+  // while entering/leaving it causes visible jumps on mobile.
+  if (prevPage !== "terminal" && page !== "terminal") {
+    window.scrollTo(0, 0);
+  }
 
   if (page === "home") {
     loadCurrentCar().catch(() => {});
@@ -654,8 +799,10 @@ function showPage(page, pushHistory = false, transition = null) {
   }
 
   if (page === "setting") {
-    showSettingScreen("groups", false);
     if (!SETTINGS) loadSettings();
+    else if (typeof syncSettingViewportLayout === "function" && typeof isCompactLandscapeMode === "function" && isCompactLandscapeMode()) {
+      syncSettingViewportLayout().catch(() => {});
+    } else if (pushHistory || !CURRENT_GROUP) showSettingScreen("groups", false);
   }
 
   if (page === "car") {
@@ -665,12 +812,16 @@ function showPage(page, pushHistory = false, transition = null) {
   if (page === "tools") {
     initToolsPage();
   }
+  if (page === "terminal" && typeof initTerminalPage === "function") {
+    initTerminalPage();
+  }
 
   const state =
     (page === "home") ? { page: "home" } :
     (page === "setting") ? { page: "setting", screen: "groups", group: null } :
     (page === "car") ? { page: "car", screen: "makers", maker: null } :
     (page === "tools") ? { page: "tools" } :
+    (page === "terminal") ? { page: "terminal" } :
     (page === "branch") ? { page: "branch" } :
     { page: "home" };
 
@@ -686,11 +837,29 @@ function showSettingScreen(which, pushHistory = false) {
   const currentGroupLabel = (!isGroups && CURRENT_GROUP && typeof getSettingGroupLabel === "function")
     ? getSettingGroupLabel(CURRENT_GROUP)
     : (CURRENT_GROUP || "");
+  const splitLandscape = (CURRENT_PAGE === "setting" && typeof isCompactLandscapeMode === "function" && isCompactLandscapeMode());
+
+  if (splitLandscape) {
+    settingTitle.textContent = UI_STRINGS[LANG].setting || "Setting";
+    if (settingSubnavWrap) settingSubnavWrap.style.display = "none";
+    if (showEl) {
+      showEl.style.display = "";
+      showEl.classList.remove("hidden");
+    }
+    if (hideEl) {
+      hideEl.style.display = "";
+      hideEl.classList.remove("hidden");
+    }
+    if (pushHistory) {
+      history.replaceState({ page: "setting", screen: "items", group: CURRENT_GROUP || null }, "");
+    }
+    if (settingScreenHost) settingScreenHost.style.minHeight = "";
+    return;
+  }
 
   if (btnBackGroups) btnBackGroups.style.display = "none";
   settingTitle.textContent = isGroups ? (UI_STRINGS[LANG].setting || "Setting") : ((UI_STRINGS[LANG].setting || "Setting") + " - " + currentGroupLabel);
-  if (settingCarRow) settingCarRow.style.display = isGroups ? "" : "none";
-  if (settingSubnav) settingSubnav.style.display = isGroups ? "none" : "";
+  if (settingSubnavWrap) settingSubnavWrap.style.display = isGroups ? "none" : "";
 
   showEl.style.display = "";
   requestAnimationFrame(() => showEl.classList.remove("hidden"));
@@ -738,6 +907,7 @@ function toggleLang() {
   loadRecordState().catch(() => {});
 
   if (SETTINGS) {
+    if (typeof rebuildSettingSearchEntries === "function") rebuildSettingSearchEntries();
     renderGroups();
     if (typeof renderSettingSubnav === "function") renderSettingSubnav();
     if (CURRENT_GROUP) renderItems(CURRENT_GROUP);
@@ -752,6 +922,7 @@ function renderUIText() {
   setNavText("btnHome", s.home);
   setNavText("btnSetting", s.setting);
   setNavText("btnTools", s.tools);
+  setNavText("btnTerminal", s.terminal);
   setNavText("btnFleet", s.fleet);
 
   // Home
@@ -782,6 +953,32 @@ function renderUIText() {
   setText("sysCmdTitle", s.section_sys_cmd);
   setText("sysCmdHelp", s.sys_cmd_help);
   setText("outputTitle", s.section_output);
+  setText("terminalTitle", s.terminal);
+  setText("terminalSessionMeta", "/data/openpilot");
+  setText("btnTerminalCtrlC", s.terminal_ctrl_c);
+  setText("btnTerminalClear", s.terminal_clear);
+  setText("btnTerminalReconnect", s.terminal_reconnect);
+  setText("btnTerminalSend", s.terminal_send);
+  const terminalInput = document.getElementById("terminalInput");
+  if (terminalInput) terminalInput.placeholder = "";
+  setText("settingSearchTitle", s.setting_search);
+  if (settingSearchInput) settingSearchInput.placeholder = s.setting_search_placeholder || "";
+  if (settingSearchMeta && (!settingSearchInput || !settingSearchInput.value.trim())) {
+    settingSearchMeta.textContent = s.setting_search_idle || "";
+  }
+  if (btnSettingSearch) {
+    btnSettingSearch.setAttribute("aria-label", s.setting_search || "Search Settings");
+    btnSettingSearch.title = s.setting_search || "Search Settings";
+  }
+  if (btnSettingSearchSubmit) {
+    btnSettingSearchSubmit.setAttribute("aria-label", s.setting_search || "Search Settings");
+    btnSettingSearchSubmit.title = s.setting_search || "Search Settings";
+  }
+  if (typeof renderSettingSearchResults === "function" && settingSearchPanel && !settingSearchPanel.hidden) {
+    renderSettingSearchResults(settingSearchInput?.value || "");
+  }
+  setText("appBranchPickerTitle", s.branch_select);
+  setText("appBranchPickerClose", s.close);
   updateLangLabel();
   syncHomeUtilityButtons();
   renderServerStateUI();
@@ -803,12 +1000,233 @@ function setText(id, txt) {
 }
 
 function updateLangLabel() {
-  if (langLabel) langLabel.textContent = `lang(${LANG})`;
+  if (!langLabel) return;
+
+  const main = langLabel.querySelector(".lang-label__main");
+  const sub = langLabel.querySelector(".lang-label__sub");
+  if (main && sub) {
+    main.textContent = "lang";
+    sub.textContent = `(${LANG})`;
+  } else {
+    langLabel.textContent = `lang (${LANG})`;
+  }
+
+  if (btnLang) {
+    btnLang.setAttribute("aria-label", `lang (${LANG})`);
+    btnLang.title = `lang (${LANG})`;
+  }
 }
 
 function getUIText(key, fallback = "") {
   return UI_STRINGS[LANG]?.[key] || fallback;
 }
+
+function syncModalBodyLock() {
+  const hasOpenDialog =
+    Boolean(appDialog && !appDialog.hidden) ||
+    Boolean(appBranchPicker && !appBranchPicker.hidden) ||
+    Boolean(settingSearchPanel && !settingSearchPanel.hidden);
+  document.body.classList.toggle("dialog-open", hasOpenDialog);
+}
+
+function showAppToast(message, opts = {}) {
+  if (!appToastHost || !message) return;
+
+  const tone = opts.tone || "default";
+  const duration = opts.duration ?? 2600;
+  let toast = activeAppToast;
+  if (!toast || !toast.isConnected) {
+    toast = document.createElement("div");
+    appToastHost.innerHTML = "";
+    appToastHost.appendChild(toast);
+    activeAppToast = toast;
+  }
+
+  toast.className = "app-toast";
+  if (tone && tone !== "default") toast.classList.add(`is-${tone}`);
+  toast.textContent = String(message);
+
+  if (appToastHideTimer) {
+    clearTimeout(appToastHideTimer);
+    appToastHideTimer = null;
+  }
+  if (appToastRemoveTimer) {
+    clearTimeout(appToastRemoveTimer);
+    appToastRemoveTimer = null;
+  }
+
+  appToastSerial += 1;
+  const toastSerial = appToastSerial;
+  requestAnimationFrame(() => {
+    if (!activeAppToast || toastSerial !== appToastSerial) return;
+    activeAppToast.classList.add("is-visible");
+  });
+
+  appToastHideTimer = window.setTimeout(() => {
+    if (!activeAppToast || toastSerial !== appToastSerial) return;
+    activeAppToast.classList.remove("is-visible");
+    appToastHideTimer = null;
+    appToastRemoveTimer = window.setTimeout(() => {
+      if (!activeAppToast || toastSerial !== appToastSerial) return;
+      activeAppToast.remove();
+      activeAppToast = null;
+      appToastRemoveTimer = null;
+    }, 180);
+  }, duration);
+}
+
+function resolveAppDialog(result) {
+  if (!activeAppDialog || !appDialog) return;
+
+  const state = activeAppDialog;
+  activeAppDialog = null;
+  const dialogSerial = state.serial;
+  appDialog.classList.remove("is-open");
+
+  window.setTimeout(() => {
+    if (dialogSerial !== appDialogSerial) {
+      state.resolve(result);
+      return;
+    }
+    appDialog.hidden = true;
+    syncModalBodyLock();
+    if (appDialogInputWrap) appDialogInputWrap.hidden = true;
+    if (appDialogInput) {
+      appDialogInput.value = "";
+      appDialogInput.placeholder = "";
+    }
+    if (state.lastFocus && typeof state.lastFocus.focus === "function") {
+      state.lastFocus.focus();
+    }
+    state.resolve(result);
+  }, 180);
+}
+
+function cancelAppDialog() {
+  if (!activeAppDialog) return;
+  const result = activeAppDialog.mode === "prompt" ? null : false;
+  resolveAppDialog(result);
+}
+
+function confirmAppDialog() {
+  if (!activeAppDialog) return;
+  const result = activeAppDialog.mode === "prompt"
+    ? (appDialogInput ? appDialogInput.value : "")
+    : true;
+  resolveAppDialog(result);
+}
+
+function openAppDialog(options = {}) {
+  if (!appDialog || !appDialogTitle || !appDialogBody || !appDialogConfirm || !appDialogCancel) {
+    if (options.mode === "prompt") return Promise.resolve(null);
+    return Promise.resolve(options.mode === "alert");
+  }
+
+  if (activeAppDialog) cancelAppDialog();
+
+  const mode = options.mode || "alert";
+  const title =
+    options.title ||
+    (mode === "confirm"
+      ? getUIText("confirm_title", "Confirm")
+      : mode === "prompt"
+        ? getUIText("input_title", "Input")
+        : getUIText("notice", "Notice"));
+  const message = options.message || "";
+  const confirmLabel = options.confirmLabel || getUIText("ok", "OK");
+  const cancelLabel = options.cancelLabel || getUIText("cancel", "Cancel");
+  const showCancel = mode !== "alert";
+
+  appDialogTitle.textContent = title;
+  appDialogBody.textContent = String(message);
+  appDialogConfirm.textContent = confirmLabel;
+  appDialogCancel.textContent = cancelLabel;
+  appDialogCancel.hidden = !showCancel;
+  appDialogCancel.setAttribute("aria-hidden", showCancel ? "false" : "true");
+
+  if (appDialogInputWrap && appDialogInput) {
+    const isPrompt = mode === "prompt";
+    appDialogInputWrap.hidden = !isPrompt;
+    appDialogInput.value = options.defaultValue ?? "";
+    appDialogInput.placeholder = options.placeholder || "";
+  }
+
+  return new Promise((resolve) => {
+    const dialogSerial = ++appDialogSerial;
+    activeAppDialog = {
+      resolve,
+      mode,
+      serial: dialogSerial,
+      lastFocus: document.activeElement instanceof HTMLElement ? document.activeElement : null,
+    };
+
+    appDialog.hidden = false;
+    syncModalBodyLock();
+
+    requestAnimationFrame(() => {
+      appDialog.classList.add("is-open");
+      if (mode === "prompt" && appDialogInput) {
+        appDialogInput.focus();
+        appDialogInput.select();
+      } else {
+        appDialogConfirm.focus();
+      }
+    });
+  });
+}
+
+function appAlert(message, opts = {}) {
+  return openAppDialog({
+    mode: "alert",
+    title: opts.title,
+    message,
+    confirmLabel: opts.confirmLabel,
+  });
+}
+
+function appConfirm(message, opts = {}) {
+  return openAppDialog({
+    mode: "confirm",
+    title: opts.title,
+    message,
+    confirmLabel: opts.confirmLabel,
+    cancelLabel: opts.cancelLabel,
+  });
+}
+
+function appPrompt(message, opts = {}) {
+  return openAppDialog({
+    mode: "prompt",
+    title: opts.title,
+    message,
+    confirmLabel: opts.confirmLabel,
+    cancelLabel: opts.cancelLabel,
+    defaultValue: opts.defaultValue,
+    placeholder: opts.placeholder,
+  });
+}
+
+if (appDialogBackdrop) appDialogBackdrop.onclick = cancelAppDialog;
+if (appDialogCancel) appDialogCancel.onclick = cancelAppDialog;
+if (appDialogConfirm) appDialogConfirm.onclick = confirmAppDialog;
+
+document.addEventListener("keydown", (ev) => {
+  if (!activeAppDialog) return;
+
+  if (ev.key === "Escape") {
+    ev.preventDefault();
+    if (activeAppDialog.mode === "alert") resolveAppDialog(true);
+    else cancelAppDialog();
+    return;
+  }
+
+  if (ev.key === "Enter" && !ev.shiftKey) {
+    const targetTag = ev.target?.tagName;
+    if (targetTag === "TEXTAREA") return;
+    ev.preventDefault();
+    confirmAppDialog();
+  }
+});
 
 function isUtilityPaneOpen(pane) {
   return Boolean(pane) && !pane.hidden;
@@ -1011,6 +1429,39 @@ async function setParam(name, value) {
 
 /* ── Swipe Navigation ──────────────────────────────────── */
 const SWIPE_PAGES = ["home", "setting", "tools"];
+const SETTING_BACK_EDGE_WIDTH = 32;
+
+function isLandscapeRailMode() {
+  return window.matchMedia("(orientation: landscape) and (max-height: 560px) and (pointer: coarse)").matches;
+}
+
+function prepareSettingBackFrame() {
+  if (!settingScreenHost || !screenItems || !screenGroups) return null;
+  if (typeof stopSettingSubnavMotion === "function") stopSettingSubnavMotion();
+
+  [screenItems, screenGroups].forEach((el) => {
+    clearPageTransitionClasses(el);
+    resetPageRuntimeStyles(el);
+    el.classList.remove("hidden");
+  });
+
+  const frame = prepareSwipeFrame(settingScreenHost, screenItems, screenGroups);
+  if (!frame) return null;
+  settingScreenHost.classList.add("setting-back-swiping");
+  screenItems.style.zIndex = "2";
+  screenGroups.style.zIndex = "1";
+  return frame;
+}
+
+function cleanupSettingBackFrame() {
+  if (!settingScreenHost || !screenItems || !screenGroups) return;
+  settingScreenHost.style.minHeight = "";
+  settingScreenHost.classList.remove("setting-back-swiping");
+  [screenItems, screenGroups].forEach((el) => {
+    clearPageTransitionClasses(el);
+    resetPageRuntimeStyles(el);
+  });
+}
 
 (function initSwipe() {
   const el = swipeContainer;
@@ -1019,10 +1470,15 @@ const SWIPE_PAGES = ["home", "setting", "tools"];
   let gesture = null;
 
   el.addEventListener("touchstart", (e) => {
+    if (isLandscapeRailMode()) {
+      gesture = null;
+      return;
+    }
+    const inSettingItems = CURRENT_PAGE === "setting" && screenItems && screenItems.style.display !== "none";
     if (
       e.touches.length !== 1 ||
       !SWIPE_PAGES.includes(CURRENT_PAGE) ||
-      (CURRENT_PAGE === "setting" && screenItems && screenItems.style.display !== "none")
+      (inSettingItems && e.target?.closest?.("#settingSubnavWrap"))
     ) {
       gesture = null;
       return;
@@ -1037,6 +1493,8 @@ const SWIPE_PAGES = ["home", "setting", "tools"];
       dx: 0,
       direction: null,
       targetPage: null,
+      settingGroupTarget: null,
+      settingBackTarget: false,
       frame: null,
       velocity: 0,
       lastX: touch.clientX,
@@ -1045,6 +1503,10 @@ const SWIPE_PAGES = ["home", "setting", "tools"];
   }, { passive: true });
 
   el.addEventListener("touchmove", (e) => {
+    if (isLandscapeRailMode()) {
+      gesture = null;
+      return;
+    }
     if (!gesture?.tracking || e.touches.length !== 1) return;
 
     const touch = e.touches[0];
@@ -1058,17 +1520,47 @@ const SWIPE_PAGES = ["home", "setting", "tools"];
         return;
       }
 
-      const idx = SWIPE_PAGES.indexOf(CURRENT_PAGE);
+      const inSettingItems = CURRENT_PAGE === "setting" && screenItems && screenItems.style.display !== "none";
       const direction = dx < 0 ? "forward" : "backward";
-      const targetPage = direction === "forward" ? SWIPE_PAGES[idx + 1] : SWIPE_PAGES[idx - 1];
+      const isSettingEdgeBack = inSettingItems && direction === "backward" && gesture.startX <= SETTING_BACK_EDGE_WIDTH;
+      if (isSettingEdgeBack) {
+        gesture = null;
+        return;
+      }
+
+      const idx = SWIPE_PAGES.indexOf(CURRENT_PAGE);
+      const nextSettingGroup = inSettingItems && typeof getSettingSubnavShiftTarget === "function"
+        ? getSettingSubnavShiftTarget(direction)
+        : null;
+      const settingBackTarget = Boolean(inSettingItems && direction === "backward" && nextSettingGroup?.reachedEdge);
+      const settingGroupTarget = (nextSettingGroup && !nextSettingGroup.reachedEdge)
+        ? nextSettingGroup.group
+        : null;
+      const targetPage = settingGroupTarget
+        ? null
+        : (
+          inSettingItems
+            ? (direction === "forward" ? "tools" : null)
+            : (direction === "forward" ? SWIPE_PAGES[idx + 1] : SWIPE_PAGES[idx - 1])
+        );
 
       gesture.dragging = true;
       gesture.direction = direction;
       gesture.targetPage = targetPage || null;
-      gesture.edgeResistance = !targetPage;
+      gesture.settingGroupTarget = settingGroupTarget || null;
+      gesture.settingBackTarget = settingBackTarget;
+      gesture.edgeResistance = !targetPage && !settingGroupTarget && !settingBackTarget;
       gesture.frame = targetPage
         ? prepareSwipePages(CURRENT_PAGE, targetPage)
-        : (stopPageTransition(), prepareSwipeFrame(swipeContainer, PAGE_ELEMENTS[CURRENT_PAGE]));
+        : (
+          settingGroupTarget
+            ? null
+            : (
+              settingBackTarget
+                ? prepareSettingBackFrame()
+                : (stopPageTransition(), prepareSwipeFrame(swipeContainer, PAGE_ELEMENTS[CURRENT_PAGE]))
+            )
+        );
     }
 
     if (!gesture.dragging) return;
@@ -1089,6 +1581,10 @@ const SWIPE_PAGES = ["home", "setting", "tools"];
   }, { passive: false });
 
   el.addEventListener("touchend", (e) => {
+    if (isLandscapeRailMode()) {
+      gesture = null;
+      return;
+    }
     if (!gesture) return;
 
     if (!gesture.dragging) {
@@ -1102,16 +1598,43 @@ const SWIPE_PAGES = ["home", "setting", "tools"];
     const velocityOk =
       (gesture.direction === "forward" && gesture.velocity < -SWIPE_VELOCITY_THRESHOLD) ||
       (gesture.direction === "backward" && gesture.velocity > SWIPE_VELOCITY_THRESHOLD);
-    const shouldCommit = Boolean(gesture.targetPage) && (travel > SWIPE_COMMIT_RATIO || velocityOk);
+    const shouldCommitPage = Boolean(gesture.targetPage) && (travel > SWIPE_COMMIT_RATIO || velocityOk);
+    const shouldCommitGroup = Boolean(gesture.settingGroupTarget) && (Math.abs(dx) > 48 || velocityOk);
+    const shouldCommitBack = Boolean(gesture.settingBackTarget) && (travel > SWIPE_COMMIT_RATIO || velocityOk);
 
-    if (gesture.frame) {
+    if (gesture.frame && gesture.targetPage) {
       const targetPage = gesture.targetPage;
       const direction = gesture.direction;
       const frame = gesture.frame;
       gesture = null;
-      settleSwipe(frame, direction, shouldCommit, () => {
-        if (shouldCommit && targetPage) showPage(targetPage, true, null);
+      settleSwipe(frame, direction, shouldCommitPage, () => {
+        if (shouldCommitPage && targetPage) showPage(targetPage, true, null);
         else setDisplayedPage(CURRENT_PAGE);
+      });
+      return;
+    }
+
+    if (gesture.settingGroupTarget) {
+      const groupTarget = gesture.settingGroupTarget;
+      const direction = gesture.direction;
+      gesture = null;
+      if (shouldCommitGroup && typeof animateSettingGroupSwitch === "function") {
+        animateSettingGroupSwitch(groupTarget, direction).catch((e) => console.log("[SettingSwipe] switch failed:", e));
+      } else if (shouldCommitGroup && typeof selectGroup === "function") {
+        selectGroup(groupTarget, false);
+      } else if (typeof centerActiveSettingSubnavTab === "function") {
+        centerActiveSettingSubnavTab("smooth");
+      }
+      return;
+    }
+
+    if (gesture.settingBackTarget && gesture.frame) {
+      const frame = gesture.frame;
+      gesture = null;
+      settleSwipe(frame, "backward", shouldCommitBack, () => {
+        cleanupSettingBackFrame();
+        if (shouldCommitBack) history.back();
+        else showSettingScreen("items", false);
       });
       return;
     }
@@ -1128,6 +1651,15 @@ const SWIPE_PAGES = ["home", "setting", "tools"];
 
   el.addEventListener("touchcancel", () => {
     if (!gesture) return;
+    if (gesture.settingBackTarget && gesture.frame) {
+      const frame = gesture.frame;
+      gesture = null;
+      settleSwipe(frame, "backward", false, () => {
+        cleanupSettingBackFrame();
+        showSettingScreen("items", false);
+      });
+      return;
+    }
     if (gesture.frame) {
       const frame = gesture.frame;
       const direction = gesture.direction;
@@ -1146,34 +1678,17 @@ const SWIPE_PAGES = ["home", "setting", "tools"];
 
   let gesture = null;
 
-  function prepareSettingBackFrame() {
-    [screenItems, screenGroups].forEach((el) => {
-      clearPageTransitionClasses(el);
-      resetPageRuntimeStyles(el);
-      el.classList.remove("hidden");
-    });
-
-    const frame = prepareSwipeFrame(host, screenItems, screenGroups);
-    if (!frame) return null;
-    screenItems.style.zIndex = "2";
-    screenGroups.style.zIndex = "1";
-    return frame;
-  }
-
-  function cleanupSettingBackFrame() {
-    host.style.minHeight = "";
-    [screenItems, screenGroups].forEach((el) => {
-      clearPageTransitionClasses(el);
-      resetPageRuntimeStyles(el);
-    });
-  }
-
   host.addEventListener("touchstart", (e) => {
+    if (isLandscapeRailMode()) {
+      gesture = null;
+      return;
+    }
     if (
       e.touches.length !== 1 ||
       CURRENT_PAGE !== "setting" ||
       screenItems.style.display === "none" ||
-      e.target?.closest?.("#settingSubnav")
+      e.target?.closest?.("#settingSubnav") ||
+      e.touches[0].clientX > SETTING_BACK_EDGE_WIDTH
     ) {
       gesture = null;
       return;
@@ -1193,6 +1708,10 @@ const SWIPE_PAGES = ["home", "setting", "tools"];
   }, { passive: true });
 
   host.addEventListener("touchmove", (e) => {
+    if (isLandscapeRailMode()) {
+      gesture = null;
+      return;
+    }
     if (!gesture || e.touches.length !== 1) return;
 
     const touch = e.touches[0];
@@ -1206,6 +1725,7 @@ const SWIPE_PAGES = ["home", "setting", "tools"];
         return;
       }
 
+      if (typeof stopSettingSubnavMotion === "function") stopSettingSubnavMotion();
       gesture.dragging = true;
       gesture.frame = prepareSettingBackFrame();
     }
@@ -1224,6 +1744,10 @@ const SWIPE_PAGES = ["home", "setting", "tools"];
   }, { passive: false });
 
   host.addEventListener("touchend", () => {
+    if (isLandscapeRailMode()) {
+      gesture = null;
+      return;
+    }
     if (!gesture) return;
     if (!gesture.dragging || !gesture.frame) {
       gesture = null;
