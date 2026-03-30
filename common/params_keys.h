@@ -217,7 +217,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MyDrivingModeAuto", {PERSISTENT, INT, "0"}},
     {"TrafficLightDetectMode", {PERSISTENT, INT, "2"}},
 
-    {"SteerActuatorDelay", {PERSISTENT, INT, "0"}},
+    {"SteerActuatorDelay", {PERSISTENT, INT, "20"}},
     {"LatSmoothSec", {PERSISTENT, INT, "13"}},
     {"LatSuspendAngleDeg", {PERSISTENT, INT, "300"}},
     {"CruiseOnDist", {PERSISTENT, INT, "400"}},
@@ -322,7 +322,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ActivateCruiseAfterBrake", {CLEAR_ON_MANAGER_START, INT, "0"}},
 
     {"CustomSR", {PERSISTENT, INT, "0"}},
-    {"SteerRatioRate", {PERSISTENT, INT, "100"}},
+    {"SteerRatioRate", {PERSISTENT, INT, "90"}},
 
     {"SoftRestartTriggered", {CLEAR_ON_MANAGER_START, INT}},
 
