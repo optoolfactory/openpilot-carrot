@@ -27,7 +27,7 @@ import traceback
 import numpy as np
 from typing import Dict, Any, Tuple, Optional, List
 
-from aiohttp import web, ClientSession, WSMsgType
+from aiohttp import web, ClientSession, ClientTimeout, WSMsgType
 from cereal import messaging
 from opendbc.car import structs
 import shlex
@@ -44,11 +44,15 @@ from openpilot.system.hardware import HARDWARE
 from ..realtime.raw_protocol import build_raw_hello, build_raw_multiplex_hello
 from ..realtime.transports import CameraWsHub, RawWsHub
 from .live_compat.broker import RealtimeBroker
+from .live_compat.normalize import to_transport_safe
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(BASE_DIR)
 
 DEFAULT_SETTINGS_PATH = "/data/openpilot/selfdrive/carrot_settings.json"
+CARROT_DATA_DIR = "/data/openpilot/selfdrive/carrot/data"
+CARROT_STATE_DIR = os.path.join(CARROT_DATA_DIR, "state")
+CARROT_GIT_STATE_PATH = os.path.join(CARROT_STATE_DIR, "git.json")
 
 WEB_DIR = os.path.join(ROOT_DIR, "web")
 CSS_DIR = os.path.join(WEB_DIR, "css")
@@ -200,14 +204,16 @@ async def proxy_stream(request: web.Request) -> web.StreamResponse:
   sess: ClientSession = request.app["http"]
 
   try:
-    async with sess.post(WEBRTCD_URL, data=body, headers={"Content-Type": ct}) as resp:
+    async with sess.post(WEBRTCD_URL, data=body, headers={"Content-Type": ct},
+                         timeout=ClientTimeout(total=15)) as resp:
       resp_body = await resp.read()
-      # 그대로 전달
       out = web.Response(body=resp_body, status=resp.status)
       rct = resp.headers.get("Content-Type")
       if rct:
         out.headers["Content-Type"] = rct
       return out
+  except asyncio.TimeoutError:
+    return web.json_response({"ok": False, "error": "webrtcd timeout"}, status=504)
   except Exception as e:
     return web.json_response({"ok": False, "error": str(e)}, status=502)
 
@@ -236,19 +242,21 @@ async def api_live_runtime(request: web.Request) -> web.Response:
 
   meta = broker.last_snapshot.get("meta") if isinstance(broker.last_snapshot, dict) else {}
   services = _select_live_runtime_services(broker.last_snapshot if isinstance(broker.last_snapshot, dict) else {})
-  return web.json_response({
+  return web.json_response(to_transport_safe({
     "ok": True,
     "meta": meta if isinstance(meta, dict) else {},
     "runtime": runtime if isinstance(runtime, dict) else {},
     "services": services,
     "snapshotAgeMs": broker.snapshot_age_ms(),
-  })
+  }))
 
 
 _LIVE_RUNTIME_SERVICE_NAMES = (
   "selfdriveState",
   "carState",
   "controlsState",
+  "deviceState",
+  "peripheralState",
   "longitudinalPlan",
   "lateralPlan",
   "radarState",
@@ -439,7 +447,61 @@ def _clamp_numeric(value: float, p: Optional[Dict[str, Any]]) -> float:
     pass
   return value
 
+def _read_git_state() -> Dict[str, Any]:
+  try:
+    with open(CARROT_GIT_STATE_PATH, "r", encoding="utf-8") as f:
+      data = json.load(f)
+    return data if isinstance(data, dict) else {}
+  except Exception:
+    return {}
+
+def _write_git_state(data: Dict[str, Any]) -> None:
+  try:
+    os.makedirs(CARROT_STATE_DIR, exist_ok=True)
+    tmp_path = f"{CARROT_GIT_STATE_PATH}.tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+      json.dump(data, f, ensure_ascii=True, separators=(",", ":"))
+    os.replace(tmp_path, CARROT_GIT_STATE_PATH)
+  except Exception:
+    pass
+
+def _read_custom_meta_value(name: str) -> Optional[str]:
+  if name != "GitPullTime":
+    return None
+
+  try:
+    value = _read_git_state().get("git_pull_time")
+    if value is None:
+      return None
+    return str(value).strip()
+  except Exception:
+    return None
+
+def _write_git_pull_time(ts: Optional[int] = None) -> None:
+  value = int(ts if ts is not None else time.time())
+  data = _read_git_state()
+  data["git_pull_time"] = value
+  data["git_pull_ok"] = True
+  _write_git_state(data)
+
+def _did_git_pull_update(output: str) -> bool:
+  body = str(output or "").strip().lower()
+  if not body:
+    return False
+  if "already up to date" in body or "already up-to-date" in body:
+    return False
+  return (
+    "fast-forward" in body or
+    "merge made by" in body or
+    "updating " in body or
+    bool(re.search(r"[0-9]+\s+files?\s+changed", body))
+  )
+
 def _get_param_value(name: str, default: Any) -> Any:
+  custom_value = _read_custom_meta_value(name)
+  if custom_value is not None:
+    return custom_value
+
   if not HAS_PARAMS:
     # mem store (string) fallback
     s = _mem_store.get(name, None)
@@ -878,6 +940,8 @@ async def _run_tool_job(job: Dict[str, Any]) -> None:
     if action == "git_pull":
       _tool_job_progress(job, message="git pull", current=1, total=1)
       rc = await _tool_stream_exec(job, ["git", "pull"], cwd=repo_dir, timeout=180)
+      if rc == 0 and _did_git_pull_update(job.get("log") or ""):
+        _write_git_pull_time()
       result = _tool_result_from_log(job, rc)
       _tool_job_finish(job, ok=rc == 0, result=result)
       return
@@ -1295,6 +1359,8 @@ async def api_tools(request: web.Request) -> web.Response:
 
     if action == "git_pull":
       rc, out = run(["git", "pull"], cwd=REPO_DIR)
+      if rc == 0 and _did_git_pull_update(out):
+        _write_git_pull_time()
       return web.json_response({"ok": rc == 0, "rc": rc, "out": out})
 
     if action == "git_sync":
