@@ -23,7 +23,8 @@ from openpilot.system.ui.lib.multilang import multilang
 from openpilot.common.realtime import Ratekeeper
 import datetime
 
-_DEFAULT_FPS = int(os.getenv("FPS", {'tizi': 20}.get(HARDWARE.get_device_type(), 60)))
+#_DEFAULT_FPS = int(os.getenv("FPS", {'tizi': 20}.get(HARDWARE.get_device_type(), 60)))
+_DEFAULT_FPS = 20 
 FPS_LOG_INTERVAL = 5  # Seconds between logging FPS drops
 FPS_DROP_THRESHOLD = 0.9  # FPS drop threshold for triggering a warning
 FPS_CRITICAL_THRESHOLD = 0.5  # Critical threshold for triggering strict actions
@@ -248,6 +249,8 @@ class GuiApplication:
     self._record_dir = Path("/data/media/0/videos")
     self._record_max_sec = 60
     self._record_t0 = 0.0
+    self._record_every_n = 3
+    self._record_frame_idx = 0
 
   def _new_record_path(self) -> Path:
     self._record_dir.mkdir(parents=True, exist_ok=True)
@@ -328,7 +331,7 @@ class GuiApplication:
     ]
 
     self._ffmpeg_proc = subprocess.Popen(ffmpeg_args, stdin=subprocess.PIPE)
-    self._ffmpeg_queue = queue.Queue(maxsize=60)
+    self._ffmpeg_queue = queue.Queue(maxsize=8) # 60 -> 8, 메모리 사용량 줄이기 위해 버퍼 크기 감소
     self._ffmpeg_stop_event = threading.Event()
     self._ffmpeg_thread = threading.Thread(target=self._ffmpeg_writer_thread, daemon=True)
     self._ffmpeg_thread.start()
@@ -824,15 +827,17 @@ class GuiApplication:
         rl.end_drawing()
 
         if RECORD or self._record_enabled:
-          image = rl.load_image_from_texture(self._render_texture.texture)
-          data_size = image.width * image.height * 4
-          data = bytes(rl.ffi.buffer(image.data, data_size))
-          try:
-            self._ffmpeg_queue.put_nowait(data)  # Async write via background thread
-          except queue.Full:
-            pass
-          
-          rl.unload_image(image)
+          self._record_frame_idx += 1
+          if self._record_frame_idx % self._record_every_n == 0:
+            image = rl.load_image_from_texture(self._render_texture.texture)
+            data_size = image.width * image.height * 4
+            data = bytes(rl.ffi.buffer(image.data, data_size))
+            try:
+              self._ffmpeg_queue.put_nowait(data)  # Async write via background thread
+            except queue.Full:
+              pass          
+            rl.unload_image(image)
+            
           if self._record_enabled:
             if (time.monotonic() - self._record_t0) >= self._record_max_sec:
               self.stop_recording()
