@@ -64,9 +64,33 @@ class DeviceLayout(Widget):
                   self._on_review_training_guide, enabled=ui_state.is_offroad),
       button_item(lambda: tr("Regulatory"), lambda: tr("VIEW"), callback=self._on_regulatory, enabled=ui_state.is_offroad),
       button_item(lambda: tr("Change Language"), lambda: tr("CHANGE"), callback=self._show_language_dialog),
+      button_item(lambda: tr("파일 복사"), lambda: tr("COPY"), lambda: tr("파일 a를 지정된 경로로 복사합니다."), callback=self._copy_file_prompt, enabled=ui_state.is_offroad
+),
       self._power_off_btn,
     ]
     return items
+
+def _copy_file_prompt(self):
+  if ui_state.engaged:
+    gui_app.push_widget(alert_dialog(tr("Disengage to Copy File")))
+    return
+
+  def do_copy(result: DialogResult):
+    if ui_state.engaged or result != DialogResult.CONFIRM:
+      return
+
+    try:
+      import shutil
+      shutil.copy("/data/openpilot/selfdrive/assets/CalibrationParam", "/data/params/d/")  # 경로 수정 가능
+    except Exception as e:
+      cloudlog.exception("file copy failed")
+
+  dialog = ConfirmDialog(
+    tr("파일 a를 복사하시겠습니까?"),
+    tr("복사"),
+    callback=do_copy
+  )
+  gui_app.push_widget(dialog)
 
   def _offroad_transition(self):
     self._power_off_btn.action_item.right_button.set_visible(ui_state.is_offroad())
