@@ -780,7 +780,8 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventName.wrongGear: {
-    ET.SOFT_DISABLE: user_soft_disable_alert("기어를 [D]로 변경하세요"),
+    ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage), #carrot
+    #ET.SOFT_DISABLE: user_soft_disable_alert("기어를 [D]로 변경하세요"),
     ET.NO_ENTRY: NoEntryAlert("기어를 [D]로 변경하세요"),
   },
 
