@@ -823,6 +823,11 @@ class CAR(Platforms):
     CarSpecs(mass=2600, wheelbase=2.995, steerRatio=16.0, tireStiffnessFactor=0.65),
     flags=HyundaiFlags.EV,
   )
+  KIA_RAY_EV = HyundaiPlatformConfig(
+    [HyundaiCarDocs("Kia Ray EV", car_parts=CarParts.common([CarHarness.hyundai_h]))],
+    CarSpecs(mass=1295, wheelbase=2.520, steerRatio=14.5),
+    flags=HyundaiFlags.EV | HyundaiFlags.CC_ONLY_CAR | HyundaiFlags.CHECKSUM_CRC8,
+  )
   KIA_TASMAN = HyundaiCanFDPlatformConfig(
     [
       HyundaiCarDocs("Kia Tasman", car_parts=CarParts.common([CarHarness.hyundai_k])),
@@ -830,7 +835,6 @@ class CAR(Platforms):
     CarSpecs(mass=2625, wheelbase=3.1, steerRatio=16.02),
     flags=HyundaiFlags.ANGLE_CONTROL,
   )
-  
 
 class Buttons:
   NONE = 0
