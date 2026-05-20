@@ -24,7 +24,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarParamsCache", {CLEAR_ON_MANAGER_START, BYTES}},
     {"CarParamsPersistent", {PERSISTENT, BYTES}},
     {"CarParamsPrevRoute", {PERSISTENT, BYTES}},
-    {"CompletedTrainingVersion", {PERSISTENT, STRING, "0"}},
+    {"CompletedTrainingVersion", {PERSISTENT, STRING, "0.2.0"}},
     {"ControlsReady", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, BOOL}},
     {"CurrentBootlog", {PERSISTENT, STRING}},
     {"CurrentRoute", {CLEAR_ON_MANAGER_START | CLEAR_ON_ONROAD_TRANSITION, STRING}},
@@ -66,7 +66,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"IsTakingSnapshot", {CLEAR_ON_MANAGER_START, BOOL}},
     {"IsTestedBranch", {CLEAR_ON_MANAGER_START, BOOL}},
     {"JoystickDebugMode", {CLEAR_ON_MANAGER_START | CLEAR_ON_OFFROAD_TRANSITION, BOOL}},
-    {"LanguageSetting", {PERSISTENT, STRING, "main_ko"}},
+    {"LanguageSetting", {PERSISTENT, STRING, "en"}},
     {"LastAthenaPingTime", {CLEAR_ON_MANAGER_START, INT}},
     {"LastGPSPosition", {PERSISTENT, STRING}},
     {"LastManagerExitReason", {CLEAR_ON_MANAGER_START, STRING}},
@@ -153,7 +153,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SupportedCars", {PERSISTENT, STRING}},
     {"SupportedCars_gm", {PERSISTENT, STRING}},
     {"ShowDebugUI", {PERSISTENT, INT, "0"}},
-    {"ShowDateTime", {PERSISTENT, INT, "0"}},
+    {"ShowDateTime", {PERSISTENT, INT, "1"}},
     {"ShowLaneInfo", {PERSISTENT, INT, "1"}},
     {"ShowRadarInfo", {PERSISTENT, INT, "1"}},
     {"ShowDeviceState", {PERSISTENT, INT, "1"}},
@@ -164,6 +164,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ShowPathColorLane", {PERSISTENT, INT, "13"}},
     {"ShowPlotMode", {PERSISTENT, INT, "0"}},
     {"ShowCustomBrightness", {PERSISTENT, INT, "100"}},
+    {"ShowModelView", {PERSISTENT, INT, "0"}},
     {"RecordRoadCam", {PERSISTENT, INT, "0"}},
     {"HDPuse", {PERSISTENT, INT, "0"}},
 
@@ -173,9 +174,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotCruiseAtcDecel", {PERSISTENT, INT, "-1"}},
 
     {"AutoGasTokSpeed", {PERSISTENT, INT, "0"}},
-    {"AutoGasSyncSpeed", {PERSISTENT, INT, "0"}},
+    {"AutoGasSyncSpeed", {PERSISTENT, INT, "1"} },
     {"ApplyModelSpeed", {PERSISTENT, INT, "0"} },
     {"AutoEngage", {PERSISTENT, INT, "0"}},
+    {"AlwaysLateral", {PERSISTENT, INT, "1"} },
     {"DisableMinSteerSpeed", {PERSISTENT, INT, "0"}},
     {"AutoCurveSpeedLowerLimit", {PERSISTENT, INT, "30"}},
     {"AutoCurveSpeedFactor", {PERSISTENT, INT, "120"}},
@@ -192,7 +194,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AutoNaviSpeedBumpTime", {PERSISTENT, INT, "1"}},
     {"AutoNaviSpeedBumpSpeed", {PERSISTENT, INT, "35"}},
     {"AutoNaviSpeedDecelRate", {PERSISTENT, INT, "120"}},
-    {"AutoNaviSpeedSafetyFactor", {PERSISTENT, INT, "100"}},
+    {"AutoNaviSpeedSafetyFactor", {PERSISTENT, INT, "105"}},
     {"AutoNaviCountDownMode", {PERSISTENT, INT, "2"}},
     {"TurnSpeedControlMode", {PERSISTENT, INT, "1"}},
 
@@ -225,7 +227,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MyDrivingModeAuto", {PERSISTENT, INT, "0"}},
     {"TrafficLightDetectMode", {PERSISTENT, INT, "2"}},
 
-    {"SteerActuatorDelay", {PERSISTENT, INT, "20"}},
+    {"SteerActuatorDelay", {PERSISTENT, INT, "0"}},
     {"LatSmoothSec", {PERSISTENT, INT, "13"}},
     {"LatSuspendAngleDeg", {PERSISTENT, INT, "300"}},
     {"CruiseOnDist", {PERSISTENT, INT, "400"}},
@@ -262,7 +264,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CanfdDebug", {PERSISTENT, INT, "0"}},
 
     {"SoundVolumeAdjust", {PERSISTENT, INT, "100"}},
-    {"SoundVolumeAdjustEngage", {PERSISTENT, INT, "90"}},
+    {"SoundVolumeAdjustEngage", {PERSISTENT, INT, "10"}},
 
     {"TFollowGap1", {PERSISTENT, INT, "110"}},
     {"TFollowGap2", {PERSISTENT, INT, "120"}},
@@ -274,10 +276,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"TFollowDecelBoost", {PERSISTENT, INT, "10"}},
     {"EnableSpeedTF", {PERSISTENT, INT, "0"}},
     {"AChangeCostStarting", {PERSISTENT, INT, "10"}},
-    {"TrafficStopDistanceAdjust", {PERSISTENT, INT, "400"}},
+    {"TrafficStopDistanceAdjust", {PERSISTENT, INT, "-150"}},
 
     {"HapticFeedbackWhenSpeedCamera", {PERSISTENT, INT, "0"}},
-    {"UseLaneLineSpeed", {PERSISTENT, INT, "21"}},
+    {"UseLaneLineSpeed", {PERSISTENT, INT, "0"}},
     {"UseLaneLineCurveSpeed", {PERSISTENT, INT, "0"}},
 
     {"AdjustLaneOffset", {PERSISTENT, INT, "0"}},
@@ -313,13 +315,12 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CustomSteerDeltaUpLC", {PERSISTENT, INT, "0"}},
     {"CustomSteerDeltaDownLC", {PERSISTENT, INT, "0"}},
 
-    {"SpeedFromPCM", {PERSISTENT, INT, "1"}},
+    {"SpeedFromPCM", {PERSISTENT, INT, "2"}},
     {"MaxTimeOffroadMin", {PERSISTENT, INT, "60"}},
 
-    {"DisableDM", {PERSISTENT, INT, "1"}},
-    {"EnableConnect", {PERSISTENT, INT, "0"}},
-    {"MuteDoor", {PERSISTENT, INT, "1"}},
-    {"MuteSeatbelt", {PERSISTENT, INT, "1"}},
+    {"DisableDM", {PERSISTENT, INT, "0"}},
+    {"MuteDoor", {PERSISTENT, INT, "0"}},
+    {"MuteSeatbelt", {PERSISTENT, INT, "0"}},
 
     {"CarrotException", {CLEAR_ON_MANAGER_START, STRING}},
 
@@ -330,7 +331,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ActivateCruiseAfterBrake", {CLEAR_ON_MANAGER_START, INT, "0"}},
 
     {"CustomSR", {PERSISTENT, INT, "0"}},
-    {"SteerRatioRate", {PERSISTENT, INT, "90"}},
+    {"SteerRatioRate", {PERSISTENT, INT, "100"}},
 
     {"SoftRestartTriggered", {CLEAR_ON_MANAGER_START, INT}},
 
