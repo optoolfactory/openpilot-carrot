@@ -49,6 +49,7 @@ let LIVE_RUNTIME_FETCH_IN_FLIGHT = null;
 let LIVE_RUNTIME_POLL_ACTIVE = false;
 const CARROT_VISION_REQUIRED_LIVE_SERVICES = Object.freeze(["roadCameraState", "modelV2"]);
 var CARROT_VISION_PHASE = window.CarrotVisionPhase;
+var CARROT_VISION_CONTROL = window.CarrotVisionControl;
 var CARROT_VISION_STATE = window.CarrotVisionState;
 var isCarrotVisionActive = window.isCarrotVisionActive;
 var setCarrotVisionPhase = window.CarrotVisionSetPhase;
@@ -179,6 +180,21 @@ async function toggleCarrotFullscreen(options = {}) {
   return requestCarrotFullscreen(options);
 }
 
+function isCarrotVisionDefaultFullscreenEnabled() {
+  const settings = window.CarrotWebSettingsState || {};
+  const fallback = true;
+  const value = Object.prototype.hasOwnProperty.call(settings, "vision_fullscreen_default")
+    ? settings.vision_fullscreen_default
+    : fallback;
+  if (typeof value === "string") return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
+  return Boolean(value);
+}
+
+function requestCarrotVisionDefaultFullscreen(options = {}) {
+  if (!isCarrotVisionDefaultFullscreenEnabled()) return Promise.resolve(false);
+  return requestCarrotFullscreen(options);
+}
+
 function shouldKeepCarrotFullscreen() {
   return document.body?.dataset?.page === "carrot" && isCarrotVisionActive();
 }
@@ -198,6 +214,11 @@ window.addEventListener("carrot:pagechange", () => {
 window.addEventListener("carrot:visionchange", () => {
   void syncCarrotFullscreenLifecycle();
 });
+window.addEventListener("carrot:websettingschange", (event) => {
+  if (event?.detail?.key !== "vision_fullscreen_default") return;
+  if (isCarrotVisionDefaultFullscreenEnabled()) return;
+  void exitCarrotFullscreen({ quiet: true }).catch(() => {});
+});
 
 function emitCarrotRenderRequest(detail = {}) {
   window.dispatchEvent(new CustomEvent("carrot:render-request", { detail }));
@@ -216,7 +237,7 @@ window.emitCarrotVisionChange = emitCarrotVisionChange;
 function maybeRequestCarrotFullscreenOnPageChange(detail = {}) {
   if (String(detail?.page || "") !== "carrot") return;
   if (!isCarrotVisionActive()) return;
-  requestCarrotFullscreen({ quiet: true }).catch(() => {});
+  requestCarrotVisionDefaultFullscreen({ quiet: true }).catch(() => {});
 }
 
 function getLiveRuntimeDataSignature(payload) {
@@ -282,8 +303,25 @@ async function fetchLiveRuntimeState(force = false) {
   return LIVE_RUNTIME_FETCH_IN_FLIGHT;
 }
 
+function isKmapStreaming() {
+  if (!isCarrotPageVisible()) return false;
+  const settings = window.CarrotWebSettingsState || {};
+  const enabled = settings.kmap_enabled;
+  const enabledBool = typeof enabled === "string"
+    ? ["1", "true", "yes", "on"].includes(enabled.trim().toLowerCase())
+    : Boolean(enabled);
+  if (!enabledBool) return false;
+  if (typeof window.matchMedia === "function") {
+    try {
+      if (!window.matchMedia("(orientation: landscape)").matches) return false;
+    } catch {}
+  }
+  return true;
+}
+
 function getLiveRuntimePollMs() {
-  return isCarrotPageVisible() ? 1000 : 3000;
+  if (!isCarrotPageVisible()) return 3000;
+  return isKmapStreaming() ? 500 : 1000;
 }
 
 function scheduleLiveRuntimeStateFetch(ms = getLiveRuntimePollMs()) {
@@ -448,7 +486,7 @@ window.CarrotVisionStart = async function() {
     if (typeof showAppToast === "function") showAppToast(window.CARROT_VISION_DISABLED_MESSAGE, { tone: "error" });
     return;
   }
-  requestCarrotFullscreen({ quiet: false }).catch(() => {});
+  requestCarrotVisionDefaultFullscreen({ quiet: false }).catch(() => {});
   setCarrotVisionActive(true, {
     phase: CARROT_VISION_PHASE.STARTING,
     reason: "user start",
@@ -573,9 +611,15 @@ function syncCarrotRealtimeLifecycle(forceFetch = false) {
       reason: "vision lifecycle active",
       updateRtcStatus: false,
     });
-    requestCarrotFullscreen({ quiet: true }).catch(() => {});
+    requestCarrotVisionDefaultFullscreen({ quiet: true }).catch(() => {});
     ensureRawDecodeWorker();
-    rawOverlayConnectAll();
+    // Staged startup: do NOT connect the heavy overlay multiplex WS here.
+    // The overlay stream (modelV2 + 8 services, full-rate) competes with the
+    // WebRTC first-frame/keyframe for the same link and viewer CPU. Overlay
+    // data does not affect reaching "ready" (that comes from the camera video
+    // frame), so we defer it until the first frame renders — see the
+    // carrot:visionstatechange listener below. This gives the keyframe a clean
+    // window so first-frame-waiting resolves fast.
     startRtcPerfPolling(true);
     if (rtcShouldConnect()) {
       rtcCancelRetry();
@@ -629,6 +673,36 @@ window.addEventListener("pagehide", rtcExitPictureInPicture);
 window.addEventListener("carrot:pagechange", (event) => {
   maybeRequestCarrotFullscreenOnPageChange(event?.detail || {});
   syncCarrotRealtimeLifecycle(false);
+});
+
+// Staged overlay gate, driven by vision phase:
+//   - Connect the heavy overlay multiplex WS (modelV2 + 8 services, full-rate)
+//     only once the camera video has produced its first renderable frame
+//     (phase === "ready"). Until then the WebRTC first-frame/keyframe owns the
+//     link + viewer CPU, so first-frame-waiting resolves fast.
+//   - When phase leaves "ready" for an active (re)connection state, drop the
+//     overlay WS again so the reconnect's keyframe gets a clean window. With
+//     the tolerant freeze watchdog, transient stalls hold at phase "ready"
+//     (no churn here); only genuine reconnects leave "ready", which is exactly
+//     when we want the link freed.
+// The _overlayStaged flag is REQUIRED: connectOverlay()/disconnectOverlay()
+// themselves publish a (non-silent) vision state change, so acting on every
+// event without an edge guard would re-enter this listener infinitely.
+let _overlayStaged = false;
+window.addEventListener("carrot:visionstatechange", (event) => {
+  const state = event?.detail?.state || window.CarrotVisionState;
+  if (!state || !state.active) {
+    _overlayStaged = false;
+    return;
+  }
+  const isReady = state.controlState === CARROT_VISION_CONTROL.LIVE;
+  if (isReady && !_overlayStaged) {
+    _overlayStaged = true;
+    window.CarrotVisionRaw?.connectOverlay?.();
+  } else if (!isReady && _overlayStaged) {
+    _overlayStaged = false;
+    window.CarrotVisionRaw?.disconnectOverlay?.();
+  }
 });
 
 

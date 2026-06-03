@@ -104,6 +104,9 @@ window.HomeDrive = (() => {
   const POLYLINE_SMOOTH_FAR_DISTANCE = 52;
   const POLYLINE_SMOOTH_MAX_STRENGTH = 0.34;
   const POLYLINE_CENTER_SMOOTH_MAX_STRENGTH = 0.24;
+  const PATH_TEMPORAL_SMOOTH_ALPHA = 0.20;
+  const LANE_TEMPORAL_SMOOTH_ALPHA = 0.16;
+  const LANE_VISUAL_WIDTH_GAIN = 1.4;
   const GEOMETRY_QUALITY_DEFAULT = "default";
   const GEOMETRY_QUALITY_LANE = "lane";
   const GEOMETRY_QUALITY_ROAD_EDGE = "road-edge";
@@ -439,6 +442,7 @@ window.HomeDrive = (() => {
   const _rgbaCache = new Map();
   const RGBA_CACHE_MAX = 64;
   const _emptyDash = [];
+  let _temporalRibbonState = new Map();
 
   function rgba(rgb, alpha) {
     const a = clamp(alpha, 0, 1);
@@ -466,6 +470,10 @@ window.HomeDrive = (() => {
       pathZ: new WeakMap(),
       pathY: new WeakMap(),
     };
+  }
+
+  function resetTemporalRibbonState() {
+    _temporalRibbonState = new Map();
   }
 
   function getWeakCacheBucket(weakMap, target) {
@@ -596,6 +604,33 @@ window.HomeDrive = (() => {
       smoothed[i].y = current.y + (targetY - current.y) * strength;
     }
     return smoothed || points;
+  }
+
+  function smoothPointListTemporal(previous, next, alpha) {
+    if (!Array.isArray(previous) || !Array.isArray(next) || previous.length !== next.length) {
+      return next.map((point) => ({ x: point.x, y: point.y }));
+    }
+    const a = clamp(alpha, 0, 1);
+    return next.map((point, index) => ({
+      x: previous[index].x + (point.x - previous[index].x) * a,
+      y: previous[index].y + (point.y - previous[index].y) * a,
+    }));
+  }
+
+  function smoothRibbonTemporal(key, ribbon, alpha) {
+    if (!key || !ribbon?.polygon?.length) return ribbon;
+    const previous = _temporalRibbonState.get(key);
+    const left = smoothPointListTemporal(previous?.left, ribbon.left, alpha);
+    const right = smoothPointListTemporal(previous?.right, ribbon.right, alpha);
+    const center = smoothPointListTemporal(previous?.center, ribbon.center, alpha);
+    const next = {
+      left,
+      right,
+      center,
+      polygon: left.length >= 2 && right.length >= 2 ? left.concat([...right].reverse()) : [],
+    };
+    _temporalRibbonState.set(key, next);
+    return next;
   }
 
   function mat3Multiply(a, b) {
@@ -874,9 +909,9 @@ window.HomeDrive = (() => {
 
       const y = finiteNumber(ys[i], 0) + centerShift;
       const z = finiteNumber(zs[i], 0) + zOffset;
-      const leftPt = projectPoint(calibTransform, x, y - halfWidth, z);
-      const rightPt = projectPoint(calibTransform, x, y + halfWidth, z);
-      const centerPt = projectPoint(calibTransform, x, y, z);
+      const leftPt = projectPointPrecise(calibTransform, x, y - halfWidth, z);
+      const rightPt = projectPointPrecise(calibTransform, x, y + halfWidth, z);
+      const centerPt = projectPointPrecise(calibTransform, x, y, z);
       if (!leftPt || !rightPt || !centerPt) return;
       if (!allowInvert && center.length && centerPt.y > center[center.length - 1].y) return;
 
@@ -1413,6 +1448,16 @@ window.HomeDrive = (() => {
   }
 
   function setCarrotVisionRenderPhase(phase, detail = {}) {
+    // Single phase owner: home_drive is the authority on whether a real camera
+    // frame is on screen, but it no longer writes the phase directly. It
+    // reports renderability to vision_rtc, which owns the live/first-frame
+    // transitions (removes the old home_drive/vision_rtc phase race).
+    const rtc = window.CarrotVisionRtc;
+    if (rtc && typeof rtc.reportCameraRenderable === "function") {
+      if (phase === "ready") { rtc.reportCameraRenderable(true); return; }
+      if (phase === "first-frame-waiting") { rtc.reportCameraRenderable(false); return; }
+    }
+    // Fallback (other phases, or vision_rtc not loaded yet): set directly.
     if (typeof window.CarrotVisionSetPhase !== "function") return;
     window.CarrotVisionSetPhase(phase, {
       source: "home_drive",
@@ -1720,21 +1765,31 @@ window.HomeDrive = (() => {
     }
   }
 
-  function resetCarrotHudLayout() {
-    if (!driveHudCardEl) return;
-    driveHudCardEl.style.removeProperty("--carrot-hud-left");
-    driveHudCardEl.style.removeProperty("--carrot-hud-bottom");
-  }
-
   let _lastHudLeft = "";
   let _lastHudBottom = "";
+  let _lastViewportSig = "";
+
+  function resetCarrotHudLayout() {
+    if (driveHudCardEl) {
+      driveHudCardEl.style.removeProperty("--carrot-hud-left");
+      driveHudCardEl.style.removeProperty("--carrot-hud-bottom");
+    }
+    if (stageEl) {
+      stageEl.style.removeProperty("--carrot-viewport-left");
+      stageEl.style.removeProperty("--carrot-viewport-top");
+      stageEl.style.removeProperty("--carrot-viewport-width");
+      stageEl.style.removeProperty("--carrot-viewport-height");
+    }
+    _lastViewportSig = "";
+  }
 
   function applyCarrotHudLayout(viewportRect) {
-    if (!driveHudCardEl) return;
     if (window.matchMedia("(orientation: portrait)").matches) {
       if (_lastHudLeft !== "" || _lastHudBottom !== "") {
-        driveHudCardEl.style.removeProperty("--carrot-hud-left");
-        driveHudCardEl.style.removeProperty("--carrot-hud-bottom");
+        if (driveHudCardEl) {
+          driveHudCardEl.style.removeProperty("--carrot-hud-left");
+          driveHudCardEl.style.removeProperty("--carrot-hud-bottom");
+        }
         _lastHudLeft = "";
         _lastHudBottom = "";
       }
@@ -1743,6 +1798,25 @@ window.HomeDrive = (() => {
     const stageWidth = stageEl?.clientWidth || viewportRect?.width || 0;
     const stageHeight = stageEl?.clientHeight || viewportRect?.height || 0;
     if (!stageWidth || !stageHeight) return;
+    const viewport = {
+      left: Math.round(finiteNumber(viewportRect?.left, 0)),
+      top: Math.round(finiteNumber(viewportRect?.top, 0)),
+      width: Math.round(finiteNumber(viewportRect?.width, stageWidth)),
+      height: Math.round(finiteNumber(viewportRect?.height, stageHeight)),
+      stageWidth: Math.round(stageWidth),
+      stageHeight: Math.round(stageHeight),
+    };
+    const viewportSig = `${viewport.left},${viewport.top},${viewport.width},${viewport.height},${viewport.stageWidth},${viewport.stageHeight}`;
+    if (stageEl && _lastViewportSig !== viewportSig) {
+      _lastViewportSig = viewportSig;
+      stageEl.style.setProperty("--carrot-viewport-left", `${viewport.left}px`);
+      stageEl.style.setProperty("--carrot-viewport-top", `${viewport.top}px`);
+      stageEl.style.setProperty("--carrot-viewport-width", `${viewport.width}px`);
+      stageEl.style.setProperty("--carrot-viewport-height", `${viewport.height}px`);
+      window.dispatchEvent(new CustomEvent("carrot:viewportlayout", { detail: viewport }));
+    }
+
+    if (!driveHudCardEl) return;
     const overlayInsetX = clamp(stageWidth * 0.028, 16, 28);
     const overlayInsetY = clamp(stageHeight * 0.038, 20, 30);
     const leftVal = `${Math.round(overlayInsetX)}px`;
@@ -1775,6 +1849,7 @@ window.HomeDrive = (() => {
     const nextOverlaySignature = `${videoWidth}x${videoHeight}@${dpr.toFixed(2)}`;
     if (overlaySizeSignature !== nextOverlaySignature) {
       overlaySizeSignature = nextOverlaySignature;
+      resetTemporalRibbonState();
       videoEl.style.width = `${videoWidth}px`;
       videoEl.style.height = `${videoHeight}px`;
       if (videoHoldEl) {
@@ -1806,6 +1881,7 @@ window.HomeDrive = (() => {
     if (transformSignature === nextSignature) return;
 
     transformSignature = nextSignature;
+    resetTemporalRibbonState();
     const cssMatrix = `matrix(${transform.scale}, 0, 0, ${transform.scale}, ${transform.tx}, ${transform.ty})`;
     videoEl.style.transform = cssMatrix;
     if (videoHoldEl) videoHoldEl.style.transform = cssMatrix;
@@ -1962,7 +2038,8 @@ window.HomeDrive = (() => {
   function drawPath(pathData, model, overlayState, calibTransform, canvasHeight, style) {
     if (!pathData || !Array.isArray(pathData.x) || !pathData.x.length) return;
     const sceneMaxDistance = getSceneMaxDistance(model, overlayState);
-    const ribbon = buildRibbon(calibTransform, pathData, getPathHalfWidth(), PATH_Z_OFFSET, getPathMaxDistance(sceneMaxDistance), false);
+    const rawRibbon = buildRibbon(calibTransform, pathData, getPathHalfWidth(), PATH_Z_OFFSET, getPathMaxDistance(sceneMaxDistance), false);
+    const ribbon = smoothRibbonTemporal(`path:${style?.laneMode ? "lane" : "model"}:${style?.mode ?? 0}`, rawRibbon, PATH_TEMPORAL_SMOOTH_ALPHA);
     if (ribbon.polygon.length < 3) return;
 
     drawPathRibbon(ribbon, style, canvasHeight);
@@ -1997,10 +2074,11 @@ window.HomeDrive = (() => {
       const highlightedLeft = i === 1 && leftLaneLine >= 20;
       const highlightedRight = i === 2 && rightLaneLine >= 20;
       const laneColor = highlightedLeft || highlightedRight ? { r: 255, g: 217, b: 94 } : { r: 255, g: 255, b: 255 };
-      const halfWidth = Math.max(highlightedLeft || highlightedRight ? 0.025 : 0.010, 0.025 * renderProb);
+      const baseHalfWidth = Math.max(highlightedLeft || highlightedRight ? 0.025 : 0.010, 0.025 * renderProb);
+      const halfWidth = baseHalfWidth * LANE_VISUAL_WIDTH_GAIN;
       const fillAlpha = prob >= 0.02 ? clamp(renderProb, 0.12, 0.7) : clamp(renderProb * 3.0, 0.16, 0.26);
       const strokeAlpha = prob >= 0.02 ? 0.20 : 0.24;
-      const ribbon = buildRibbon(
+      const rawRibbon = buildRibbon(
         calibTransform,
         laneLines[i],
         halfWidth,
@@ -2010,6 +2088,7 @@ window.HomeDrive = (() => {
         0,
         GEOMETRY_QUALITY_LANE,
       );
+      const ribbon = smoothRibbonTemporal(`lane:${i}`, rawRibbon, LANE_TEMPORAL_SMOOTH_ALPHA);
       drawPolygon(
         ribbon.polygon,
         `rgba(${laneColor.r},${laneColor.g},${laneColor.b},${fillAlpha.toFixed(3)})`,
@@ -2019,7 +2098,7 @@ window.HomeDrive = (() => {
 
       if ((i === 1 && (leftLaneLine % 10) === 4) || (i === 2 && (rightLaneLine % 10) === 4)) {
         const shift = i === 1 ? -0.3 : 0.3;
-        const doubleRibbon = buildRibbon(
+        const rawDoubleRibbon = buildRibbon(
           calibTransform,
           laneLines[i],
           halfWidth,
@@ -2029,6 +2108,7 @@ window.HomeDrive = (() => {
           shift,
           GEOMETRY_QUALITY_LANE,
         );
+        const doubleRibbon = smoothRibbonTemporal(`lane:${i}:double:${shift}`, rawDoubleRibbon, LANE_TEMPORAL_SMOOTH_ALPHA);
         drawPolygon(
           doubleRibbon.polygon,
           `rgba(${laneColor.r},${laneColor.g},${laneColor.b},${fillAlpha.toFixed(3)})`,
@@ -2997,10 +3077,14 @@ window.HomeDrive = (() => {
     const bitrateMbps = Number.isFinite(Number(network.bitrateMbps)) ? Number(network.bitrateMbps) : null;
     const fps = Number.isFinite(Number(inbound.framesPerSecond)) ? Number(inbound.framesPerSecond) : null;
     const rttMs = Number.isFinite(Number(network.rttMs)) ? Number(network.rttMs) : null;
+    const lossPct = Number.isFinite(Number(network.lossPct)) ? Number(network.lossPct) : null;
+    const jitterMs = Number.isFinite(Number(network.jitterMs)) ? Number(network.jitterMs) : null;
+    const keyFramesDecoded = Number.isFinite(Number(inbound.keyFramesDecoded)) ? Number(inbound.keyFramesDecoded) : null;
+    const packetsLost = Number.isFinite(Number(inbound.packetsLost)) ? Number(inbound.packetsLost) : null;
     const hasFreeze = Number.isFinite(Number(inbound.freezeCount)) && Number(inbound.freezeCount) > 0 &&
       Number.isFinite(Number(video.readyState)) && Number(video.readyState) < 3;
 
-    if (!resolutionLabel && bitrateMbps == null && fps == null && rttMs == null) {
+    if (!resolutionLabel && bitrateMbps == null && fps == null && rttMs == null && lossPct == null && jitterMs == null) {
       return hasFreeze ? "STALL" : "";
     }
 
@@ -3009,7 +3093,16 @@ window.HomeDrive = (() => {
       : "-m";
     const fpsLabel = fps != null ? `${Math.round(fps)}fps` : "-fps";
     const rttLabel = rttMs != null ? `${Math.round(rttMs)}ms` : "-ms";
-    return [resolutionLabel || "-p", bitrateLabel, fpsLabel, rttLabel].join(" ");
+    const warningLabels = [];
+    if (lossPct != null && lossPct >= 0.5) {
+      warningLabels.push(`loss${lossPct >= 10 ? Math.round(lossPct) : lossPct.toFixed(1)}%`);
+    } else if (packetsLost != null && packetsLost > 0 && Number(inbound.framesDecoded || 0) <= 0) {
+      warningLabels.push(`lost${packetsLost}`);
+    }
+    if (jitterMs != null && jitterMs >= 30) warningLabels.push(`jit${Math.round(jitterMs)}`);
+    if (keyFramesDecoded === 0 && Number(inbound.framesDecoded || 0) <= 0) warningLabels.push("key0");
+
+    return [resolutionLabel || "-p", bitrateLabel, fpsLabel, rttLabel].concat(warningLabels).join(" ");
   }
 
   function drawHudRightCenterPerfText(stageWidth, stageHeight, viewportRect, pathMode) {
@@ -3575,6 +3668,7 @@ window.HomeDrive = (() => {
         _lastHudSig = "vision-disabled";
         _lastPlotInputSig = "off";
         cancelCameraFrameRecheck();
+        resetTemporalRibbonState();
         hideOnroadAlert();
         setStageLoading(false);
         setStageReady(false);
@@ -3596,6 +3690,7 @@ window.HomeDrive = (() => {
       }
       _lastOverlaySig = "";
       _lastHudSig = "";
+      resetTemporalRibbonState();
       hideOnroadAlert();
       setStageLoading(true, getCarrotVisionStatusText(getUIText("connecting", "Connecting...")), getCarrotVisionDetailText());
       setStageReady(false);
@@ -3670,7 +3765,13 @@ window.HomeDrive = (() => {
     setStageReady(true);
     setCarrotVisionRenderPhase("ready", { reason: "camera frame renderable" });
     applyCarrotHudLayout(viewportRect);
-    setStageLoading(false);
+    // The <video> may hold a renderable-but-stale last frame during a reconnect.
+    // vision_rtc only promotes to controlState "live" when the connection is
+    // genuinely up, so key the loading panel on that: live -> hide it; otherwise
+    // keep a "reconnecting/connecting" message over the frozen frame instead of
+    // a silent blank.
+    const carrotLive = (getCarrotVisionState().controlState || "") === "live";
+    setStageLoading(!carrotLive, getCarrotVisionStatusText(getUIText("connecting", "Connecting...")), getCarrotVisionDetailText());
 
     if (overlayDirty) {
       resetFrameProjectionCache();
@@ -3828,6 +3929,7 @@ window.HomeDrive = (() => {
     _gradientCache.clear();
     _hudGradientCache.clear();
     _rgbaCache.clear();
+    resetTemporalRibbonState();
     _mergeRuntimeCache.refs = null;
     _mergeRuntimeCache.result = null;
   }
@@ -3863,8 +3965,8 @@ window.HomeDrive = (() => {
   function handleLifecycleChange() {
     if (isStageVisible()) {
       if (isCarrotVisionActive()) {
-        const phase = String(getCarrotVisionState().phase || "");
-        setStageLoading(phase !== "ready", getCarrotVisionStatusText(getUIText("connecting", "Connecting...")), getCarrotVisionDetailText());
+        const live = (getCarrotVisionState().controlState || "") === "live";
+        setStageLoading(!live, getCarrotVisionStatusText(getUIText("connecting", "Connecting...")), getCarrotVisionDetailText());
       }
       refreshOverlayInfo().catch(() => {});
       requestFullRender();
