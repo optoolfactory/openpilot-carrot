@@ -9,6 +9,7 @@ from dataclasses import dataclass, replace
 from cluster_config import (
     AMBER,
     BLUE,
+    BLUE_SOFT,
     CLUSTER_CAMERA_VIEW_MODE_EGO_BOTTOM,
     CLUSTER_RADAR_DISPLAY_DETAIL,
     CLUSTER_RADAR_SOURCE_COLOR_BY_SOURCE,
@@ -22,6 +23,7 @@ from cluster_config import (
     PATH_LANE_CHANGE_CURVE_END_M,
     PATH_LANE_CHANGE_CURVE_START_M,
     PATH_START_M,
+    GREEN,
     RED,
     ROAD_CURVE_M_PER_M2,
     ROAD_FAR_M,
@@ -48,7 +50,7 @@ RoadEdgeLayer = tuple[int, Color, float, float]
 ProfileAdd = Callable[[str, float], None]
 PATH_BLOCKER_CLEARANCE_M = 1.25
 PATH_BLOCKER_LANE_TOLERANCE = 0.42
-RADAR_VEHICLE_MIN_VALID_COUNT = 11
+RADAR_VEHICLE_MIN_VALID_COUNT = 20
 RADAR_VEHICLE_MAX_DISTANCE_M = 150.0
 RADAR_VEHICLE_MAX_LATERAL_LANES = 2.75
 RADAR_ROAD_EDGE_HARD_CLEARANCE_M = 0.50
@@ -57,8 +59,8 @@ RADAR_ROAD_EDGE_OUTSIDE_MARGIN_M = 0.0
 RADAR_ROAD_EDGE_KEEP_OUTSIDE_MARGIN_M = 0.85
 RADAR_ROAD_EDGE_STABLE_VEHICLE_OUTSIDE_MARGIN_M = 2.25
 RADAR_ROAD_EDGE_KEEP_SPEED_KPH = 18.0
-RADAR_ROAD_EDGE_KEEP_MIN_VALID_COUNT = 24
-RADAR_ROAD_EDGE_STABLE_VEHICLE_MIN_VALID_COUNT = 35
+RADAR_ROAD_EDGE_KEEP_MIN_VALID_COUNT = 20
+RADAR_ROAD_EDGE_STABLE_VEHICLE_MIN_VALID_COUNT = 20
 RADAR_ROAD_EDGE_STABLE_VEHICLE_MAX_ACCEL_MPS2 = 5.0
 RADAR_STATIC_OBJECT_SPEED_MPS = 1.25
 RADAR_STATIC_OBJECT_SPEED_KPH = 8.0
@@ -68,7 +70,7 @@ RADAR_CENTER_RAW_LATERAL_LANES = 0.72
 RADAR_ADJACENT_RAW_LATERAL_LANES = 1.45
 RADAR_OUTER_RAW_LATERAL_LANES = 2.65
 RADAR_RAW_MOVING_SPEED_KPH = 8.0
-RADAR_RAW_CENTER_MIN_VALID_COUNT = 16
+RADAR_RAW_CENTER_MIN_VALID_COUNT = 20
 RADAR_RAW_ADJACENT_MIN_VALID_COUNT = 24
 RADAR_RAW_OUTER_MIN_VALID_COUNT = 35
 RADAR_PROBABLE_VEHICLE_LATERAL_LANES = 2.75
@@ -1700,6 +1702,8 @@ def merged_radar_point(points: list[RadarPoint], state: ClusterUiState) -> Radar
         valid=max_optional_int(point.valid for point in points),
         valid_count=max_optional_int(point.valid_count for point in points),
         in_my_lane=max_optional_int(point.in_my_lane for point in points),
+        motion_consistent=merged_radar_motion_consistent(point.motion_consistent for point in points),
+        promotion_held=any(point.promotion_held for point in points),
     )
 
 
@@ -1718,6 +1722,21 @@ def average_optional_float(values: Iterable[float | None]) -> float | None:
 def max_optional_int(values: Iterable[int | None]) -> int | None:
     numbers = [int(value) for value in values if value is not None]
     return max(numbers) if numbers else None
+
+
+def merged_radar_motion_consistent(values: Iterable[bool | None]) -> bool | None:
+    has_true = False
+    has_known = False
+    for value in values:
+        if value is None:
+            continue
+        has_known = True
+        if not value:
+            return False
+        has_true = True
+    if not has_known:
+        return None
+    return has_true
 
 
 def radar_point_markers(
@@ -1905,12 +1924,34 @@ def detected_vehicle_is_front_merge_candidate(vehicle: DetectedVehicle) -> bool:
 
 
 def detected_vehicle_base_source(vehicle: DetectedVehicle) -> str:
-    return vehicle.source.split(RADAR_MERGED_SOURCE_TAG, 1)[0]
+    return vehicle_source_base(vehicle.source)
+
+
+def vehicle_source_base(source: str) -> str:
+    return source.split(RADAR_MERGED_SOURCE_TAG, 1)[0]
+
+
+def vehicle_source_is_adas(source: str) -> bool:
+    base_source = vehicle_source_base(source)
+    return base_source == "carState" or base_source in ("CAN 0x162", "CAN 0x1ea")
+
+
+def vehicle_source_is_camera(source: str) -> bool:
+    return vehicle_source_base(source).startswith("camera")
+
+
+def vehicle_source_is_front_radar(source: str) -> bool:
+    return vehicle_source_base(source) == "radarState"
+
+
+def vehicle_source_is_radar_track(source: str) -> bool:
+    return source in ("radarPoint", "liveTracks") or RADAR_MERGED_SOURCE_TAG in source
 
 
 def merge_detected_vehicle_for_display(base: DetectedVehicle, other: DetectedVehicle) -> DetectedVehicle:
     return replace(
         base,
+        source=merged_detected_vehicle_source(base.source, other.source),
         probability=max(base.probability, other.probability),
         relative_speed_mps=base.relative_speed_mps if base.relative_speed_mps is not None else other.relative_speed_mps,
         absolute_speed_kph=base.absolute_speed_kph if base.absolute_speed_kph is not None else other.absolute_speed_kph,
@@ -1923,6 +1964,22 @@ def merge_detected_vehicle_for_display(base: DetectedVehicle, other: DetectedVeh
     )
 
 
+def merged_detected_vehicle_source(base_source: str, other_source: str) -> str:
+    if vehicle_source_is_adas(base_source):
+        return base_source
+    if vehicle_source_is_adas(other_source):
+        return other_source
+    if vehicle_source_is_front_radar(base_source):
+        return base_source
+    if vehicle_source_is_front_radar(other_source):
+        return other_source
+    if vehicle_source_is_radar_track(base_source):
+        return base_source
+    if vehicle_source_is_radar_track(other_source):
+        return other_source
+    return base_source
+
+
 def radar_merge_point_for_vehicle(
     vehicle: DetectedVehicle,
     radar_points: tuple[RadarPoint, ...],
@@ -1933,7 +1990,7 @@ def radar_merge_point_for_vehicle(
     candidates = tuple(
         point
         for point in radar_points
-        if radar_point_can_fill_vehicle_speed(point, state) and radar_point_close_to_vehicle(point, vehicle)
+        if radar_point_can_fill_vehicle_speed(point, state) and radar_point_can_merge_with_vehicle(point, vehicle)
     )
     if not candidates:
         return None
@@ -1947,6 +2004,8 @@ def radar_merge_point_for_vehicle(
 
 
 def detected_vehicle_needs_radar_merge(vehicle: DetectedVehicle) -> bool:
+    if vehicle.source.startswith("modelV2") and vehicle.longitudinal_m > 0.0:
+        return True
     return (
         vehicle.label in CORNER_RADAR_LABELS
         and vehicle.absolute_speed_kph is None
@@ -1956,6 +2015,12 @@ def detected_vehicle_needs_radar_merge(vehicle: DetectedVehicle) -> bool:
 
 def radar_point_can_fill_vehicle_speed(point: RadarPoint, state: ClusterUiState) -> bool:
     return radar_point_absolute_speed_kph(point, state) is not None or point.relative_speed_mps is not None
+
+
+def radar_point_can_merge_with_vehicle(point: RadarPoint, vehicle: DetectedVehicle) -> bool:
+    if vehicle.source.startswith("modelV2"):
+        return radar_point_close_to_detected_vehicle(point, vehicle)
+    return radar_point_close_to_vehicle(point, vehicle)
 
 
 def radar_point_close_to_vehicle(point: RadarPoint, vehicle: DetectedVehicle) -> bool:
@@ -2029,8 +2094,15 @@ def radar_point_is_vehicle_candidate(point: RadarPoint, state: ClusterUiState, l
         return False
     if abs(point.lateral_m) > lane_width_m * RADAR_VEHICLE_MAX_LATERAL_LANES:
         return False
-    if point.valid_count is not None and point.valid_count < RADAR_VEHICLE_MIN_VALID_COUNT:
-        return False
+    if radar_point_is_confirmed_vehicle_source(point):
+        return True
+    if point.valid_count is not None:
+        if point.valid_count < RADAR_VEHICLE_MIN_VALID_COUNT:
+            return False
+        if point.motion_consistent is not True:
+            return False
+    if point.promotion_held:
+        return True
     outside_road_edge_m = radar_point_road_edge_outside_distance_m(point, state, lane_width_m)
     stable_edge_vehicle = (
         radar_point_has_stable_edge_vehicle_motion(point, state, lane_width_m)
@@ -2068,6 +2140,15 @@ def radar_point_is_vehicle_candidate(point: RadarPoint, state: ClusterUiState, l
     if radar_point_is_moving_raw_vehicle(point, state, lane_width_m):
         return True
     return False
+
+
+def radar_point_is_confirmed_vehicle_source(point: RadarPoint) -> bool:
+    source = point.source.lower()
+    return "0x162" in source or "0x1ea" in source
+
+
+def radar_point_source_is_radar_track(point: RadarPoint) -> bool:
+    return point.source == "liveTracks"
 
 
 def radar_point_has_vehicle_estimate(point: RadarPoint, state: ClusterUiState, lane_width_m: float) -> bool:
@@ -2338,10 +2419,12 @@ def radar_point_color(point: RadarPoint) -> Color:
         return 116, 126, 136, 150
     if point.longitudinal_m < 12.0 and abs(point.lateral_m) < 1.6:
         return RED[0], RED[1], RED[2], 232
-    if point.in_my_lane is not None and point.in_my_lane > 0:
-        return BLUE[0], BLUE[1], BLUE[2], 226
     if point.probability is not None and point.probability < 0.25:
         return 116, 126, 136, 150
+    if radar_point_source_is_radar_track(point):
+        return AMBER[0], AMBER[1], AMBER[2], 226
+    if point.in_my_lane is not None and point.in_my_lane > 0:
+        return BLUE[0], BLUE[1], BLUE[2], 226
     if point.relative_speed_mps is not None and point.relative_speed_mps < -2.5:
         return AMBER[0], AMBER[1], AMBER[2], 226
     return 34, 150, 255, 208
@@ -2764,16 +2847,15 @@ def vehicle_color_for_source(
 ) -> tuple[int, int, int]:
     if source_color_mode != CLUSTER_RADAR_SOURCE_COLOR_BY_SOURCE:
         return theme.default_vehicle
-    if source == "radarState":
+    if vehicle_source_is_adas(source):
+        return GREEN
+    if vehicle_source_is_front_radar(source):
         return RED
-    if source == "radarPoint" or source == "liveTracks" or source.startswith("CAN-FD"):
+    if vehicle_source_is_radar_track(source):
         return AMBER
-    if (
-        RADAR_MERGED_SOURCE_TAG in source
-        or source == "carState"
-        or source.startswith("CAN 0x")
-        or source.startswith("modelV2")
-    ):
+    if vehicle_source_is_camera(source):
+        return BLUE_SOFT
+    if source.startswith("modelV2"):
         return BLUE
     return theme.default_vehicle
 

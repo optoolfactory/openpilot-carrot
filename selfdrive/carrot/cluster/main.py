@@ -28,6 +28,7 @@ from cluster_config import (
     CLUSTER_SCREEN_MODE_DEBUG,
     CLUSTER_SCREEN_MODE_DEBUG_GRAPH,
     CLUSTER_SCREEN_MODE_DEBUG_GRAPH_RIGHT,
+    CLUSTER_SCREEN_MODE_NAVI_DEBUG,
     CLUSTER_SCREEN_MODE_PARAM,
     CLUSTER_THEME_PARAM,
     DESIGN_HEIGHT,
@@ -93,6 +94,10 @@ def live_debug_plot_enabled(screen_mode: int) -> bool:
     return screen_mode in (CLUSTER_SCREEN_MODE_DEBUG_GRAPH, CLUSTER_SCREEN_MODE_DEBUG_GRAPH_RIGHT)
 
 
+def live_navi_debug_enabled(screen_mode: int) -> bool:
+    return screen_mode == CLUSTER_SCREEN_MODE_NAVI_DEBUG
+
+
 def resolved_usb_display_fps(
     requested_fps: int | None,
     usb_codec: str,
@@ -145,8 +150,13 @@ def apply_cluster_encoder_param(args: argparse.Namespace) -> str:
     elif encoder_mode in (CLUSTER_ENCODER_AUTO, CLUSTER_ENCODER_HARDWARE, CLUSTER_ENCODER_SOFTWARE):
         args.usb_codec = "h264"
         if not args.usb_h264_backend_from_cli:
-            args.usb_h264_backend = "ffmpeg" if encoder_mode == CLUSTER_ENCODER_SOFTWARE else "native"
-        if encoder_mode == CLUSTER_ENCODER_SOFTWARE and not args.usb_h264_ffmpeg_encoder_from_cli:
+            if encoder_mode == CLUSTER_ENCODER_SOFTWARE:
+                args.usb_h264_backend = "ffmpeg"
+            elif encoder_mode == CLUSTER_ENCODER_AUTO:
+                args.usb_h264_backend = "native"
+            else:
+                args.usb_h264_backend = "native"
+        if args.usb_h264_backend == "ffmpeg" and not args.usb_h264_ffmpeg_encoder_from_cli:
             args.usb_h264_ffmpeg_encoder = "libx264"
     return CLUSTER_ENCODER_PARAM
 
@@ -361,11 +371,19 @@ class ClusterHudOutputGateParamReader:
         except Exception:
             pass
 
+    def read_mode(self) -> int:
+        if self._params is None:
+            return 0
+        try:
+            return max(0, min(3, int(self._params.get_int(CLUSTER_HUD_DEBUG_PARAM))))
+        except Exception:
+            return 0
+
     def allowed(self) -> bool:
         if self._params is None:
             return True
         try:
-            return int(self._params.get_int(CLUSTER_HUD_DEBUG_PARAM)) == 1 or bool(self._params.get_bool("IsOnroad"))
+            return self.read_mode() >= 1 or bool(self._params.get_bool("IsOnroad"))
         except Exception:
             return False
 
@@ -637,7 +655,9 @@ def run_demo(
     hud_encoder_param_reader = ClusterHudEncoderParamReader() if hud_encoder_watch is not None else None
     hud_core_mode_param_reader = ClusterHudCoreModeParamReader() if hud_core_mode_watch is not None else None
     hud_priority_param_reader = ClusterHudPriorityParamReader() if hud_priority_watch is not None else None
-    hud_output_gate_param_reader = ClusterHudOutputGateParamReader() if hud_mode_watch is not None else None
+    hud_debug_param_reader = ClusterHudOutputGateParamReader() if hud_mode_watch is not None or input_mode == "live" else None
+    hud_output_gate_param_reader = hud_debug_param_reader if hud_mode_watch is not None else None
+    active_hud_debug_mode = hud_debug_param_reader.read_mode() if hud_debug_param_reader is not None else 0
     renderer = ClusterUiRenderer(
         frame_width,
         frame_height,
@@ -666,9 +686,11 @@ def run_demo(
     live_source = OpenpilotLiveSource(include_can=live_include_can, timeout_ms=live_timeout_ms) if input_mode == "live" else None
     if live_source is not None:
         live_source.set_profile_enabled(profile_render)
+        live_source.set_hud_debug_mode(active_hud_debug_mode)
         live_source.set_debug_panels_enabled(
             live_debug=live_debug_panel_enabled(active_screen_mode),
             debug_plot=live_debug_plot_enabled(active_screen_mode),
+            navi_debug=live_navi_debug_enabled(active_screen_mode),
         )
     route_source = None
     if input_mode == "route":
@@ -817,6 +839,7 @@ def run_demo(
                         live_source.set_debug_panels_enabled(
                             live_debug=live_debug_panel_enabled(next_screen_mode),
                             debug_plot=live_debug_plot_enabled(next_screen_mode),
+                            navi_debug=live_navi_debug_enabled(next_screen_mode),
                         )
                 next_screen_mode_param_read = now + SCREEN_MODE_PARAM_POLL_SECONDS
             if now >= next_camera_view_param_read:
@@ -862,6 +885,7 @@ def run_demo(
                     or hud_encoder_param_reader is not None
                     or hud_core_mode_param_reader is not None
                     or hud_priority_param_reader is not None
+                    or hud_debug_param_reader is not None
                     or hud_output_gate_param_reader is not None
                 )
             ):
@@ -895,6 +919,17 @@ def run_demo(
                         flush=True,
                     )
                     break
+                if hud_debug_param_reader is not None:
+                    next_hud_debug_mode = hud_debug_param_reader.read_mode()
+                    if next_hud_debug_mode != active_hud_debug_mode:
+                        print(
+                            f"{CLUSTER_HUD_DEBUG_PARAM} updated: "
+                            f"{active_hud_debug_mode} -> {next_hud_debug_mode}",
+                            flush=True,
+                        )
+                        active_hud_debug_mode = next_hud_debug_mode
+                        if live_source is not None:
+                            live_source.set_hud_debug_mode(active_hud_debug_mode)
                 if hud_output_gate_param_reader is not None and not hud_output_gate_param_reader.allowed():
                     print(
                         f"{CLUSTER_HUD_DEBUG_PARAM}=0 and IsOnroad=0; "
@@ -1580,7 +1615,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help=(
             "Disable live CAN/sendcan subscriptions. This keeps radarState/modelV2/liveTracks data "
-            "but skips direct raw CAN-FD parsing."
+            "but skips direct raw CAN parsing for camera-bus ADAS corner detections."
         ),
     )
     parser.add_argument(

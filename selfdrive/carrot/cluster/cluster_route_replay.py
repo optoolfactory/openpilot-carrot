@@ -66,7 +66,7 @@ class DbcSignalSpec:
 
 RADAR_TO_CAMERA_M = 1.52
 MODEL_LEAD_MIN_PROB = 0.08
-RADAR_POINT_STALE_S = 0.12
+RADAR_POINT_STALE_S = 0.25
 CORNER_DETECTION_STALE_S = 0.8
 RADAR_MIN_LONGITUDINAL_M = 0.0
 RADAR_FRONT_MAX_LONGITUDINAL_M = 180.0
@@ -1005,9 +1005,6 @@ class RouteLogParser:
         self.adrv_corner_message_t = -999.0
         self.adrv_lane_changing = 0
         self.adrv_lane_changing_t = -999.0
-        self.hyundai_canfd_radar_points: dict[str, RadarPoint] = {}
-        self.hyundai_canfd_radar_history: dict[str, tuple[float, float]] = {}
-        self.hyundai_canfd_radar_t = -999.0
         self.live_track_radar_points: dict[str, RadarPoint] = {}
         self.live_track_radar_t = -999.0
         self.radar_detections: tuple[DetectedVehicle, ...] = ()
@@ -1492,20 +1489,6 @@ class RouteLogParser:
             if source_service == "can" and bus >= 0x80:
                 continue
             data = bytes(safe_get(can_message, "dat", b""))
-            if is_hyundai_canfd_radar_address(address):
-                if source_service == "sendcan":
-                    continue
-                labels = hyundai_canfd_radar_labels_for_address(address)
-                radar_points = parse_hyundai_canfd_radar_message(address, data)
-                valid_labels = {point.label for point in radar_points}
-                for label in labels:
-                    self.hyundai_canfd_radar_points.pop(label, None)
-                    if label not in valid_labels:
-                        self.hyundai_canfd_radar_history.pop(label, None)
-                for point in radar_points:
-                    self.hyundai_canfd_radar_points[point.label] = self._radar_point_with_absolute_speed(point, event_t)
-                self.hyundai_canfd_radar_t = event_t
-                continue
             if address not in (CCNC_CORNER_RADAR_ADDRESS, ADRV_CORNER_RADAR_ADDRESS):
                 continue
             if source_service == "sendcan" or not is_hyundai_camera_can_bus(bus):
@@ -1537,32 +1520,9 @@ class RouteLogParser:
         self.live_track_radar_t = event_t
 
     def _radar_points_from_current_state(self, event_t: float) -> tuple[RadarPoint, ...]:
-        points: list[RadarPoint] = []
-        if event_t - self.hyundai_canfd_radar_t < RADAR_POINT_STALE_S:
-            points.extend(self.hyundai_canfd_radar_points.values())
-        elif event_t - self.live_track_radar_t < RADAR_POINT_STALE_S:
-            points.extend(self.live_track_radar_points.values())
-        return sorted_radar_points(points)
-
-    def _radar_point_with_absolute_speed(self, point: RadarPoint, event_t: float) -> RadarPoint:
-        signal_speed_kph = (
-            None
-            if point.relative_speed_mps is None
-            else max(0.0, self.current_speed_kph + point.relative_speed_mps * 3.6)
-        )
-        observed_speed_kph = None
-        previous = self.hyundai_canfd_radar_history.get(point.label)
-        if previous is not None:
-            previous_distance_m, previous_t = previous
-            dt = event_t - previous_t
-            if 0.02 <= dt <= 0.45:
-                observed_relative_mps = (point.longitudinal_m - previous_distance_m) / dt
-                observed_speed_kph = max(0.0, self.current_speed_kph + observed_relative_mps * 3.6)
-                if observed_speed_kph > MAX_SPEED_KPH * 1.8:
-                    observed_speed_kph = None
-        self.hyundai_canfd_radar_history[point.label] = (point.longitudinal_m, event_t)
-        absolute_speed_kph = observed_speed_kph if observed_speed_kph is not None else signal_speed_kph
-        return replace(point, absolute_speed_kph=absolute_speed_kph)
+        if event_t - self.live_track_radar_t < RADAR_POINT_STALE_S:
+            return sorted_radar_points(self.live_track_radar_points.values())
+        return ()
 
     def _detected_vehicles_from_current_state(
         self,
@@ -1579,7 +1539,10 @@ class RouteLogParser:
         car_state_detections = car_state_corner_detections(car_state)
         car_state_corner_labels = {vehicle.label for vehicle in car_state_detections}
         for vehicle in car_state_detections:
-            if not vehicle_is_inside_road_edges(vehicle, lane_values):
+            if (
+                not vehicle_is_confirmed_corner_radar(vehicle)
+                and not vehicle_is_inside_road_edges(vehicle, lane_values)
+            ):
                 continue
             if not has_nearby_vehicle(detections, vehicle, longitudinal_tolerance=3.0, lateral_tolerance=1.1):
                 detections.append(vehicle)
@@ -1593,7 +1556,10 @@ class RouteLogParser:
             for vehicle in corner_detections:
                 if vehicle.label in car_state_corner_labels:
                     continue
-                if not vehicle_is_inside_road_edges(vehicle, lane_values):
+                if (
+                    not vehicle_is_confirmed_corner_radar(vehicle)
+                    and not vehicle_is_inside_road_edges(vehicle, lane_values)
+                ):
                     continue
                 if not has_nearby_vehicle(detections, vehicle, longitudinal_tolerance=3.0, lateral_tolerance=1.1):
                     detections.append(vehicle)
@@ -3017,99 +2983,6 @@ def is_hyundai_camera_can_bus(bus: int) -> bool:
     return bus >= 0 and bus % 4 == HYUNDAI_CAMERA_CAN_BUS_MOD
 
 
-def parse_hyundai_canfd_radar_message(address: int, data: bytes) -> tuple[RadarPoint, ...]:
-    if 0x210 <= address <= 0x21F:
-        return tuple(
-            point
-            for point in (
-                parse_hyundai_canfd_radar_slot(address, data, 1),
-                parse_hyundai_canfd_radar_slot(address, data, 2),
-            )
-            if point is not None
-        )
-    if 0x3A5 <= address <= 0x3C4:
-        point = parse_hyundai_canfd_radar_point_3a5(address, data)
-        return () if point is None else (point,)
-    return ()
-
-
-def is_hyundai_canfd_radar_address(address: int) -> bool:
-    return 0x210 <= address <= 0x21F or 0x3A5 <= address <= 0x3C4
-
-
-def hyundai_canfd_radar_labels_for_address(address: int) -> tuple[str, ...]:
-    if 0x210 <= address <= 0x21F:
-        index = (address - 0x210) * 2
-        return (f"R{index:02d}", f"R{index + 1:02d}")
-    if 0x3A5 <= address <= 0x3C4:
-        return (f"P{address - 0x3A5:02d}",)
-    return ()
-
-
-def parse_hyundai_canfd_radar_slot(address: int, data: bytes, slot: int) -> RadarPoint | None:
-    if len(data) < 32:
-        return None
-    base = 0 if slot == 1 else 128
-    valid_count = dbc_unsigned(data, base + 47, 8, "be")
-    if valid_count <= 10:
-        return None
-    long_dist_m = dbc_unsigned(data, base + 64, 12, "le") * 0.05
-    raw_lat_dist_m = dbc_signed(data, base + 76, 12, "le") * 0.05
-    rel_speed_mps = dbc_signed(data, base + 88, 14, "le") * 0.01
-    raw_lat_speed_mps = dbc_signed(data, base + 104, 13, "le") * 0.01
-    rel_accel_mps2 = dbc_signed(data, base + 118, 10, "le") * 0.05
-    lat_dist_m = renderer_lateral_from_openpilot_yrel(raw_lat_dist_m)
-    lat_speed_mps = renderer_lateral_from_openpilot_yrel(raw_lat_speed_mps)
-    if not -10.0 <= lat_dist_m <= 10.0 or not 2.5 <= long_dist_m <= 180.0:
-        return None
-    index = (address - 0x210) * 2 + (slot - 1)
-    return RadarPoint(
-        label=f"R{index:02d}",
-        longitudinal_m=long_dist_m,
-        lateral_m=lat_dist_m,
-        source=f"CAN-FD 0x{address:x}.{slot}",
-        relative_speed_mps=rel_speed_mps,
-        lateral_speed_mps=lat_speed_mps,
-        relative_accel_mps2=rel_accel_mps2,
-        valid_count=valid_count,
-    )
-
-
-def parse_hyundai_canfd_radar_point_3a5(address: int, data: bytes) -> RadarPoint | None:
-    if len(data) < 24:
-        return None
-    valid = dbc_unsigned(data, 25, 2, "be")
-    valid2 = dbc_unsigned(data, 28, 2, "be")
-    probability = dbc_unsigned(data, 30, 10, "le") / 1023.0
-    valid_count = dbc_unsigned(data, 47, 8, "be")
-    if valid_count <= 10:
-        return None
-    long_dist_m = dbc_unsigned(data, 63, 13, "le") * 0.05
-    raw_lat_dist_m = dbc_signed(data, 76, 12, "le") * 0.05
-    rel_speed_mps = dbc_signed(data, 88, 14, "le") * 0.01
-    in_my_lane = dbc_unsigned(data, 103, 2, "be")
-    raw_lat_speed_mps = dbc_signed(data, 104, 13, "le") * 0.01
-    rel_accel_mps2 = dbc_signed(data, 118, 10, "le") * 0.05
-    lat_dist_m = renderer_lateral_from_openpilot_yrel(raw_lat_dist_m)
-    lat_speed_mps = renderer_lateral_from_openpilot_yrel(raw_lat_speed_mps)
-    if not -10.0 <= lat_dist_m <= 10.0 or not 2.5 <= long_dist_m <= 180.0:
-        return None
-    index = address - 0x3A5
-    return RadarPoint(
-        label=f"P{index:02d}",
-        longitudinal_m=long_dist_m,
-        lateral_m=lat_dist_m,
-        source=f"CAN-FD 0x{address:x}",
-        relative_speed_mps=rel_speed_mps,
-        lateral_speed_mps=lat_speed_mps,
-        relative_accel_mps2=rel_accel_mps2,
-        probability=clamp(probability, 0.0, 1.0),
-        valid=valid or valid2,
-        valid_count=valid_count,
-        in_my_lane=in_my_lane,
-    )
-
-
 def renderer_lateral_from_openpilot_yrel(y_rel: float) -> float:
     # openpilot radar/model UI projects radar points as -yRel; this renderer stores x as right-positive.
     return -y_rel
@@ -3184,12 +3057,6 @@ def dbc_unsigned(data: bytes, start: int, length: int, byte_order: str) -> int:
     return value
 
 
-def dbc_signed(data: bytes, start: int, length: int, byte_order: str) -> int:
-    value = dbc_unsigned(data, start, length, byte_order)
-    sign_bit = 1 << (length - 1)
-    return value - (1 << length) if value & sign_bit else value
-
-
 def has_nearby_vehicle(
     vehicles: list[DetectedVehicle],
     candidate: DetectedVehicle,
@@ -3229,6 +3096,13 @@ def vehicle_is_inside_road_edges(vehicle: DetectedVehicle, lane_values: dict[str
     if right_edge_m is not None and vehicle.lateral_m > right_edge_m + ROAD_EDGE_VEHICLE_OUTSIDE_MARGIN_M:
         return False
     return True
+
+
+def vehicle_is_confirmed_corner_radar(vehicle: DetectedVehicle) -> bool:
+    if vehicle.label not in ("LF", "RF", "LR", "RR"):
+        return False
+    source = vehicle.source.lower()
+    return source == "carstate" or source in ("can 0x162", "can 0x1ea")
 
 
 def detected_vehicle_summary(vehicles: tuple[DetectedVehicle, ...]) -> str:

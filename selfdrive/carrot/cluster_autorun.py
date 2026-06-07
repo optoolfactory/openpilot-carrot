@@ -32,7 +32,7 @@ AUTORUN_FPS_ENV = "CLUSTER_AUTORUN_FPS"
 REALTIME_CORES_ENV = "CLUSTER_REALTIME_CORES"
 REALTIME_PRIORITY_ENV = "CLUSTER_REALTIME_PRIORITY"
 AUTORUN_DEFAULT_ENV = {
-    "CLUSTER_REALTIME": "1",
+    "CLUSTER_REALTIME": "0",
 }
 DEFAULT_REALTIME_CORES = [1, 2, 3, 4]
 DEFAULT_REALTIME_PRIORITY = 10
@@ -195,7 +195,7 @@ def _read_is_onroad(params: Params) -> bool:
 
 
 def _hud_output_allowed(params: Params) -> bool:
-    return _read_hud_debug_mode(params) == 1 or _read_is_onroad(params)
+    return _read_hud_debug_mode(params) >= 1 or _read_is_onroad(params)
 
 
 def _read_encoder_mode(params: Params) -> int:
