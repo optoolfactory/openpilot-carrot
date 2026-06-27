@@ -7,6 +7,13 @@ let appToastRemoveTimer = null;
 let activeAppDialog = null;
 let appDialogSerial = 0;
 
+const APP_DIALOG_VARIANT_CLASSES = [
+  "app-dialog--choice",
+  "app-dialog--choice-list",
+  "app-dialog--choice-grid",
+  "app-dialog--choice-value-grid",
+];
+
 
 function syncModalBodyLock() {
   const hasOpenDialog =
@@ -16,6 +23,26 @@ function syncModalBodyLock() {
     Boolean(settingSearchPanel && !settingSearchPanel.hidden);
   document.body.classList.toggle("dialog-open", hasOpenDialog);
 }
+
+// Tone → icon glyph + style class. Centralized here so every toast across the
+// app (showAppToast is the single entry point) renders the same toast surface.
+const APP_TOAST_TONE_GLYPH = {
+  success: "✓", // ✓
+  error: "✕",   // ✕
+  warn: "!",
+  offline: "!",
+  info: "i",
+  hint: "i",
+  default: "i",
+};
+const APP_TOAST_TONE_CLASS = {
+  success: "is-success",
+  error: "is-error",
+  warn: "is-warn",
+  offline: "is-warn",
+  info: "is-info",
+  hint: "is-hint",
+};
 
 function showAppToast(message, opts = {}) {
   if (!appToastHost || !message) return;
@@ -30,9 +57,19 @@ function showAppToast(message, opts = {}) {
     activeAppToast = toast;
   }
 
-  toast.className = "app-toast";
-  if (tone && tone !== "default") toast.classList.add(`is-${tone}`);
-  toast.textContent = String(message);
+  const toneClass = APP_TOAST_TONE_CLASS[tone] || "";
+  toast.className = toneClass ? `app-toast ${toneClass}` : "app-toast";
+
+  const icon = document.createElement("span");
+  icon.className = "app-toast__icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = APP_TOAST_TONE_GLYPH[tone] || APP_TOAST_TONE_GLYPH.default;
+
+  const msg = document.createElement("div");
+  msg.className = "app-toast__msg";
+  msg.textContent = String(message);
+
+  toast.replaceChildren(icon, msg);
 
   if (appToastHideTimer) {
     clearTimeout(appToastHideTimer);
@@ -59,12 +96,45 @@ function showAppToast(message, opts = {}) {
       activeAppToast.remove();
       activeAppToast = null;
       appToastRemoveTimer = null;
-    }, 180);
+    }, 220);
   }, duration);
 }
 
 
 /* ── Dialog (alert / confirm / prompt / choice) ─────────── */
+function resetAppDialogPresentation() {
+  if (appDialog) appDialog.classList.remove(...APP_DIALOG_VARIANT_CLASSES);
+  if (appDialogChoices) {
+    appDialogChoices.className = "app-dialog__choices";
+    appDialogChoices.style.removeProperty("--app-dialog-choice-columns");
+  }
+}
+
+function appDialogChoiceText(choice) {
+  if (!choice || choice.labelHtml) return "";
+  return String(choice.label ?? "").trim();
+}
+
+function inferAppDialogChoiceLayout(choices, options = {}) {
+  const explicit = String(options.choiceLayout || options.choiceKind || "").trim();
+  if (explicit === "grid" || explicit === "value-grid" || explicit === "values") return "value-grid";
+  if (explicit === "list" || explicit === "action-list" || explicit === "actions") return "list";
+
+  const shortValueChoices = choices.length > 4 && choices.every((choice) => {
+    const text = appDialogChoiceText(choice);
+    return text && text.length <= 5 && !choice.danger && /^[+-]?(?:\d+|\d+\.\d+|[A-Za-z]{1,4})$/.test(text);
+  });
+  return shortValueChoices ? "value-grid" : "list";
+}
+
+function appDialogChoiceColumns(count, options = {}) {
+  const explicit = Number(options.choiceColumns || options.columns);
+  if (Number.isInteger(explicit) && explicit >= 2 && explicit <= 6) return explicit;
+  if (count <= 4) return Math.max(2, count);
+  if (count <= 25) return 5;
+  return 4;
+}
+
 function resolveAppDialog(result) {
   if (!activeAppDialog || !appDialog) return;
 
@@ -80,6 +150,7 @@ function resolveAppDialog(result) {
     }
     appDialog.hidden = true;
     syncModalBodyLock();
+    resetAppDialogPresentation();
     if (appDialogChoices) {
       appDialogChoices.hidden = true;
       appDialogChoices.innerHTML = "";
@@ -140,11 +211,19 @@ function openAppDialog(options = {}) {
   const defaultActionLabel = options.defaultActionLabel || "";
   const hasDefaultAction = mode === "prompt" && Boolean(defaultActionLabel);
   const choices = Array.isArray(options.choices)
-    ? options.choices.filter((choice) => choice && (choice.label || choice.labelHtml))
+    ? options.choices.filter((choice) => choice && (choice.label != null || choice.labelHtml))
     : [];
   const hasChoices = choices.length > 0;
   const isChoice = mode === "choice" || hasChoices;
+  const choiceLayout = hasChoices ? inferAppDialogChoiceLayout(choices, options) : "";
   const showCancel = mode !== "alert" && options.showCancel !== false;
+
+  resetAppDialogPresentation();
+  if (appDialog && hasChoices) {
+    appDialog.classList.add("app-dialog--choice");
+    appDialog.classList.add(choiceLayout === "value-grid" ? "app-dialog--choice-grid" : "app-dialog--choice-list");
+    if (choiceLayout === "value-grid") appDialog.classList.add("app-dialog--choice-value-grid");
+  }
 
   appDialogTitle.textContent = title;
   if (useHtml) appDialogBody.innerHTML = String(messageHtml || message);
@@ -180,12 +259,22 @@ function openAppDialog(options = {}) {
   if (appDialogChoices) {
     appDialogChoices.innerHTML = "";
     appDialogChoices.hidden = !hasChoices;
+    appDialogChoices.className = `app-dialog__choices app-dialog__choices--${choiceLayout || "list"}`;
+    if (choiceLayout === "value-grid") {
+      appDialogChoices.style.setProperty("--app-dialog-choice-columns", String(appDialogChoiceColumns(choices.length, options)));
+    } else {
+      appDialogChoices.style.removeProperty("--app-dialog-choice-columns");
+    }
     for (const choice of choices) {
       const button = document.createElement("button");
       button.type = "button";
       let btnClass = choice.danger
         ? "btn btn--danger app-dialog__choiceBtn"
         : "btn app-dialog__choiceBtn";
+      btnClass += choiceLayout === "value-grid"
+        ? " app-dialog__choiceBtn--value"
+        : " app-dialog__choiceBtn--action";
+      if (choice.current || choice.selected) btnClass += " is-current";
       if (choice.className) btnClass += " " + choice.className;
       button.className = btnClass;
       if (choice.labelHtml) {
@@ -193,7 +282,6 @@ function openAppDialog(options = {}) {
       } else {
         button.textContent = String(choice.label);
       }
-      button.style.cssText = "text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;";
       button.addEventListener("click", () => resolveAppDialog(choice.value));
       appDialogChoices.appendChild(button);
     }
@@ -224,8 +312,14 @@ function openAppDialog(options = {}) {
         appDialogInput.focus();
         appDialogInput.select();
       } else if (hasChoices && appDialogChoices) {
-        const firstChoice = appDialogChoices.querySelector("button");
-        if (firstChoice && typeof firstChoice.focus === "function") firstChoice.focus();
+        const currentChoice = appDialogChoices.querySelector(".is-current");
+        const firstChoice = currentChoice || appDialogChoices.querySelector("button");
+        if (firstChoice && typeof firstChoice.focus === "function") {
+          firstChoice.focus({ preventScroll: Boolean(currentChoice) });
+          if (currentChoice && typeof currentChoice.scrollIntoView === "function") {
+            currentChoice.scrollIntoView({ block: "center", inline: "nearest" });
+          }
+        }
       } else if (mode === "choice" && appDialogCancel) {
         appDialogCancel.focus();
       } else {
