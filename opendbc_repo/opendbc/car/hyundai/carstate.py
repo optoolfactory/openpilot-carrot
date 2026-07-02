@@ -288,6 +288,9 @@ class CarState(CarStateBase):
 
     ret.seatbeltUnlatched = cp.vl["CGW1"]["CF_Gway_DrvSeatBeltSw"] == 0
 
+    if cp.ts_nanos["EMS21"]["SCR_UREA_LEVEL"] > 0:
+      ret.ureaGauge = float(np.clip(cp.vl["EMS21"]["SCR_UREA_LEVEL"] / 100.0, 0.0, 1.0))
+
     ret.wheelSpeeds = self.get_wheel_speeds(
       cp.vl["WHL_SPD11"]["WHL_SPD_FL"],
       cp.vl["WHL_SPD11"]["WHL_SPD_FR"],
@@ -732,7 +735,9 @@ class CarState(CarStateBase):
     if self.cruise_buttons_alt2 is not None:
       self.main_buttons.extend([1 if int(self.cruise_buttons_alt2.get("CRUISE_BUTTONS", 0)) == 8 else 0])
     else:
-      self.main_buttons.extend(cp.vl_all[self.cruise_btns_msg_canfd]["ADAPTIVE_CRUISE_MAIN_BTN"])
+      adaptive_main = cp.vl_all[self.cruise_btns_msg_canfd]["ADAPTIVE_CRUISE_MAIN_BTN"]
+      normal_main = cp.vl_all[self.cruise_btns_msg_canfd]["NORMAL_CRUISE_MAIN_BTN"]
+      self.main_buttons.extend(int(adaptive or normal) for adaptive, normal in zip(adaptive_main, normal_main, strict=True))
     if self.main_buttons[-1] != prev_main_buttons and not self.main_buttons[-1]: # and self.CP.openpilotLongitudinalControl: #carrot
       self.main_enabled = not self.main_enabled
       print("main_enabled = {}".format(self.main_enabled))
@@ -780,6 +785,8 @@ class CarState(CarStateBase):
       return self.get_can_parsers_canfd(CP)
 
     return {
-      Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], [], 0),
+      # EMS21 carries SCR_UREA_LEVEL on diesel platforms. NaN frequency makes
+      # it optional, so gasoline/EV platforms do not fail CAN validity.
+      Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], [("EMS21", math.nan)], 0),
       Bus.cam: CANParser(DBC[CP.carFingerprint][Bus.pt], [], 2),
     }

@@ -170,6 +170,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ShowCustomBrightness", {PERSISTENT, INT, "100"}},
     {"ShowModelView", {PERSISTENT, INT, "0"}},
     {"ClusterHud", {PERSISTENT, INT, "0"}},
+    {"ClusterHudConnected", {CLEAR_ON_MANAGER_START, BOOL}},
     {"ClusterHudDebug", {PERSISTENT, INT, "0"}},
     {"ClusterHudBrightness", {PERSISTENT, INT, "0"}},
     {"ClusterHudEncoder", {PERSISTENT, INT, "0"}},
@@ -183,6 +184,9 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ClusterHudRadarDisplay", {PERSISTENT, INT, "0"}},
     {"ClusterHudRadarSourceColor", {PERSISTENT, INT, "0"}},
     {"RecordRoadCam", {PERSISTENT, INT, "0"}},
+    {"CarrotYouTubeLive", {PERSISTENT, INT, "0"}},
+    {"CarrotYouTubeQuality", {PERSISTENT, INT, "0"}},
+    {"CarrotYouTubeTimestamp", {PERSISTENT, INT, "0"}},
     {"HDPuse", {PERSISTENT, INT, "0"}},
 
     {"AutoCruiseControl", {PERSISTENT, INT, "0"}},
