@@ -125,7 +125,7 @@ def enable_cluster_hud(started, params, CP: car.CarParams) -> bool:
 procs = [
   DaemonProcess("manage_athenad", "openpilot.system.athena.manage_athenad", "AthenadPid"),
 
-  NativeProcess("loggerd", "openpilot/system/loggerd", ["./loggerd"], logging),
+  #NativeProcess("loggerd", "openpilot/system/loggerd", ["./loggerd"], logging),
   NativeProcess("encoderd", "openpilot/system/loggerd", ["./encoderd"], only_onroad),
   NativeProcess("stream_encoderd", "openpilot/system/loggerd", ["./encoderd", "--stream"], or_(notcar, and_(only_onroad, enable_webrtc))),
   NativeProcess("youtube_low_encoderd", "openpilot/system/loggerd", ["./encoderd", "--youtube-low"], and_(only_onroad, enable_youtube_low_encoder)),
