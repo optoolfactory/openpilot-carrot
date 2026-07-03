@@ -219,6 +219,12 @@ class TestMonitoring:
     assert alert_lvls[int((_stop_time+0.1)/DT_DMON)] == 2
     assert alert_lvls[int((_stop_time+0.5)/DT_DMON)] == 0
 
+  def test_drowsy_driver_warning_after_three_seconds(self):
+    ds_vector = [msg_DISTRACTED] * int((3.1)/DT_DMON)
+    alert_lvls, d_status = self._run_seq(ds_vector, always_false, always_true, always_false)
+    assert alert_lvls[int((3.0)/DT_DMON)] == 2
+    assert d_status.drowsy_warning
+
   # engaged, model is somehow uncertain and driver is distracted
   #  - should fall back to wheel touch after uncertain alert
   def test_somehow_indecisive_model(self):
