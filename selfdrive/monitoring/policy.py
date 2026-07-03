@@ -42,7 +42,7 @@ class DRIVER_MONITOR_SETTINGS:
     self._FACE_THRESHOLD = 0.7
     self._EYE_THRESHOLD = 0.65
     self._SG_THRESHOLD = 0.9
-    self._BLINK_THRESHOLD = 0.83  #toolfactory 0.865
+    self._BLINK_THRESHOLD = 0.43  #toolfactory 0.865
     self._PHONE_THRESH = 0.5
     self._POSE_PITCH_THRESHOLD = 0.3133
     self._POSE_PITCH_THRESHOLD_SLACK = 0.3237
