@@ -49,7 +49,6 @@ class DRIVER_MONITOR_SETTINGS:
     self._EYE_THRESHOLD = 0.65
     self._SG_THRESHOLD = 0.9
     self._BLINK_THRESHOLD = 0.865
-    self._DROWSY_EYE_CLOSED_TIME = 3.0
     self._PHONE_THRESH = 0.5
     self._POSE_PITCH_THRESHOLD = 0.3133
     self._POSE_PITCH_THRESHOLD_SLACK = 0.3237
@@ -143,8 +142,6 @@ class DriverMonitoring:
     self.always_on = always_on
     self.distracted_types = defaultdict(bool)
     self.driver_distracted = False
-    self.drowsy_warning = False
-    self.eye_closed_duration = 0.
     self.driver_distraction_filter = FirstOrderFilter(0., self.settings._DISTRACTED_FILTER_TS, DT_DMON)
     self.wheel_on_right = False
     self.wheel_on_right_last = None
@@ -278,13 +275,6 @@ class DriverMonitoring:
                       * (driver_data.sunglassesProb < self.settings._SG_THRESHOLD)
     self.phone_prob = driver_data.phoneProb
 
-    blink_avg = (self.blink.left + self.blink.right) * 0.5
-    if self.face_detected and self.pose.low_std and blink_avg > self.settings._BLINK_THRESHOLD:
-      self.eye_closed_duration += DT_DMON
-    else:
-      self.eye_closed_duration = 0.
-    self.drowsy_warning = self.eye_closed_duration >= self.settings._DROWSY_EYE_CLOSED_TIME
-
     self._get_distracted_types()
     self.driver_distracted = any(self.distracted_types.values()) and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std
     self.driver_distraction_filter.update(self.driver_distracted)
@@ -317,9 +307,6 @@ class DriverMonitoring:
   def _update_events(self, driver_engaged, op_engaged, lowspeed, wrong_gear):
     self.alert_level = AlertLevel.none
     self.driver_interacting = driver_engaged
-
-    if self.drowsy_warning:
-      self.alert_level = AlertLevel.two
 
     if self.alert_3_cnt >= self.settings._MAX_ALERT_3 or self.no_response_cnt >= self.settings._MAX_NO_RESPONSE:
       self.too_distracted = True
