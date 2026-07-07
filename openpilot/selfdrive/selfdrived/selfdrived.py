@@ -209,7 +209,7 @@ class SelfdriveD:
       # Alerts
       vision_dm = self.sm['driverMonitoringState'].activePolicy == MonitoringPolicy.vision
       if self.sm['driverMonitoringState'].alertLevel == AlertLevel.one:
-        self.events.add(EventName.driverDistracted1 if vision_dm else EventName.driverUnresponsive1)
+        self.events.add(EventName.driverDistracted1 if vision_dm else EventName.driverUnresponsive2)
       elif self.sm['driverMonitoringState'].alertLevel == AlertLevel.two:
         self.events.add(EventName.driverDistracted2 if vision_dm else EventName.driverUnresponsive2)
       elif self.sm['driverMonitoringState'].alertLevel == AlertLevel.three:
