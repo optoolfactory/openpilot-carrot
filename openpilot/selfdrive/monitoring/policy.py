@@ -127,7 +127,7 @@ def face_orientation_from_model(orient_model, pos_model, rpy_calib):
 
 
 class DriverMonitoring:
-  def __init__(self, rhd_saved=False, settings=None, always_on=False):
+  def __init__(self, rhd_saved=False, settings=None, always_on=False, warning_callback=None):
     # init policy settings
     self.settings = settings if settings is not None else DRIVER_MONITOR_SETTINGS()
 
@@ -163,6 +163,10 @@ class DriverMonitoring:
     self.dcam_uncertain_cnt = 0
     self.dcam_reset_cnt = 0
     self.too_distracted = Params().get_bool("DriverTooDistracted")
+    self.warning_callback = warning_callback
+    self.warning_active = False
+    self.warning_reason = None
+    self.warning_elapsed = 0.
 
     self._reset_awareness()
     self._set_policy(MonitoringPolicy.vision)
@@ -171,6 +175,40 @@ class DriverMonitoring:
     self.awareness = 1.
     self.last_vision_awareness = 1.
     self.last_wheeltouch_awareness = 1.
+
+  def _clear_warning(self):
+    self.warning_active = False
+    self.warning_reason = None
+    self.warning_elapsed = 0.
+
+  def _trigger_warning(self, reason):
+    if self.warning_callback is not None:
+      self.warning_callback(reason)
+
+  def _update_warning_state(self):
+    if not self.face_detected:
+      reason = 'no_face'
+    elif self.distracted_types['eye']:
+      reason = 'eyes_closed'
+    else:
+      reason = None
+
+    if reason is None:
+      if self.warning_active:
+        self._clear_warning()
+      return
+
+    if self.warning_active and self.warning_reason == reason:
+      return
+
+    if self.warning_active and self.warning_reason != reason:
+      self._clear_warning()
+
+    self.warning_elapsed += DT_DMON
+    if self.warning_elapsed >= 3.0:
+      self.warning_active = True
+      self.warning_reason = reason
+      self._trigger_warning(reason)
 
   def _set_policy(self, target_policy):
     if self.active_policy == MonitoringPolicy.vision and self.awareness <= self.threshold_alert_2:
@@ -276,6 +314,7 @@ class DriverMonitoring:
     self.phone_prob = driver_data.phoneProb
 
     self._get_distracted_types()
+    self._update_warning_state()
     self.driver_distracted = any(self.distracted_types.values()) and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std
     self.driver_distraction_filter.update(self.driver_distracted)
 
