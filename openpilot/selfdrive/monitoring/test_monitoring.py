@@ -195,6 +195,24 @@ class TestMonitoring:
     alert_lvls, _ = self._run_seq(always_distracted, always_false, always_false, always_false)
     assert all(a == 0 for a in alert_lvls)
 
+  def test_eye_closed_warning_after_3_seconds(self):
+    DM = DriverMonitoring()
+    eye_closed_msgs = [msg_ATTENTIVE] * int(2.9 / DT_DMON) + [msg_DISTRACTED] * int(3.1 / DT_DMON)
+    for msg in eye_closed_msgs:
+      DM._update_states(msg, [0, 0, 0], 0, True, False)
+      DM._update_events(False, True, False, False)
+    assert DM.warning_active is True
+    assert DM.warning_reason == 'eyes_closed'
+
+  def test_no_face_warning_after_3_seconds(self):
+    DM = DriverMonitoring()
+    no_face_msgs = [msg_ATTENTIVE] * int(2.9 / DT_DMON) + [msg_NO_FACE_DETECTED] * int(3.1 / DT_DMON)
+    for msg in no_face_msgs:
+      DM._update_states(msg, [0, 0, 0], 0, True, False)
+      DM._update_events(False, True, False, False)
+    assert DM.warning_active is True
+    assert DM.warning_reason == 'no_face'
+
   # engaged, car stops at traffic light, down to orange, no action, then car starts moving
   #  - should only reach green when stopped, but continues counting down on launch
   def test_long_traffic_light_victim(self):
