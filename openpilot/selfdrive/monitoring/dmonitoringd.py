@@ -5,6 +5,25 @@ from openpilot.common.realtime import config_realtime_process
 from openpilot.selfdrive.monitoring.policy import DriverMonitoring
 
 
+def show_warning_message(reason):
+  message = '눈을 감거나 얼굴 인식이 안 됩니다. 운전 중에는 주의를 기울이세요.'
+  try:
+    import winsound
+    winsound.Beep(1000, 500)
+  except Exception:
+    pass
+
+  try:
+    import tkinter as tk
+    from tkinter import messagebox
+    root = tk.Tk()
+    root.withdraw()
+    messagebox.showwarning('Driver warning', message)
+    root.destroy()
+  except Exception:
+    print(message)
+
+
 def dmonitoringd_thread():
   config_realtime_process([0, 1, 2, 3], 5)
 
@@ -12,7 +31,7 @@ def dmonitoringd_thread():
   pm = messaging.PubMaster(['driverMonitoringState'])
   sm = messaging.SubMaster(['driverStateV2', 'liveCalibration', 'carState', 'selfdriveState', 'modelV2'], poll='driverStateV2')
 
-  DM = DriverMonitoring(rhd_saved=params.get_bool("IsRhdDetected"), always_on=params.get_bool("AlwaysOnDM"))
+  DM = DriverMonitoring(rhd_saved=params.get_bool("IsRhdDetected"), always_on=params.get_bool("AlwaysOnDM"), warning_callback=show_warning_message)
   demo_mode=False
 
   # 20Hz <- dmonitoringmodeld
