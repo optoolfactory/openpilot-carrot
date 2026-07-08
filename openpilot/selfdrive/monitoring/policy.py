@@ -194,20 +194,19 @@ class DriverMonitoring:
       reason = None
 
     if reason is None:
-      if self.warning_active:
-        self._clear_warning()
-      return
-
-    if self.warning_active and self.warning_reason == reason:
-      return
-
-    if self.warning_active and self.warning_reason != reason:
       self._clear_warning()
+      return
+
+    if self.warning_reason != reason:
+      self._clear_warning()
+      self.warning_reason = reason
+
+    if self.warning_active:
+      return
 
     self.warning_elapsed += DT_DMON
     if self.warning_elapsed >= 3.0:
       self.warning_active = True
-      self.warning_reason = reason
       self._trigger_warning(reason)
 
   def _set_policy(self, target_policy):
