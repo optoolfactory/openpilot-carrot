@@ -50,6 +50,7 @@ class DRIVER_MONITOR_SETTINGS:
     self._SG_THRESHOLD = 0.9
     self._BLINK_THRESHOLD = 0.865
     self._PHONE_THRESH = 0.5
+    self._EYE_NOT_DETECTED_WARNING_TIMEOUT = 3.0  # 3 seconds
     self._POSE_PITCH_THRESHOLD = 0.3133
     self._POSE_PITCH_THRESHOLD_SLACK = 0.3237
     self._POSE_PITCH_THRESHOLD_STRICT = self._POSE_PITCH_THRESHOLD
@@ -164,6 +165,10 @@ class DriverMonitoring:
     self.dcam_reset_cnt = 0
     self.too_distracted = Params().get_bool("DriverTooDistracted")
 
+    # Eye not detected tracking
+    self.eye_not_detected_time = 0.0  # Time in seconds when pupils are not detected
+    self.eye_not_detected_warning = False  # Flag for warning when eye not detected > 3 seconds
+
     self._reset_awareness()
     self._set_policy(MonitoringPolicy.vision)
 
@@ -274,6 +279,19 @@ class DriverMonitoring:
     self.blink.right = driver_data.rightBlinkProb * (driver_data.rightEyeProb > self.settings._EYE_THRESHOLD) \
                       * (driver_data.sunglassesProb < self.settings._SG_THRESHOLD)
     self.phone_prob = driver_data.phoneProb
+
+    # Track eye not detected time
+    eyes_detected = (driver_data.leftEyeProb > self.settings._EYE_THRESHOLD and 
+                     driver_data.rightEyeProb > self.settings._EYE_THRESHOLD and
+                     driver_data.sunglassesProb < self.settings._SG_THRESHOLD)
+    
+    if not eyes_detected and self.face_detected:
+      self.eye_not_detected_time += DT_DMON
+    else:
+      self.eye_not_detected_time = 0.0
+    
+    # Set warning flag when eye not detected time exceeds threshold
+    self.eye_not_detected_warning = self.eye_not_detected_time >= self.settings._EYE_NOT_DETECTED_WARNING_TIMEOUT
 
     self._get_distracted_types()
     self.driver_distracted = any(self.distracted_types.values()) and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std
@@ -400,6 +418,7 @@ class DriverMonitoring:
     dm.visionPolicyState.distractedTypes.eye = self.distracted_types['eye']
     dm.visionPolicyState.distractedTypes.phone = self.distracted_types['phone']
     dm.visionPolicyState.faceDetected = self.face_detected
+    dm.visionPolicyState.eyeNotDetected = self.eye_not_detected_warning
     dm.visionPolicyState.pose.pitch = self.pose.pitch
     dm.visionPolicyState.pose.yaw = self.pose.yaw
     dm.visionPolicyState.pose.calibrated = self.pose.calibrated
