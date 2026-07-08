@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import threading
 import openpilot.cereal.messaging as messaging
 from openpilot.common.params import Params
 from openpilot.common.realtime import config_realtime_process
@@ -7,21 +8,26 @@ from openpilot.selfdrive.monitoring.policy import DriverMonitoring
 
 def show_warning_message(reason):
   message = '눈을 감거나 얼굴 인식이 안 됩니다. 운전 중에는 주의를 기울이세요.'
-  try:
-    import winsound
-    winsound.Beep(1000, 500)
-  except Exception:
-    pass
+  print('WARNING:', message)
 
-  try:
-    import tkinter as tk
-    from tkinter import messagebox
-    root = tk.Tk()
-    root.withdraw()
-    messagebox.showwarning('Driver warning', message)
-    root.destroy()
-  except Exception:
-    print(message)
+  def notify():
+    try:
+      import winsound
+      winsound.Beep(1000, 500)
+    except Exception:
+      pass
+
+    try:
+      import tkinter as tk
+      from tkinter import messagebox
+      root = tk.Tk()
+      root.withdraw()
+      messagebox.showwarning('Driver warning', message)
+      root.destroy()
+    except Exception:
+      pass
+
+  threading.Thread(target=notify, daemon=True).start()
 
 
 def dmonitoringd_thread():
