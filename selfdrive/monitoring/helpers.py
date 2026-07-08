@@ -36,6 +36,13 @@ class DRIVER_MONITOR_SETTINGS:
     self._BLINK_THRESHOLD = 0.5
     self._PHONE_THRESH = 0.5
 
+    # Eye detection and drowsy driving alert thresholds (fast alerts < 3 seconds)
+    self._EYES_NOT_DETECTED_TIME = 3.  # alert if eyes not detected for 3 seconds
+    self._EYES_NOT_DETECTED_ALERT_TIME = int(3 / self._DT_DMON)  # convert to frames (50Hz = 150 frames)
+    self._DROWSY_BLINK_THRESHOLD = 0.7  # high blink probability indicates drowsiness
+    self._DROWSY_TIME = 3.  # alert if drowsy for 3 seconds
+    self._DROWSY_ALERT_TIME = int(3 / self._DT_DMON)  # convert to frames
+
     self._POSE_PITCH_THRESHOLD = 0.3133
     self._POSE_PITCH_THRESHOLD_SLACK = 0.3237
     self._POSE_PITCH_THRESHOLD_STRICT = self._POSE_PITCH_THRESHOLD
@@ -167,6 +174,12 @@ class DriverMonitoring:
     self.dcam_uncertain_alerted = False # once per drive
     self.dcam_reset_cnt = 0
 
+    # Eye detection loss and drowsy driving tracking
+    self.eyes_not_detected_counter = 0
+    self.eyes_not_detected_alerted = False  # alert only once per detection loss event
+    self.drowsy_counter = 0
+    self.drowsy_alerted = False  # alert only once per drowsy event
+
     self.params = Params()
     self.too_distracted = self.params.get_bool("DriverTooDistracted")
 
@@ -178,6 +191,11 @@ class DriverMonitoring:
     self.awareness = 1.
     self.awareness_active = 1.
     self.awareness_passive = 1.
+    # Reset eye detection and drowsy counters when disengaging
+    self.eyes_not_detected_counter = 0
+    self.eyes_not_detected_alerted = False
+    self.drowsy_counter = 0
+    self.drowsy_alerted = False
 
   def _reset_events(self):
     self.current_events = Events()
@@ -291,6 +309,22 @@ class DriverMonitoring:
     self.blink_prob = driver_data.eyesClosedProb * (driver_data.eyesVisibleProb > self.settings._EYE_THRESHOLD)
     self.phone_prob = driver_data.phoneProb
 
+    # Track eyes not detected (eyesVisibleProb low)
+    eyes_visible = driver_data.eyesVisibleProb > self.settings._EYE_THRESHOLD
+    if not eyes_visible:
+      self.eyes_not_detected_counter += 1
+    else:
+      self.eyes_not_detected_counter = 0
+      self.eyes_not_detected_alerted = False
+
+    # Track drowsy driving (high blink probability sustained)
+    is_drowsy = driver_data.eyesClosedProb > self.settings._DROWSY_BLINK_THRESHOLD and eyes_visible
+    if is_drowsy:
+      self.drowsy_counter += 1
+    else:
+      self.drowsy_counter = 0
+      self.drowsy_alerted = False
+
     self.distracted_types = self._get_distracted_types()
     self.driver_distracted = (DistractedType.DISTRACTED_PHONE in self.distracted_types
                               or DistractedType.DISTRACTED_POSE in self.distracted_types
@@ -326,6 +360,21 @@ class DriverMonitoring:
 
   def _update_events(self, driver_engaged, op_engaged, standstill, wrong_gear, car_speed):
     self._reset_events()
+    
+    # Fast alerts for eyes not detected (< 3 seconds)
+    if self.eyes_not_detected_counter >= self.settings._EYES_NOT_DETECTED_ALERT_TIME:
+      if not self.eyes_not_detected_alerted:
+        # Add distracted alert because eyes not detected
+        self.current_events.add(EventName.driverDistracted2)
+        self.eyes_not_detected_alerted = True
+    
+    # Fast alerts for drowsy driving (< 3 seconds)
+    if self.drowsy_counter >= self.settings._DROWSY_ALERT_TIME:
+      if not self.drowsy_alerted:
+        # Add distracted alert because drowsy detected
+        self.current_events.add(EventName.driverDistracted2)
+        self.drowsy_alerted = True
+    
     # Block engaging until ignition cycle after max number or time of distractions
     if self.terminal_alert_cnt >= self.settings._MAX_TERMINAL_ALERTS or \
        self.terminal_time >= self.settings._MAX_TERMINAL_DURATION:
