@@ -11,13 +11,13 @@ DISTRACTED_SECONDS_TO_RED = dm_settings._VISION_POLICY_ALERT_3_TIMEOUT + 1
 INVISIBLE_SECONDS_TO_ORANGE = dm_settings._WHEELTOUCH_POLICY_ALERT_2_TIMEOUT + 1
 INVISIBLE_SECONDS_TO_RED = dm_settings._WHEELTOUCH_POLICY_ALERT_3_TIMEOUT + 1
 
-def make_msg(face_detected, distracted=False, model_uncertain=False):
+def make_msg(face_detected, distracted=False, model_uncertain=False, eyes_detected=True):
   ds = log.DriverStateV2.new_message()
   ds.leftDriverData.faceOrientation = [0., 0., 0.]
   ds.leftDriverData.facePosition = [0., 0.]
   ds.leftDriverData.faceProb = 1. * face_detected
-  ds.leftDriverData.leftEyeProb = 1.
-  ds.leftDriverData.rightEyeProb = 1.
+  ds.leftDriverData.leftEyeProb = 1. * eyes_detected
+  ds.leftDriverData.rightEyeProb = 1. * eyes_detected
   ds.leftDriverData.leftBlinkProb = 1. * distracted
   ds.leftDriverData.rightBlinkProb = 1. * distracted
   ds.leftDriverData.faceOrientationStd = [1.*model_uncertain, 1.*model_uncertain, 1.*model_uncertain]
@@ -34,6 +34,7 @@ msg_DISTRACTED = make_msg(True, distracted=True)
 msg_ATTENTIVE_UNCERTAIN = make_msg(True, model_uncertain=True)
 msg_DISTRACTED_UNCERTAIN = make_msg(True, distracted=True, model_uncertain=True)
 msg_DISTRACTED_BUT_SOMEHOW_UNCERTAIN = make_msg(True, distracted=True, model_uncertain=dm_settings._HI_STD_THRESHOLD*1.5)
+msg_EYES_NOT_DETECTED = make_msg(True, eyes_detected=False)  # Face detected but eyes not detected
 
 # driver interaction with car
 car_interaction_DETECTED = True
@@ -229,3 +230,30 @@ class TestMonitoring:
     assert alert_lvls[int((INVISIBLE_SECONDS_TO_ORANGE-1+DT_DMON*s._HI_STD_FALLBACK_TIME-0.1)/DT_DMON)] == 1
     assert alert_lvls[int((INVISIBLE_SECONDS_TO_ORANGE-1+DT_DMON*s._HI_STD_FALLBACK_TIME+0.1)/DT_DMON)] == 2
     assert alert_lvls[int((INVISIBLE_SECONDS_TO_RED-1+DT_DMON*s._HI_STD_FALLBACK_TIME+0.1)/DT_DMON)] == 3
+
+  # engaged, face detected but eyes not detected for 3+ seconds
+  #  - should trigger eye not detected warning
+  def test_eye_not_detected_warning(self):
+    EYE_NOT_DETECTED_TIMEOUT = dm_settings._EYE_NOT_DETECTED_WARNING_TIMEOUT
+    ds_vector = [msg_ATTENTIVE] * int((EYE_NOT_DETECTED_TIMEOUT - 0.5) / DT_DMON) + \
+                [msg_EYES_NOT_DETECTED] * int(5 / DT_DMON) + \
+                [msg_ATTENTIVE] * int((TEST_TIMESPAN - EYE_NOT_DETECTED_TIMEOUT - 5.5) / DT_DMON)
+    interaction_vector = always_false[:]
+    alert_lvls, d_status = self._run_seq(ds_vector, interaction_vector, always_true, always_false)
+    
+    # Before 3 seconds, should be no warning
+    assert not d_status.eye_not_detected_warning or d_status.eye_not_detected_time < EYE_NOT_DETECTED_TIMEOUT
+    
+    # After 3 seconds with eyes not detected, should have warning
+    dm = DriverMonitoring()
+    for i in range(int(EYE_NOT_DETECTED_TIMEOUT / DT_DMON) + 5):
+      dm._update_states(msg_EYES_NOT_DETECTED, [0, 0, 0], 0, True, False)
+      if i * DT_DMON >= EYE_NOT_DETECTED_TIMEOUT:
+        assert dm.eye_not_detected_warning, f"Warning should be set after {EYE_NOT_DETECTED_TIMEOUT} seconds"
+      else:
+        assert not dm.eye_not_detected_warning or dm.eye_not_detected_time < EYE_NOT_DETECTED_TIMEOUT
+    
+    # After eyes are detected again, warning should clear
+    dm._update_states(msg_ATTENTIVE, [0, 0, 0], 0, True, False)
+    assert not dm.eye_not_detected_warning
+    assert dm.eye_not_detected_time == 0.0
