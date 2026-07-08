@@ -2210,6 +2210,7 @@ struct DriverMonitoringState {
     pose @5 :Pose;
     wheeltouchFallbackPercent @6 :Int8;
     uncertainOffroadAlertPercent @7 :Int8;
+    eyeNotDetected @8 :Bool;  # Warning when pupils not recognized for 3+ seconds
 
     struct DistractedTypes {
       pose @0: Bool;
