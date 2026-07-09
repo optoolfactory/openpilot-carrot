@@ -35,6 +35,7 @@ class DRIVER_MONITOR_SETTINGS:
     self._EYE_THRESHOLD = 0.5
     self._BLINK_THRESHOLD = 0.5
     self._PHONE_THRESH = 0.5
+    self._EYES_CLOSED_WARNING_TIME = 3.0
 
     self._POSE_PITCH_THRESHOLD = 0.3133
     self._POSE_PITCH_THRESHOLD_SLACK = 0.3237
@@ -155,6 +156,9 @@ class DriverMonitoring:
     self.wheel_on_right_last = None
     self.wheel_on_right_default = rhd_saved
     self.face_detected = False
+    self.eyes_closed_duration = 0.
+    self.eyes_closed_warning_triggered = False
+    self.eyes_closed_warning = False
     self.terminal_alert_cnt = 0
     self.terminal_time = 0
     self.step_change = 0.
@@ -291,6 +295,16 @@ class DriverMonitoring:
     self.blink_prob = driver_data.eyesClosedProb * (driver_data.eyesVisibleProb > self.settings._EYE_THRESHOLD)
     self.phone_prob = driver_data.phoneProb
 
+    self.eyes_closed_warning = False
+    if self.face_detected and self.pose.low_std and self.blink_prob > self.settings._BLINK_THRESHOLD:
+      self.eyes_closed_duration += self.settings._DT_DMON
+      if self.eyes_closed_duration >= self.settings._EYES_CLOSED_WARNING_TIME and not self.eyes_closed_warning_triggered:
+        self.eyes_closed_warning = True
+        self.eyes_closed_warning_triggered = True
+    else:
+      self.eyes_closed_duration = 0.
+      self.eyes_closed_warning_triggered = False
+
     self.distracted_types = self._get_distracted_types()
     self.driver_distracted = (DistractedType.DISTRACTED_PHONE in self.distracted_types
                               or DistractedType.DISTRACTED_POSE in self.distracted_types
@@ -387,6 +401,9 @@ class DriverMonitoring:
     elif self.awareness <= self.threshold_pre:
       # pre green alert
       alert = EventName.driverDistracted1 if self.active_monitoring_mode else EventName.driverUnresponsive1
+
+    if self.eyes_closed_warning:
+      self.current_events.add(EventName.driverDistracted2)
 
     if alert is not None:
       self.current_events.add(alert)
