@@ -82,6 +82,12 @@ class TestMonitoring:
                     ((TEST_TIMESPAN-10-d_status.settings._DISTRACTED_TIME)/2))/DT_DMON)].names[0] == EventName.driverDistracted3
     assert isinstance(d_status.awareness, float)
 
+  # engaged, driver keeps eyes closed for 3 seconds and should be warned immediately
+  def test_eyes_closed_for_three_seconds_warns(self):
+    msgs = [msg_DISTRACTED] * int(3.0 / DT_DMON)
+    events, _ = self._run_seq(msgs, always_false, always_true, always_false)
+    assert EventName.driverDistracted2 in events[-1].names
+
   # engaged, no face detected the whole time, no action
   def test_fully_invisible_driver(self):
     events, d_status = self._run_seq(always_no_face, always_false, always_true, always_false)
