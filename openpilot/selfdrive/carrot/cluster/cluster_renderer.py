@@ -77,6 +77,13 @@ SPEED_BG_PATH = SELFDRIVE_DIR / "assets" / "images" / "speed_bg.png"
 FOLLOW_VEHICLE_ICON_PATH = SELFDRIVE_DIR / "assets" / "icons_mici" / "carrot_cruse_gap_trimmed.png"
 LFA_ICON_PATH = SELFDRIVE_DIR / "assets" / "icons_mici" / "carrot_wheel_org.png"
 WIFI_ICON_PATH = SELFDRIVE_DIR / "assets" / "icons_mici" / "settings" / "network" / "wifi_strength_full.png"
+ROUTE_CONTROL_PANEL_X = 340.0
+ROUTE_CONTROL_PANEL_Y = DESIGN_HEIGHT - 74.0
+ROUTE_CONTROL_PANEL_W = DESIGN_WIDTH - ROUTE_CONTROL_PANEL_X * 2.0
+ROUTE_CONTROL_PANEL_H = 34.0
+ROUTE_CONTROL_SEEK_Y = ROUTE_CONTROL_PANEL_Y + 18.0
+ROUTE_CONTROL_BAR_X = ROUTE_CONTROL_PANEL_X + 142.0
+ROUTE_CONTROL_BAR_W = ROUTE_CONTROL_PANEL_W - 284.0
 TPMS_LOW_PRESSURE_PSI = 31.0
 TPMS_BADGE_WIDTH = 46.0
 TPMS_BADGE_HEIGHT = 37.5
@@ -376,9 +383,19 @@ def radar_point_speed_label(point: RadarPointMarker) -> str:
 
 
 def vehicle_distance_label(vehicle: VehicleBox) -> str:
-    if vehicle.absolute_speed_kph is not None and abs(vehicle.absolute_speed_kph) <= RADAR_STATIC_OBJECT_SPEED_KPH:
+    if (
+        vehicle.absolute_speed_kph is not None
+        and abs(vehicle.absolute_speed_kph) <= RADAR_STATIC_OBJECT_SPEED_KPH
+        and not vehicle.primary
+        and not vehicle.cut_in
+    ):
         return ""
-    return f"{vehicle_distance_m(vehicle):.0f} m"
+    distance = f"{vehicle_distance_m(vehicle):.0f} m"
+    if (vehicle.primary or vehicle.cut_in) and vehicle.label:
+        if vehicle.label in ("L1", "L2"):
+            return distance
+        return f"{vehicle.label} {distance}"
+    return distance
 
 
 def vehicle_distance_m(vehicle: VehicleBox) -> float:
@@ -423,6 +440,10 @@ def radar_info_shows_distance(mode: int) -> bool:
 
 
 def vehicle_metric_color(vehicle: VehicleBox, theme: ClusterTheme, source_color_mode: int) -> tuple[int, int, int]:
+    if vehicle.cut_in:
+        return AMBER
+    if vehicle.primary:
+        return theme.primary_vehicle
     if source_color_mode != CLUSTER_RADAR_SOURCE_COLOR_BY_SOURCE:
         return theme.world_label_text
     if vehicle_source_is_adas(vehicle.source):
@@ -750,6 +771,62 @@ class ClusterUiRenderer:
         profile_stage = self._profile_start()
         rl.end_drawing()
         self._profile_add("render_frame.end_drawing", profile_stage)
+
+    def render_route_replay_frame(
+        self,
+        state: ClusterUiState,
+        playback_s: float,
+        duration_s: float,
+        corner_lateral_offset_m: float,
+        paused: bool = False,
+    ) -> None:
+        self.open()
+        profile_stage = self._profile_start()
+        rl.begin_drawing()
+        self._profile_add("render_route_frame.begin_drawing", profile_stage)
+        try:
+            profile_stage = self._profile_start()
+            self.render(state)
+            self._profile_add("render_route_frame.render", profile_stage)
+            profile_stage = self._profile_start()
+            self._draw_route_replay_controls(playback_s, duration_s, corner_lateral_offset_m, paused)
+            self._profile_add("render_route_frame.controls", profile_stage)
+        finally:
+            profile_stage = self._profile_start()
+            rl.end_drawing()
+            self._profile_add("render_route_frame.end_drawing", profile_stage)
+
+    def route_replay_control_input(
+        self,
+        playback_s: float,
+        duration_s: float,
+        corner_lateral_offset_m: float,
+    ) -> tuple[float | None, float, bool]:
+        if not self._window_open or duration_s <= 0.0:
+            return None, corner_lateral_offset_m, False
+
+        sx = self.width / DESIGN_WIDTH
+        sy = self.height / DESIGN_HEIGHT
+        mouse = rl.get_mouse_position()
+        mx = float(mouse.x) / max(0.001, sx)
+        my = float(mouse.y) / max(0.001, sy)
+        if not rl.is_mouse_button_down(rl.MOUSE_BUTTON_LEFT):
+            return None, corner_lateral_offset_m, False
+
+        seek_rect = rl.Rectangle(ROUTE_CONTROL_BAR_X, ROUTE_CONTROL_SEEK_Y - 8.0, ROUTE_CONTROL_BAR_W, 16.0)
+        if self._point_in_rect(mx, my, seek_rect):
+            ratio = clamp((mx - ROUTE_CONTROL_BAR_X) / max(1.0, ROUTE_CONTROL_BAR_W), 0.0, 1.0)
+            return ratio * duration_s, corner_lateral_offset_m, True
+        return None, corner_lateral_offset_m, False
+
+    def route_replay_mouse_down(self) -> bool:
+        if not self._window_open:
+            return False
+        return bool(rl.is_mouse_button_down(rl.MOUSE_BUTTON_LEFT))
+
+    @staticmethod
+    def _point_in_rect(x: float, y: float, rect: "rl.Rectangle") -> bool:
+        return rect.x <= x <= rect.x + rect.width and rect.y <= y <= rect.y + rect.height
 
     def render(self, state: ClusterUiState, signal_lights: tuple[bool, bool] | None = None) -> None:
         """Draw one frame into the currently active raylib render target."""
@@ -1862,13 +1939,18 @@ class ClusterUiRenderer:
         radar_info_mode: int = CLUSTER_RADAR_INFO_ALL_SPEED_DISTANCE,
         radar_source_color_mode: int = 0,
     ) -> None:
-        if not radar_info_shows_vehicle(radar_info_mode):
+        show_vehicle_info = radar_info_shows_vehicle(radar_info_mode)
+        if not show_vehicle_info and not any(vehicle.primary or vehicle.cut_in for vehicle in vehicles):
             return
         theme = self._current_theme()
         profile_enabled = self.profile_enabled
         profile_stage = self._profile_start()
         ordered = sorted(
-            (vehicle for vehicle in vehicles if vehicle.label),
+            (
+                vehicle
+                for vehicle in vehicles
+                if vehicle.label and (show_vehicle_info or vehicle.primary or vehicle.cut_in)
+            ),
             key=lambda vehicle: (
                 0 if vehicle.primary else 1 if vehicle.cut_in else 2,
                 max(0.0, vehicle.center.y - EGO_FORWARD_M),
@@ -1906,7 +1988,12 @@ class ClusterUiRenderer:
 
             if profile_enabled:
                 layout_stage = time.perf_counter()
-            distance = vehicle_distance_label(vehicle) if radar_info_shows_distance(radar_info_mode) else ""
+            show_important_label = vehicle.primary or vehicle.cut_in
+            distance = (
+                vehicle_distance_label(vehicle)
+                if radar_info_shows_distance(radar_info_mode) or show_important_label
+                else ""
+            )
             speed = vehicle_speed_label(vehicle) if radar_info_shows_speed(radar_info_mode) else ""
             if not distance and not speed:
                 if profile_enabled:
@@ -2042,6 +2129,52 @@ class ClusterUiRenderer:
         )
         for start, end in edges:
             rl.draw_line_3d(vec3(edge_points[start]), vec3(edge_points[end]), outline)
+        if vehicle.primary or vehicle.cut_in:
+            self._draw_selected_vehicle_outline(vehicle, corner, half_width, half_length, z0, z1)
+
+    def _draw_selected_vehicle_outline(
+        self,
+        vehicle: VehicleBox,
+        corner,
+        half_width: float,
+        half_length: float,
+        z0: float,
+        z1: float,
+    ) -> None:
+        outline_color = AMBER if vehicle.cut_in else WHITE
+        outline = rl_color(outline_color, 255)
+        halo_width = half_width + 0.12
+        halo_length = half_length + 0.16
+        halo_z0 = z0 + 0.015
+        halo_z1 = z1 + 0.065
+        halo_base = (
+            corner(-halo_width, -halo_length, halo_z0),
+            corner(halo_width, -halo_length, halo_z0),
+            corner(halo_width, halo_length, halo_z0),
+            corner(-halo_width, halo_length, halo_z0),
+        )
+        halo_top = (
+            corner(-halo_width, -halo_length, halo_z1),
+            corner(halo_width, -halo_length, halo_z1),
+            corner(halo_width, halo_length, halo_z1),
+            corner(-halo_width, halo_length, halo_z1),
+        )
+        halo_edges = (
+            (halo_top[0], halo_top[1]),
+            (halo_top[1], halo_top[2]),
+            (halo_top[2], halo_top[3]),
+            (halo_top[3], halo_top[0]),
+            (halo_base[0], halo_base[1]),
+            (halo_base[1], halo_base[2]),
+            (halo_base[2], halo_base[3]),
+            (halo_base[3], halo_base[0]),
+            (halo_base[0], halo_top[0]),
+            (halo_base[1], halo_top[1]),
+            (halo_base[2], halo_top[2]),
+            (halo_base[3], halo_top[3]),
+        )
+        for start, end in halo_edges:
+            rl.draw_line_3d(vec3(start), vec3(end), outline)
 
     def _draw_quad(
         self,
@@ -2155,6 +2288,69 @@ class ClusterUiRenderer:
             profile_stage = self._profile_start()
             rl.rl_pop_matrix()
             self._profile_add("hud.pop_matrix", profile_stage)
+
+    def _draw_route_replay_controls(
+        self,
+        playback_s: float,
+        duration_s: float,
+        corner_lateral_offset_m: float,
+        paused: bool,
+    ) -> None:
+        sx = self.width / DESIGN_WIDTH
+        sy = self.height / DESIGN_HEIGHT
+        rl.rl_push_matrix()
+        rl.rl_scalef(sx, sy, 1.0)
+        try:
+            theme = self._current_theme()
+            panel = rl.Rectangle(
+                ROUTE_CONTROL_PANEL_X,
+                ROUTE_CONTROL_PANEL_Y,
+                ROUTE_CONTROL_PANEL_W,
+                ROUTE_CONTROL_PANEL_H,
+            )
+            rl.draw_rectangle_rounded(panel, 0.20, 12, rl_color((2, 5, 10, 188)))
+            rl.draw_rectangle_rounded_lines_ex(panel, 0.20, 12, 1.4, rl_color((255, 255, 255, 54)))
+
+            duration_s = max(0.001, duration_s)
+            playback_s = clamp(playback_s, 0.0, duration_s)
+            seek_ratio = playback_s / duration_s
+            self._draw_route_slider(
+                "seek",
+                f"{self._format_time(playback_s)} / {self._format_time(duration_s)}{' PAUSED' if paused else ''}",
+                seek_ratio,
+                ROUTE_CONTROL_SEEK_Y,
+                BLUE_SOFT,
+                theme.text,
+            )
+        finally:
+            rl.rl_pop_matrix()
+
+    def _draw_route_slider(
+        self,
+        label: str,
+        value: str,
+        ratio: float,
+        center_y: float,
+        fill_color: tuple[int, int, int],
+        text_color: tuple[int, int, int],
+    ) -> None:
+        ratio = clamp(ratio, 0.0, 1.0)
+        self._draw_text(label, ROUTE_CONTROL_PANEL_X + 26.0, center_y - 9.0, 16, text_color)
+        self._draw_text(value, ROUTE_CONTROL_PANEL_X + ROUTE_CONTROL_PANEL_W - 26.0, center_y - 9.0, 16, text_color, anchor="right")
+        bar_bg = rl.Rectangle(ROUTE_CONTROL_BAR_X, center_y - 3.0, ROUTE_CONTROL_BAR_W, 6.0)
+        bar_fill = rl.Rectangle(ROUTE_CONTROL_BAR_X, center_y - 3.0, ROUTE_CONTROL_BAR_W * ratio, 6.0)
+        knob_x = ROUTE_CONTROL_BAR_X + ROUTE_CONTROL_BAR_W * ratio
+        rl.draw_rectangle_rounded(bar_bg, 1.0, 8, rl_color((255, 255, 255, 50)))
+        rl.draw_rectangle_rounded(bar_fill, 1.0, 8, rl_color(fill_color, 205))
+        rl.draw_circle_v(rl.Vector2(knob_x, center_y), 8.5, rl_color(fill_color, 235))
+        rl.draw_circle_lines(int(round(knob_x)), int(round(center_y)), 9.5, rl_color((255, 255, 255, 150)))
+
+    @staticmethod
+    def _format_time(seconds: float) -> str:
+        total = max(0, int(round(seconds)))
+        minutes = total // 60
+        secs = total % 60
+        return f"{minutes:d}:{secs:02d}"
 
     def _draw_center_clock(self, state: ClusterUiState) -> None:
         if not state.center_clock_text:

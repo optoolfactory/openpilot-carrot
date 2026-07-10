@@ -156,6 +156,11 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarSelected3", {PERSISTENT, STRING, "MOCK"}},
     {"SupportedCars", {PERSISTENT, STRING}},
     {"SupportedCars_gm", {PERSISTENT, STRING}},
+    {"SupportedCars_toyota", {PERSISTENT, STRING}},
+    {"SupportedCars_mazda", {PERSISTENT, STRING}},
+    {"SupportedCars_ford", {PERSISTENT, STRING}},
+    {"SupportedCars_vw", {PERSISTENT, STRING}},
+    {"SupportedCars_tesla", {PERSISTENT, STRING}},
     {"ShowDebugUI", {PERSISTENT, INT, "0"}},
     {"ShowDateTime", {PERSISTENT, INT, "0"}},
     {"ShowLaneInfo", {PERSISTENT, INT, "1"}},
@@ -173,6 +178,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ClusterHudConnected", {CLEAR_ON_MANAGER_START, BOOL}},
     {"ClusterHudDebug", {PERSISTENT, INT, "0"}},
     {"ClusterHudBrightness", {PERSISTENT, INT, "0"}},
+    {"ClusterHudMirror", {PERSISTENT, INT, "0"}},
     {"ClusterHudEncoder", {PERSISTENT, INT, "0"}},
     {"ClusterHudCoreMode", {PERSISTENT, INT, "0"}},
     {"ClusterHudPriority", {PERSISTENT, INT, "10"}},
@@ -295,7 +301,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
 
     {"DynamicTFollow", {PERSISTENT, INT, "0"}},
     {"DynamicTFollowLC", {PERSISTENT, INT, "100"}},
-    {"TFollowDecelBoost", {PERSISTENT, INT, "10"}},
+    {"TFollowDecelBoost", {PERSISTENT, INT, "50"}},
     {"EnableSpeedTF", {PERSISTENT, INT, "0"}},
     {"AChangeCostStarting", {PERSISTENT, INT, "10"}},
     {"TrafficStopDistanceAdjust", {PERSISTENT, INT, "-150"}},
@@ -345,6 +351,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"MuteSeatbelt", {PERSISTENT, INT, "1"}},
 
     {"CarrotException", {CLEAR_ON_MANAGER_START, STRING}},
+    {"CarrotExceptionSent", {CLEAR_ON_MANAGER_START, BOOL}},
+    {"CarrotExceptionDiscordWebhookUrl", {PERSISTENT, STRING}},
 
     {"CarName", {PERSISTENT, STRING}},
     {"EVTable", {PERSISTENT, BOOL, "0"}},

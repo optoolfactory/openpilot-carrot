@@ -126,8 +126,9 @@ class CarState(CarStateBase):
     self.cluster_speed_counter = CLUSTER_SAMPLE_RATE
 
     self.params = CarControllerParams(CP)
+    self.op_params = Params()
 
-    self.main_enabled = True if Params().get_int("AutoEngage") == 2 else False
+    self.main_enabled = True if self.op_params.get_int("AutoEngage") == 2 else False
     self.gear_shifter = GearShifter.drive # Gear_init for Nexo ?? unknown 21.02.23.LSW
 
     self.acc_fault_frames = 0  # debounce counter for accFaulted (see ACC_FAULT_DEBOUNCE_FRAMES)
@@ -234,10 +235,12 @@ class CarState(CarStateBase):
           add_and_cache(self.cp, "CLU11", "clu11")
         elif self.controls_ready_count == 105:
           cp_cruise = self.cp_cam if self.CP.flags & HyundaiFlags.CAMERA_SCC else self.cp
-          add_and_cache(cp_cruise, "SCC11", "scc11")
-          add_and_cache(cp_cruise, "SCC12", "scc12")
-          add_and_cache(cp_cruise, "SCC13", "scc13")
-          add_and_cache(cp_cruise, "SCC14", "scc14")
+          scc_messages_expected = not self.CP.openpilotLongitudinalControl or self.CP.flags & HyundaiFlags.CAMERA_SCC
+          if scc_messages_expected:
+            add_and_cache(cp_cruise, "SCC11", "scc11")
+            add_and_cache(cp_cruise, "SCC12", "scc12")
+            add_and_cache(cp_cruise, "SCC13", "scc13")
+            add_and_cache(cp_cruise, "SCC14", "scc14")
       else: # canfd
         if self.controls_ready_count == 120:
           cp_cruise = self.cp_cam if self.CP.flags & HyundaiFlags.CANFD_CAMERA_SCC else self.cp
@@ -662,8 +665,18 @@ class CarState(CarStateBase):
       ret.rightRearLatDist = corner_max("RR_DETECT_LATERAL")
       corner = True
     if corner:
-      left_block = True if 0 < ret.leftLongDist < 7.0 or 0 < self.lr_distance < 7.0 else False
-      right_block = True if 0 < ret.rightLongDist < 7.0 or 0 < self.rr_distance < 7.0 else False
+      raw_corner_radar_enabled = (
+        self.op_params.get_int("EnableCornerRadar") > 0 and
+        bool(self.CP.extFlags & (HyundaiExtFlags.CORNER_RADAR_OBJECTS_235.value |
+                                 HyundaiExtFlags.CORNER_RADAR_OBJECTS_180.value))
+      )
+      left_front_block = (not raw_corner_radar_enabled) and 0 < ret.leftLongDist < 7.0
+      right_front_block = (not raw_corner_radar_enabled) and 0 < ret.rightLongDist < 7.0
+      rear_block_dist = 5.0 if raw_corner_radar_enabled else 7.0
+      left_rear_block = 0 < self.lr_distance < rear_block_dist
+      right_rear_block = 0 < self.rr_distance < rear_block_dist
+      left_block = left_front_block or left_rear_block
+      right_block = right_front_block or right_rear_block
       if left_block:
         ret.leftBlindspot = True
       if right_block:
