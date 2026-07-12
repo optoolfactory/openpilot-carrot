@@ -178,6 +178,8 @@ class DriverMonitoring:
     self.awareness = 1.
     self.awareness_active = 1.
     self.awareness_passive = 1.
+    self.eyes_not_detected_steps = 0
+    self.eyes_closed_steps = 0
 
   def _reset_events(self):
     self.current_events = Events()
@@ -291,11 +293,27 @@ class DriverMonitoring:
     self.blink_prob = driver_data.eyesClosedProb * (driver_data.eyesVisibleProb > self.settings._EYE_THRESHOLD)
     self.phone_prob = driver_data.phoneProb
 
+    if self.face_detected:
+      if driver_data.eyesVisibleProb <= self.settings._EYE_THRESHOLD:
+        self.eyes_not_detected_steps += 1
+      else:
+        self.eyes_not_detected_steps = 0
+      if driver_data.eyesClosedProb > self.settings._BLINK_THRESHOLD:
+        self.eyes_closed_steps += 1
+      else:
+        self.eyes_closed_steps = 0
+    else:
+      self.eyes_not_detected_steps = 0
+      self.eyes_closed_steps = 0
+    custom_distracted = (self.eyes_not_detected_steps >= int(3.0 / self.settings._DT_DMON) or
+                         self.eyes_closed_steps >= int(3.0 / self.settings._DT_DMON)) and self.pose.low_std and not standstill
+
     self.distracted_types = self._get_distracted_types()
-    self.driver_distracted = (DistractedType.DISTRACTED_PHONE in self.distracted_types
-                              or DistractedType.DISTRACTED_POSE in self.distracted_types
-                              or DistractedType.DISTRACTED_BLINK in self.distracted_types) \
-                              and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std
+    self.driver_distracted = ((DistractedType.DISTRACTED_PHONE in self.distracted_types
+                               or DistractedType.DISTRACTED_POSE in self.distracted_types
+                               or DistractedType.DISTRACTED_BLINK in self.distracted_types) \
+                              and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std) \
+                             or custom_distracted
     self.driver_distraction_filter.update(self.driver_distracted)
 
     # update offseter
@@ -351,7 +369,9 @@ class DriverMonitoring:
     standstill_orange_exemption = standstill and _reaching_pre
     always_on_red_exemption = always_on_valid and not op_engaged and _reaching_terminal
 
-    if self.awareness > 0 and \
+    custom_distracted = (self.eyes_not_detected_steps >= int(3.0 / self.settings._DT_DMON) or
+                         self.eyes_closed_steps >= int(3.0 / self.settings._DT_DMON)) and self.pose.low_std and not standstill
+    if self.awareness > 0 and not custom_distracted and \
        ((self.driver_distraction_filter.x < 0.37 and self.face_detected and self.pose.low_std) or standstill_orange_exemption):
       if driver_engaged:
         self._reset_awareness()
@@ -368,7 +388,7 @@ class DriverMonitoring:
     certainly_distracted = self.driver_distraction_filter.x > 0.63 and self.driver_distracted and self.face_detected
     maybe_distracted = self.hi_stds > self.settings._HI_STD_FALLBACK_TIME or not self.face_detected
 
-    if certainly_distracted or maybe_distracted:
+    if certainly_distracted or maybe_distracted or custom_distracted:
       # should always be counting if distracted unless at standstill and reaching green
       # also will not be reaching 0 if DM is active when not engaged
       if not (standstill_orange_exemption or always_on_red_exemption):
@@ -381,7 +401,7 @@ class DriverMonitoring:
       self.terminal_time += 1
       if awareness_prev > 0.:
         self.terminal_alert_cnt += 1
-    elif self.awareness <= self.threshold_prompt:
+    elif self.awareness <= self.threshold_prompt or custom_distracted:
       # prompt orange alert
       alert = EventName.driverDistracted2 if self.active_monitoring_mode else EventName.driverUnresponsive2
     elif self.awareness <= self.threshold_pre:
