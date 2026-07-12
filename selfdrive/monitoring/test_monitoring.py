@@ -75,7 +75,7 @@ class TestMonitoring:
     assert len(events[int((d_status.settings._DISTRACTED_TIME-d_status.settings._DISTRACTED_PRE_TIME_TILL_TERMINAL)/2/DT_DMON)]) == 0
     assert events[int((d_status.settings._DISTRACTED_TIME-d_status.settings._DISTRACTED_PRE_TIME_TILL_TERMINAL + \
                     ((d_status.settings._DISTRACTED_PRE_TIME_TILL_TERMINAL-d_status.settings._DISTRACTED_PROMPT_TIME_TILL_TERMINAL)/2))/DT_DMON)].names[0] == \
-                    EventName.driverDistracted1
+                    EventName.driverDistracted2
     assert events[int((d_status.settings._DISTRACTED_TIME-d_status.settings._DISTRACTED_PROMPT_TIME_TILL_TERMINAL + \
                     ((d_status.settings._DISTRACTED_PROMPT_TIME_TILL_TERMINAL)/2))/DT_DMON)].names[0] == EventName.driverDistracted2
     assert events[int((d_status.settings._DISTRACTED_TIME + \
@@ -104,7 +104,7 @@ class TestMonitoring:
     interaction_vector = [car_interaction_NOT_DETECTED] * int(DISTRACTED_SECONDS_TO_ORANGE*3/DT_DMON) + \
                          [car_interaction_DETECTED] * (int(TEST_TIMESPAN/DT_DMON)-int(DISTRACTED_SECONDS_TO_ORANGE*3/DT_DMON))
     events, _ = self._run_seq(ds_vector, interaction_vector, always_true, always_false)
-    assert len(events[int(DISTRACTED_SECONDS_TO_ORANGE*0.5/DT_DMON)]) == 0
+    assert events[int(DISTRACTED_SECONDS_TO_ORANGE*0.5/DT_DMON)].names[0] == EventName.driverDistracted2
     assert events[int((DISTRACTED_SECONDS_TO_ORANGE-0.1)/DT_DMON)].names[0] == EventName.driverDistracted2
     assert len(events[int(DISTRACTED_SECONDS_TO_ORANGE*1.5/DT_DMON)]) == 0
     assert events[int((DISTRACTED_SECONDS_TO_ORANGE*3-0.1)/DT_DMON)].names[0] == EventName.driverDistracted2
@@ -186,7 +186,7 @@ class TestMonitoring:
     events, d_status = self._run_seq(always_distracted, always_false, always_true, standstill_vector)
     assert len(events[int((_redlight_time-0.1)/DT_DMON)]) == 0
     _pre_to_prompt = d_status.settings._DISTRACTED_PRE_TIME_TILL_TERMINAL - d_status.settings._DISTRACTED_PROMPT_TIME_TILL_TERMINAL
-    assert events[int((_redlight_time+0.5)/DT_DMON)].names[0] == EventName.driverDistracted1
+    assert events[int((_redlight_time+0.5)/DT_DMON)].names[0] == EventName.driverDistracted2
     assert events[int((_redlight_time+_pre_to_prompt+0.5)/DT_DMON)].names[0] == EventName.driverDistracted2
 
   # engaged, distracted while moving, then car stops after reaching orange
@@ -212,3 +212,38 @@ class TestMonitoring:
                               events[int((INVISIBLE_SECONDS_TO_ORANGE-1+DT_DMON*d_status.settings._HI_STD_FALLBACK_TIME+0.1)/DT_DMON)].names
     assert EventName.driverUnresponsive3 in \
                               events[int((INVISIBLE_SECONDS_TO_RED-1+DT_DMON*d_status.settings._HI_STD_FALLBACK_TIME+0.1)/DT_DMON)].names
+
+  # engaged, driver closes eyes for 3 seconds
+  def test_eyes_closed_3s(self):
+    msg_eyes_closed = make_msg(True, distracted=True)
+    ds_vector = [msg_eyes_closed] * int(3.0 / DT_DMON) + [msg_ATTENTIVE] * int(5.0 / DT_DMON)
+    interaction_vector = [False] * len(ds_vector)
+    engaged_vector = [True] * len(ds_vector)
+    standstill_vector = [False] * len(ds_vector)
+    events, _ = self._run_seq(ds_vector, interaction_vector, engaged_vector, standstill_vector)
+    # Check that alert is triggered at exactly 3.0 seconds (index 60)
+    assert events[int(3.0 / DT_DMON) - 1].names[0] == EventName.driverDistracted2
+    # Check that the alert is cleared after driver becomes attentive again
+    assert len(events[int(4.0 / DT_DMON)]) == 0
+
+  # engaged, driver's eyes not detected for 3 seconds
+  def test_eyes_not_detected_3s(self):
+    msg_eyes_invisible = log.DriverStateV2.new_message()
+    msg_eyes_invisible.leftDriverData.faceOrientation = [0., 0., 0.]
+    msg_eyes_invisible.leftDriverData.facePosition = [0., 0.]
+    msg_eyes_invisible.leftDriverData.faceProb = 1.0
+    msg_eyes_invisible.leftDriverData.eyesVisibleProb = 0.0
+    msg_eyes_invisible.leftDriverData.eyesClosedProb = 0.0
+    msg_eyes_invisible.leftDriverData.faceOrientationStd = [0.03, 0.03, 0.03]
+    msg_eyes_invisible.leftDriverData.facePositionStd = [0.01, 0.01]
+    
+    ds_vector = [msg_eyes_invisible] * int(3.0 / DT_DMON) + [msg_ATTENTIVE] * int(5.0 / DT_DMON)
+    interaction_vector = [False] * len(ds_vector)
+    engaged_vector = [True] * len(ds_vector)
+    standstill_vector = [False] * len(ds_vector)
+    events, _ = self._run_seq(ds_vector, interaction_vector, engaged_vector, standstill_vector)
+    # Check that alert is triggered at exactly 3.0 seconds (index 60)
+    assert events[int(3.0 / DT_DMON) - 1].names[0] == EventName.driverDistracted2
+    # Check that the alert is cleared after driver's eyes are detected again
+    assert len(events[int(4.0 / DT_DMON)]) == 0
+
