@@ -14,7 +14,7 @@ DISTRACTED_SECONDS_TO_RED = dm_settings._DISTRACTED_TIME + 1
 INVISIBLE_SECONDS_TO_ORANGE = dm_settings._AWARENESS_TIME - dm_settings._AWARENESS_PROMPT_TIME_TILL_TERMINAL + 1
 INVISIBLE_SECONDS_TO_RED = dm_settings._AWARENESS_TIME + 1
 
-def make_msg(face_detected, distracted=False, model_uncertain=False):
+def make_msg(face_detected, distracted=False, model_uncertain=False, eyes_visible=True):
   ds = log.DriverStateV2.new_message()
   ds.leftDriverData.faceOrientation = [0., 0., 0.]
   ds.leftDriverData.facePosition = [0., 0.]
@@ -31,6 +31,7 @@ def make_msg(face_detected, distracted=False, model_uncertain=False):
 # driver state from neural net, 10Hz
 msg_NO_FACE_DETECTED = make_msg(False)
 msg_ATTENTIVE = make_msg(True)
+msg_EYES_NOT_VISIBLE = make_msg(True, eyes_visible=False)
 msg_DISTRACTED = make_msg(True, distracted=True)
 msg_ATTENTIVE_UNCERTAIN = make_msg(True, model_uncertain=True)
 msg_DISTRACTED_UNCERTAIN = make_msg(True, distracted=True, model_uncertain=True)
@@ -68,6 +69,19 @@ class TestMonitoring:
   def test_fully_aware_driver(self):
     events, _ = self._run_seq(always_attentive, always_false, always_true, always_false)
     self._assert_no_events(events)
+
+  # Eyes must have been detected first; after three continuous seconds without
+  # eye detection, issue the first driver-distraction warning.
+  def test_eyes_undetected_for_three_seconds_warns(self):
+    visible_time = int(1 / DT_DMON)
+    invisible_time = int(4 / DT_DMON)
+    msgs = [msg_ATTENTIVE] * visible_time + [msg_EYES_NOT_VISIBLE] * invisible_time
+    interaction = [car_interaction_NOT_DETECTED] * len(msgs)
+    engaged = [True] * len(msgs)
+    standstill = [False] * len(msgs)
+    events, _ = self._run_seq(msgs, interaction, engaged, standstill)
+    assert not len(events[visible_time + int(2.9 / DT_DMON)])
+    assert EventName.driverDistracted1 in events[visible_time + int(3.1 / DT_DMON)].names
 
   # engaged, driver is distracted and does nothing
   def test_fully_distracted_driver(self):
