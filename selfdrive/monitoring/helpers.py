@@ -33,6 +33,7 @@ class DRIVER_MONITOR_SETTINGS:
 
     self._FACE_THRESHOLD = 0.7
     self._EYE_THRESHOLD = 0.5
+    self._EYE_UNDETECTED_TIME = 3.  # warn if previously visible eyes disappear for this long
     self._BLINK_THRESHOLD = 0.5
     self._PHONE_THRESH = 0.5
 
@@ -155,6 +156,9 @@ class DriverMonitoring:
     self.wheel_on_right_last = None
     self.wheel_on_right_default = rhd_saved
     self.face_detected = False
+    self.eyes_detected = False
+    self.eyes_were_detected = False
+    self.eyes_undetected_time = 0.
     self.terminal_alert_cnt = 0
     self.terminal_time = 0
     self.step_change = 0.
@@ -277,6 +281,15 @@ class DriverMonitoring:
       return
 
     self.face_detected = driver_data.faceProb > self.settings._FACE_THRESHOLD
+    self.eyes_detected = self.face_detected and driver_data.eyesVisibleProb > self.settings._EYE_THRESHOLD
+    if not op_engaged:
+      self.eyes_were_detected = False
+      self.eyes_undetected_time = 0.
+    elif self.eyes_detected:
+      self.eyes_were_detected = True
+      self.eyes_undetected_time = 0.
+    elif self.eyes_were_detected:
+      self.eyes_undetected_time += self.settings._DT_DMON
     self.pose.roll, self.pose.pitch, self.pose.yaw = face_orientation_from_net(driver_data.faceOrientation, driver_data.facePosition, cal_rpy)
     steer_d = max(abs(steering_angle_deg) - self.settings._POSE_YAW_MIN_STEER_DEG, 0.)
     self.pose.steer_yaw_offset = radians(steer_d) * -np.sign(steering_angle_deg) * self.settings._POSE_YAW_STEER_FACTOR
@@ -352,7 +365,7 @@ class DriverMonitoring:
     always_on_red_exemption = always_on_valid and not op_engaged and _reaching_terminal
 
     if self.awareness > 0 and \
-       ((self.driver_distraction_filter.x < 0.37 and self.face_detected and self.pose.low_std) or standstill_orange_exemption):
+       ((self.driver_distraction_filter.x < 0.37 and self.face_detected and self.pose.low_std and not eye_undetected_alert) or standstill_orange_exemption):
       if driver_engaged:
         self._reset_awareness()
         return
@@ -390,6 +403,11 @@ class DriverMonitoring:
 
     if alert is not None:
       self.current_events.add(alert)
+
+    # Emit the first driver-distraction warning as soon as eyes that were visible
+    # have been missing for three continuous seconds.
+    if eye_undetected_alert:
+      self.current_events.add(EventName.driverDistracted2)
 
     if self.dcam_uncertain_cnt > self.settings._DCAM_UNCERTAIN_ALERT_COUNT and not self.dcam_uncertain_alerted:
       set_offroad_alert("Offroad_DriverMonitoringUncertain", True)
