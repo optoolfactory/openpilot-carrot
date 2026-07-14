@@ -35,6 +35,8 @@ class DRIVER_MONITOR_SETTINGS:
     self._EYE_THRESHOLD = 0.5
     self._BLINK_THRESHOLD = 0.5
     self._PHONE_THRESH = 0.5
+    self._EYE_UNRESPONSIVE_TIME = 3.0
+    self._EYE_UNRESPONSIVE_ALERT_COUNT = int(self._EYE_UNRESPONSIVE_TIME / self._DT_DMON)
 
     self._POSE_PITCH_THRESHOLD = 0.3133
     self._POSE_PITCH_THRESHOLD_SLACK = 0.3237
@@ -161,6 +163,7 @@ class DriverMonitoring:
     self.active_monitoring_mode = True
     self.is_model_uncertain = False
     self.hi_stds = 0
+    self.eyes_unresponsive_cnt = 0
     self.threshold_pre = self.settings._DISTRACTED_PRE_TIME_TILL_TERMINAL / self.settings._DISTRACTED_TIME
     self.threshold_prompt = self.settings._DISTRACTED_PROMPT_TIME_TILL_TERMINAL / self.settings._DISTRACTED_TIME
     self.dcam_uncertain_cnt = 0
@@ -291,10 +294,18 @@ class DriverMonitoring:
     self.blink_prob = driver_data.eyesClosedProb * (driver_data.eyesVisibleProb > self.settings._EYE_THRESHOLD)
     self.phone_prob = driver_data.phoneProb
 
+    eyes_tracked = driver_data.eyesVisibleProb > self.settings._EYE_THRESHOLD
+    eyes_closed = driver_data.eyesClosedProb > self.settings._BLINK_THRESHOLD
+    if self.face_detected and (not eyes_tracked or eyes_closed):
+      self.eyes_unresponsive_cnt += 1
+    else:
+      self.eyes_unresponsive_cnt = 0
+
     self.distracted_types = self._get_distracted_types()
-    self.driver_distracted = (DistractedType.DISTRACTED_PHONE in self.distracted_types
+    self.driver_distracted = ((DistractedType.DISTRACTED_PHONE in self.distracted_types
                               or DistractedType.DISTRACTED_POSE in self.distracted_types
-                              or DistractedType.DISTRACTED_BLINK in self.distracted_types) \
+                              or DistractedType.DISTRACTED_BLINK in self.distracted_types)
+                              or (self.face_detected and not eyes_tracked)) \
                               and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std
     self.driver_distraction_filter.update(self.driver_distracted)
 
@@ -375,6 +386,8 @@ class DriverMonitoring:
         self.awareness = max(self.awareness - self.step_change, -0.1)
 
     alert = None
+    if self.eyes_unresponsive_cnt >= self.settings._EYE_UNRESPONSIVE_ALERT_COUNT:
+      alert = EventName.driverUnresponsive2
     if self.awareness <= 0.:
       # terminal red alert: disengagement required
       alert = EventName.driverDistracted3 if self.active_monitoring_mode else EventName.driverUnresponsive3
@@ -383,7 +396,9 @@ class DriverMonitoring:
         self.terminal_alert_cnt += 1
     elif self.awareness <= self.threshold_prompt:
       # prompt orange alert
-      alert = EventName.driverDistracted2 if self.active_monitoring_mode else EventName.driverUnresponsive2
+      # do not override an immediate eye-unresponsive event once triggered
+      if alert is None:
+        alert = EventName.driverDistracted2 if self.active_monitoring_mode else EventName.driverUnresponsive2
     elif self.awareness <= self.threshold_pre:
       # pre green alert
       alert = EventName.driverDistracted1 if self.active_monitoring_mode else EventName.driverUnresponsive1
