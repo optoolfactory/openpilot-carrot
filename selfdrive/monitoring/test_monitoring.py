@@ -14,13 +14,13 @@ DISTRACTED_SECONDS_TO_RED = dm_settings._DISTRACTED_TIME + 1
 INVISIBLE_SECONDS_TO_ORANGE = dm_settings._AWARENESS_TIME - dm_settings._AWARENESS_PROMPT_TIME_TILL_TERMINAL + 1
 INVISIBLE_SECONDS_TO_RED = dm_settings._AWARENESS_TIME + 1
 
-def make_msg(face_detected, distracted=False, model_uncertain=False):
+def make_msg(face_detected, distracted=False, model_uncertain=False, eyes_visible=1.0, eyes_closed=0.0):
   ds = log.DriverStateV2.new_message()
   ds.leftDriverData.faceOrientation = [0., 0., 0.]
   ds.leftDriverData.facePosition = [0., 0.]
   ds.leftDriverData.faceProb = 1. * face_detected
-  ds.leftDriverData.eyesVisibleProb = 1.
-  ds.leftDriverData.eyesClosedProb = 1. * distracted
+  ds.leftDriverData.eyesVisibleProb = eyes_visible
+  ds.leftDriverData.eyesClosedProb = eyes_closed
   ds.leftDriverData.faceOrientationStd = [1.*model_uncertain, 1.*model_uncertain, 1.*model_uncertain]
   ds.leftDriverData.facePositionStd = [1.*model_uncertain, 1.*model_uncertain]
   # TODO: test both separately when e2e is used
@@ -31,10 +31,10 @@ def make_msg(face_detected, distracted=False, model_uncertain=False):
 # driver state from neural net, 10Hz
 msg_NO_FACE_DETECTED = make_msg(False)
 msg_ATTENTIVE = make_msg(True)
-msg_DISTRACTED = make_msg(True, distracted=True)
+msg_DISTRACTED = make_msg(True, distracted=True, eyes_visible=1.0, eyes_closed=1.0)
 msg_ATTENTIVE_UNCERTAIN = make_msg(True, model_uncertain=True)
-msg_DISTRACTED_UNCERTAIN = make_msg(True, distracted=True, model_uncertain=True)
-msg_DISTRACTED_BUT_SOMEHOW_UNCERTAIN = make_msg(True, distracted=True, model_uncertain=dm_settings._POSESTD_THRESHOLD*1.5)
+msg_DISTRACTED_UNCERTAIN = make_msg(True, distracted=True, model_uncertain=True, eyes_visible=1.0, eyes_closed=1.0)
+msg_DISTRACTED_BUT_SOMEHOW_UNCERTAIN = make_msg(True, distracted=True, model_uncertain=dm_settings._POSESTD_THRESHOLD*1.5, eyes_visible=1.0, eyes_closed=1.0)
 
 # driver interaction with car
 car_interaction_DETECTED = True
@@ -93,6 +93,18 @@ class TestMonitoring:
                       ((d_status.settings._AWARENESS_PROMPT_TIME_TILL_TERMINAL)/2))/DT_DMON)].names[0] == EventName.driverUnresponsive2
     assert events[int((d_status.settings._AWARENESS_TIME + \
                       ((TEST_TIMESPAN-10-d_status.settings._AWARENESS_TIME)/2))/DT_DMON)].names[0] == EventName.driverUnresponsive3
+
+  def test_eyes_unresponsive_triggers_driver_unresponsive2(self):
+    msg_eyes_not_recognized = make_msg(True, eyes_visible=0.0, eyes_closed=0.0)
+    msg_eyes_closed = make_msg(True, eyes_visible=1.0, eyes_closed=1.0)
+    count = int((dm_settings._EYE_UNRESPONSIVE_TIME + 0.1) / DT_DMON)
+    msgs = [msg_eyes_not_recognized] * count
+    events, _ = self._run_seq(msgs, always_false[:len(msgs)], always_true[:len(msgs)], always_false[:len(msgs)])
+    assert EventName.driverUnresponsive2 in events[-1].names
+
+    msgs = [msg_eyes_closed] * count
+    events, _ = self._run_seq(msgs, always_false[:len(msgs)], always_true[:len(msgs)], always_false[:len(msgs)])
+    assert EventName.driverUnresponsive2 in events[-1].names
 
   # engaged, down to orange, driver pays attention, back to normal; then down to orange, driver touches wheel
   #  - should have short orange recovery time and no green afterwards; wheel touch only recovers when paying attention
