@@ -49,6 +49,8 @@ class DRIVER_MONITOR_SETTINGS:
     self._EYE_THRESHOLD = 0.65
     self._SG_THRESHOLD = 0.9
     self._BLINK_THRESHOLD = 0.865
+    self._EYES_CLOSED_DROWSY_TIMEOUT = 3.  # continuous eyes-closed time to trigger a drowsy driving warning
+    self._EYES_CLOSED_DROWSY_COUNT = int(self._EYES_CLOSED_DROWSY_TIMEOUT / DT_DMON)
     self._PHONE_THRESH = 0.5
     self._POSE_PITCH_THRESHOLD = 0.3133
     self._POSE_PITCH_THRESHOLD_SLACK = 0.3237
@@ -147,6 +149,8 @@ class DriverMonitoring:
     self.wheel_on_right_last = None
     self.wheel_on_right_default = rhd_saved
     self.face_detected = False
+    self.eyes_closed_cnt = 0
+    self.is_drowsy = False
     self.alert_3_cnt = 0
     self.cnt_since_alert_3 = 0
     self.no_response_timeout = int(self.settings._NO_RESPONSE_TIMEOUT / DT_DMON)
@@ -276,6 +280,14 @@ class DriverMonitoring:
     self.phone_prob = driver_data.phoneProb
 
     self._get_distracted_types()
+
+    # face detected but eyes closed continuously -> drowsy driving warning, clears as soon as eyes reopen
+    if self.face_detected and self.distracted_types['eye']:
+      self.eyes_closed_cnt += 1
+    else:
+      self.eyes_closed_cnt = 0
+    self.is_drowsy = self.eyes_closed_cnt >= self.settings._EYES_CLOSED_DROWSY_COUNT
+
     self.driver_distracted = any(self.distracted_types.values()) and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std
     self.driver_distraction_filter.update(self.driver_distracted)
 
@@ -400,6 +412,7 @@ class DriverMonitoring:
     dm.visionPolicyState.distractedTypes.eye = self.distracted_types['eye']
     dm.visionPolicyState.distractedTypes.phone = self.distracted_types['phone']
     dm.visionPolicyState.faceDetected = self.face_detected
+    dm.visionPolicyState.isDrowsy = self.is_drowsy
     dm.visionPolicyState.pose.pitch = self.pose.pitch
     dm.visionPolicyState.pose.yaw = self.pose.yaw
     dm.visionPolicyState.pose.calibrated = self.pose.calibrated
