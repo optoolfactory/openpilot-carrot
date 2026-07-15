@@ -158,6 +158,8 @@ struct OnroadEvent @0xc4fa6047f024e718 {
 
     torqueNNLoad @118;
 
+    driverDrowsy @123;
+
     soundsUnavailableDEPRECATED @47;
   }
 }
@@ -2210,6 +2212,7 @@ struct DriverMonitoringState {
     pose @5 :Pose;
     wheeltouchFallbackPercent @6 :Int8;
     uncertainOffroadAlertPercent @7 :Int8;
+    isDrowsy @8 :Bool;
 
     struct DistractedTypes {
       pose @0: Bool;
@@ -2623,8 +2626,8 @@ struct Event {
     # DON'T change the ID (e.g. @107)
     # DON'T change which struct it points to
     carrotMan @107 :Custom.CarrotMan;
-    carrotNavi @108 :Custom.CarrotNaviState;
-    carrotNaviMedia @109 :Custom.CarrotNaviMedia;
+    customReserved1 @108 :Custom.CustomReserved1;
+    customReserved2 @109 :Custom.CustomReserved2;
     customReserved3 @110 :Custom.CustomReserved3;
     customReserved4 @111 :Custom.CustomReserved4;
     customReserved5 @112 :Custom.CustomReserved5;
