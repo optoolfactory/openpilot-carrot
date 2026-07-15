@@ -70,6 +70,7 @@ CLUSTER_PRIORITY_MIN = 1
 CLUSTER_PRIORITY_MAX = 99
 CLUSTER_CAMERA_VIEW_MODE_DEFAULT = 0
 CLUSTER_CAMERA_VIEW_MODE_EGO_BOTTOM = 1
+CLUSTER_CAMERA_VIEW_MODE_ROAD_CAMERA = 2
 CLUSTER_CAMERA_VIEW_MODE_PARAM = "ClusterHudCameraViewMode"
 CLUSTER_SCREEN_MODE_DEFAULT = 0
 CLUSTER_SCREEN_MODE_DEBUG = 1
@@ -77,6 +78,7 @@ CLUSTER_SCREEN_MODE_DEBUG_SYSTEM = 2
 CLUSTER_SCREEN_MODE_DEBUG_GRAPH = 3
 CLUSTER_SCREEN_MODE_DEBUG_GRAPH_RIGHT = 4
 CLUSTER_SCREEN_MODE_NAVI_DEBUG = 5
+CLUSTER_SCREEN_MODE_NAVI = 6
 CLUSTER_SCREEN_MODE_PARAM = "ClusterHudScreenMode"
 CLUSTER_RADAR_INFO_NONE = 0
 CLUSTER_RADAR_INFO_VEHICLE_SPEED = 1
@@ -282,6 +284,11 @@ def normalize_cluster_camera_view_mode(value: object) -> int:
             "mode1": CLUSTER_CAMERA_VIEW_MODE_EGO_BOTTOM,
             "mode-1": CLUSTER_CAMERA_VIEW_MODE_EGO_BOTTOM,
             "legacy": CLUSTER_CAMERA_VIEW_MODE_EGO_BOTTOM,
+            "camera": CLUSTER_CAMERA_VIEW_MODE_ROAD_CAMERA,
+            "road-camera": CLUSTER_CAMERA_VIEW_MODE_ROAD_CAMERA,
+            "road_camera": CLUSTER_CAMERA_VIEW_MODE_ROAD_CAMERA,
+            "mode2": CLUSTER_CAMERA_VIEW_MODE_ROAD_CAMERA,
+            "mode-2": CLUSTER_CAMERA_VIEW_MODE_ROAD_CAMERA,
         }
         if normalized in aliases:
             return aliases[normalized]
@@ -295,6 +302,8 @@ def normalize_cluster_camera_view_mode(value: object) -> int:
         return CLUSTER_CAMERA_VIEW_MODE_DEFAULT
     if mode == CLUSTER_CAMERA_VIEW_MODE_EGO_BOTTOM:
         return CLUSTER_CAMERA_VIEW_MODE_EGO_BOTTOM
+    if mode == CLUSTER_CAMERA_VIEW_MODE_ROAD_CAMERA:
+        return CLUSTER_CAMERA_VIEW_MODE_ROAD_CAMERA
     return CLUSTER_CAMERA_VIEW_MODE_DEFAULT
 
 
@@ -334,6 +343,8 @@ def normalize_cluster_screen_mode(value: object) -> int:
             "navi_debug": CLUSTER_SCREEN_MODE_NAVI_DEBUG,
             "navigation-debug": CLUSTER_SCREEN_MODE_NAVI_DEBUG,
             "navigation_debug": CLUSTER_SCREEN_MODE_NAVI_DEBUG,
+            "navi": CLUSTER_SCREEN_MODE_NAVI,
+            "navigation": CLUSTER_SCREEN_MODE_NAVI,
         }
         if normalized in aliases:
             return aliases[normalized]
@@ -352,6 +363,7 @@ def normalize_cluster_screen_mode(value: object) -> int:
         CLUSTER_SCREEN_MODE_DEBUG_GRAPH,
         CLUSTER_SCREEN_MODE_DEBUG_GRAPH_RIGHT,
         CLUSTER_SCREEN_MODE_NAVI_DEBUG,
+        CLUSTER_SCREEN_MODE_NAVI,
     ):
         return mode
     return CLUSTER_SCREEN_MODE_DEFAULT
@@ -515,6 +527,7 @@ SURROUND_ROAD_STEPS = 96
 SURROUND_ROAD_NEAR_DEPTH_M = 0.75
 VEHICLE_WIDTH_M = 1.82
 VEHICLE_LENGTH_M = 4.35
+RADAR_TO_CAMERA_M = 1.52
 VEHICLE_SURROUND_WIDTH_M = 1.05
 VEHICLE_SURROUND_LENGTH_M = 1.85
 VEHICLE_HEIGHT_M = 1.35

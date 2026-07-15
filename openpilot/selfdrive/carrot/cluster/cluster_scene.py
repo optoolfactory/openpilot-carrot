@@ -12,6 +12,7 @@ from cluster_config import (
     BLUE,
     BLUE_SOFT,
     CLUSTER_CAMERA_VIEW_MODE_EGO_BOTTOM,
+    CLUSTER_CAMERA_VIEW_MODE_ROAD_CAMERA,
     CLUSTER_RADAR_DISPLAY_DETAIL,
     CLUSTER_RADAR_SOURCE_COLOR_BY_SOURCE,
     ClusterTheme,
@@ -120,6 +121,7 @@ DRIVE_VIEW_ROAD_START_M = (
 )
 VEHICLE_BADGE_TTC_S = 9.9
 VEHICLE_BADGE_ACCEL_MPS2 = 1.0
+DETECTED_VEHICLE_DISPLAY_HEIGHT_OFFSET_M = -0.3
 MODEL_LINE_STRIP_GROUP_CACHE_LIMIT = 48
 MODEL_LINE_STRIP_GROUP_CACHE_GRID_M = 0.5
 MODEL_LINE_STRIP_GROUP_CACHE_POINT_GRID_M = 0.05
@@ -163,12 +165,13 @@ PATH_BODY_LAYER_M = PATH_HEIGHT_M + 0.046
 PATH_METRIC_LAYER_M = PATH_HEIGHT_M + 0.066
 PATH_HIGHLIGHT_LAYER_M = PATH_HEIGHT_M + 0.088
 FOLLOW_DISTANCE_MARKER_BACKING_LAYER_M = PATH_HEIGHT_M + 0.116
-FOLLOW_DISTANCE_MARKER_BODY_LAYER_M = PATH_HEIGHT_M + 0.132
-FOLLOW_DISTANCE_MARKER_BACKING_FORWARD_M = 0.36
-FOLLOW_DISTANCE_MARKER_BODY_FORWARD_M = 0.20
-FOLLOW_DISTANCE_MARKER_BACKING_EXTRA_WIDTH_M = 0.22
-FOLLOW_DISTANCE_MARKER_BACKING_COLOR: Color = (42, 0, 38, 230)
-FOLLOW_DISTANCE_MARKER_BODY_COLOR: Color = (255, 0, 220, 248)
+FOLLOW_DISTANCE_MARKER_BODY_LAYER_M = FOLLOW_DISTANCE_MARKER_BACKING_LAYER_M + 0.001
+FOLLOW_DISTANCE_MARKER_WIDTH_M = 1.8
+FOLLOW_DISTANCE_MARKER_BODY_FORWARD_M = 0.26
+FOLLOW_DISTANCE_MARKER_OUTLINE_M = 0.07
+FOLLOW_DISTANCE_MARKER_CAP_STEPS = 10
+FOLLOW_DISTANCE_MARKER_BACKING_COLOR: Color = (5, 9, 12, 230)
+FOLLOW_DISTANCE_MARKER_BODY_COLOR: Color = (255, 255, 255, 242)
 FOLLOW_DISTANCE_STOP_DISTANCE_M = 6.0
 FOLLOW_DISTANCE_GAP_T_FOLLOW_S = {
     1: 1.25,
@@ -1572,35 +1575,33 @@ def follow_distance_marker_strips(
     center_x_m = centerline_x_at_forward(points, forward_m)
     if center_x_m is None:
         return ()
-    half_width_m = lane_width_m * 0.5
-
-    def marker_strip(half_forward_m: float, extra_width_m: float, height_m: float, color: Color) -> MeshStrip:
-        left_x_m = center_x_m - half_width_m - extra_width_m
-        right_x_m = center_x_m + half_width_m + extra_width_m
-        near_m = forward_m - half_forward_m
-        far_m = forward_m + half_forward_m
+    def marker_strip(width_m: float, half_forward_m: float, height_m: float, color: Color) -> MeshStrip:
+        radius_m = min(width_m * 0.5, half_forward_m)
+        straight_half_width_m = width_m * 0.5 - radius_m
+        left: list[Vec3] = []
+        right: list[Vec3] = []
+        for index in range(FOLLOW_DISTANCE_MARKER_CAP_STEPS + 1):
+            offset_m = -half_forward_m + 2.0 * half_forward_m * index / FOLLOW_DISTANCE_MARKER_CAP_STEPS
+            cap_x_m = math.sqrt(max(0.0, radius_m * radius_m - offset_m * offset_m))
+            half_width_m = straight_half_width_m + cap_x_m
+            left.append(Vec3(center_x_m - half_width_m, forward_m + offset_m, height_m))
+            right.append(Vec3(center_x_m + half_width_m, forward_m + offset_m, height_m))
         return MeshStrip(
-            left=(
-                Vec3(left_x_m, near_m, height_m),
-                Vec3(left_x_m, far_m, height_m),
-            ),
-            right=(
-                Vec3(right_x_m, near_m, height_m),
-                Vec3(right_x_m, far_m, height_m),
-            ),
+            left=tuple(left),
+            right=tuple(right),
             color=color,
         )
 
     return (
         marker_strip(
-            FOLLOW_DISTANCE_MARKER_BACKING_FORWARD_M,
-            FOLLOW_DISTANCE_MARKER_BACKING_EXTRA_WIDTH_M,
+            FOLLOW_DISTANCE_MARKER_WIDTH_M + FOLLOW_DISTANCE_MARKER_OUTLINE_M * 2.0,
+            FOLLOW_DISTANCE_MARKER_BODY_FORWARD_M + FOLLOW_DISTANCE_MARKER_OUTLINE_M,
             FOLLOW_DISTANCE_MARKER_BACKING_LAYER_M,
             FOLLOW_DISTANCE_MARKER_BACKING_COLOR,
         ),
         marker_strip(
+            FOLLOW_DISTANCE_MARKER_WIDTH_M,
             FOLLOW_DISTANCE_MARKER_BODY_FORWARD_M,
-            0.0,
             FOLLOW_DISTANCE_MARKER_BODY_LAYER_M,
             FOLLOW_DISTANCE_MARKER_BODY_COLOR,
         ),
@@ -2113,7 +2114,12 @@ def merge_detected_vehicle_for_display(base: DetectedVehicle, other: DetectedVeh
         ttc_s=base.ttc_s if base.ttc_s is not None else other.ttc_s,
         x_std_m=base.x_std_m if base.x_std_m is not None else other.x_std_m,
         y_std_m=base.y_std_m if base.y_std_m is not None else other.y_std_m,
+        radar_track_id=base.radar_track_id if base.radar_track_id is not None else other.radar_track_id,
     )
+
+
+def detected_vehicles_have_same_radar_track(left: DetectedVehicle, right: DetectedVehicle) -> bool:
+    return left.radar_track_id is not None and left.radar_track_id == right.radar_track_id
 
 
 def merged_detected_vehicle_source(base_source: str, other_source: str) -> str:
@@ -2751,6 +2757,7 @@ def vehicle_box(
     annotate: bool = False,
     x_offset_m: float = 0.0,
     center_x_m_override: float | None = None,
+    center_z_m_offset: float = 0.0,
 ) -> VehicleBox:
     confidence = clamp(confidence, 0.0, 1.0)
     alpha = int(92 + 163 * confidence)
@@ -2782,7 +2789,7 @@ def vehicle_box(
     )
 
     return VehicleBox(
-        center=Vec3(center_x_m, forward_m, height_m * 0.5),
+        center=Vec3(center_x_m, forward_m, height_m * 0.5 + center_z_m_offset),
         right_x=right_x,
         right_y=right_y,
         forward_x=forward_x,
@@ -3376,8 +3383,23 @@ def build_cluster_scene(
     if raw_corner_active:
         display_detected_vehicles = tuple(
             vehicle for vehicle in display_detected_vehicles
-            if detected_vehicle_is_front_lead(vehicle)
+            if vehicle.cut_in
+            or detected_vehicle_is_front_lead(vehicle)
             or detected_vehicle_is_rear_car_state_summary(vehicle)
+        )
+    cutin_vehicles = tuple(vehicle for vehicle in display_detected_vehicles if vehicle.cut_in)
+    if cutin_vehicles:
+        display_detected_vehicles = tuple(
+            vehicle for vehicle in display_detected_vehicles
+            if vehicle.cut_in
+            or not any(detected_vehicles_have_same_radar_track(vehicle, cutin) for cutin in cutin_vehicles)
+        )
+    lead_one_vehicles = tuple(vehicle for vehicle in display_detected_vehicles if vehicle.label.upper().startswith("L1"))
+    if lead_one_vehicles:
+        display_detected_vehicles = tuple(
+            vehicle for vehicle in display_detected_vehicles
+            if not vehicle.label.upper().startswith("L2")
+            or not any(detected_vehicles_have_same_radar_track(vehicle, lead_one) for lead_one in lead_one_vehicles)
         )
     if display_radar_points is not state.radar_points or display_detected_vehicles != state.detected_vehicles:
         state = replace(state, radar_points=display_radar_points, detected_vehicles=display_detected_vehicles)
@@ -3512,6 +3534,7 @@ def build_cluster_scene(
         camera_active,
         target_offset,
     )
+    show_ego_vehicle = state.camera_view_mode != CLUSTER_CAMERA_VIEW_MODE_ROAD_CAMERA
     merged_radar_labels = frozenset[str]()
     if route_mode:
         if raw_corner_active:
@@ -3559,6 +3582,7 @@ def build_cluster_scene(
                 primary=detected.primary,
                 annotate=vehicle_badge_has_special_info(detected),
                 center_x_m_override=detected.lateral_m + relative_scene_x_offset_m,
+                center_z_m_offset=DETECTED_VEHICLE_DISPLAY_HEIGHT_OFFSET_M,
             )
             for detected in render_detected_vehicles
         )
@@ -3594,10 +3618,11 @@ def build_cluster_scene(
             for vehicle in visible_radar_vehicle_boxes_raw
         )
         blockers = (*detected_blockers, *radar_blockers)
-        vehicles = (ego_vehicle, *detected_vehicle_boxes, *visible_radar_vehicle_boxes)
+        scene_vehicles = (*detected_vehicle_boxes, *visible_radar_vehicle_boxes)
+        vehicles = (ego_vehicle, *scene_vehicles) if show_ego_vehicle else scene_vehicles
     else:
         blockers = ()
-        vehicles = (ego_vehicle,)
+        vehicles = (ego_vehicle,) if show_ego_vehicle else ()
     profile_scene_add(profile_add, "scene.build.vehicles", profile_stage)
 
     profile_stage = profile_scene_start(profile_add)
@@ -3619,7 +3644,15 @@ def build_cluster_scene(
 
     profile_stage = profile_scene_start(profile_add)
     if raw_corner_active:
-        radar_points = ()
+        radar_points = radar_point_markers(
+            state,
+            lane_width_m,
+            (),
+            min_forward_m=road_start_m,
+            max_forward_m=road_end_m if camera_active else ROAD_FAR_M + 30.0,
+            x_offset_m=relative_scene_x_offset_m,
+            lateral_speed_offset_mps=corner_lateral_speed_offset_mps,
+        )
     else:
         hidden_merged_radar_points = tuple(point for point in state.radar_points if point.label in merged_radar_labels)
         radar_points = radar_point_markers(

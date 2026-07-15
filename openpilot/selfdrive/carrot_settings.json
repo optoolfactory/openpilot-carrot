@@ -399,8 +399,8 @@
           "zh": "雷达",
           "params": [
             "EnableRadarTracks",
-            "RadarLatFactor",
-            "EnableCornerRadar"
+            "EnableCornerRadar",
+            "RadarLeadModelMode"
           ]
         },
         {
@@ -488,7 +488,9 @@
                 "ClusterHud",
                 "ClusterHudBrightness",
                 "ClusterHudMirror",
-                "ClusterHudTheme"
+                "ClusterHudTheme",
+                "ClusterNaviMapTheme",
+                "ClusterNaviMapType"
               ]
             },
             {
@@ -2456,22 +2458,6 @@
     },
     {
       "group": "레이더설정",
-      "name": "RadarLatFactor",
-      "title": "끼어들기 감지 감도(0)",
-      "descr": "높을수록 옆차선에서 들어오는 차량을 더 빨리 잡지만, 너무 높으면 옆차를 앞차로 볼 수 있음",
-      "egroup": "RADAR",
-      "etitle": "Cut-in detection sensitivity(50)",
-      "edescr": "50 is the recommended baseline. Lower values reduce sensitivity; higher values catch lane-entering vehicles earlier, but too high may mistake adjacent-lane vehicles for leads.",
-      "cgroup": "雷达设置",
-      "ctitle": "切入检测灵敏度 (0)",
-      "cdescr": "值越高越早发现从旁边车道驶入的车辆，但太高可能把旁边车道车辆当作前车",
-      "min": 0,
-      "max": 100,
-      "default": 50,
-      "unit": 1
-    },
-    {
-      "group": "레이더설정",
       "name": "EnableCornerRadar",
       "title": "코너레이더 사용(0)",
       "descr": "1:코너레이더활성화,2:끼어드는 차량 검출",
@@ -2483,6 +2469,22 @@
       "cdescr": "1: 开启角雷达, 2: CCNC 车辆的切入检测",
       "min": 0,
       "max": 2,
+      "default": 0,
+      "unit": 1
+    },
+    {
+      "group": "레이더",
+      "name": "RadarLeadModelMode",
+      "title": "레이더 리드 방식(0)",
+      "descr": "0: 기존 방식\n1: 모델 방식 (radard 재시작 후 적용)",
+      "egroup": "RADAR",
+      "etitle": "Radar lead method(0)",
+      "edescr": "0: Legacy\n1: Model (applied after radard restart)",
+      "cgroup": "RADAR",
+      "ctitle": "Radar lead method(0)",
+      "cdescr": "0: Legacy\n1: Model (applied after radard restart)",
+      "min": 0,
+      "max": 1,
       "default": 0,
       "unit": 1
     },
@@ -3077,6 +3079,38 @@
     },
     {
       "group": "외부 HUD",
+      "name": "ClusterNaviMapTheme",
+      "title": "클러스터 내비 지도 테마(1)",
+      "descr": "0: 자동\n1: 다크\n2: 라이트\n변경하면 외부 내비가 자동으로 다시 연결됩니다.",
+      "egroup": "CLUSTER HUD",
+      "etitle": "Cluster Navi Map Theme(1)",
+      "edescr": "0: Auto\n1: Dark\n2: Light\nThe external navigation app reconnects automatically when changed.",
+      "cgroup": "外部 HUD",
+      "ctitle": "集群导航地图主题(1)",
+      "cdescr": "0: 自动\n1: 深色\n2: 浅色\n更改后外部导航应用会自动重新连接。",
+      "min": 0,
+      "max": 2,
+      "default": 1,
+      "unit": 1
+    },
+    {
+      "group": "외부 HUD",
+      "name": "ClusterNaviMapType",
+      "title": "클러스터 내비 지도 종류(0)",
+      "descr": "0: 일반 지도\n1: 위성 지도\n변경하면 외부 내비가 자동으로 다시 연결됩니다.",
+      "egroup": "CLUSTER HUD",
+      "etitle": "Cluster Navi Map Type(0)",
+      "edescr": "0: Normal map\n1: Satellite map\nThe external navigation app reconnects automatically when changed.",
+      "cgroup": "外部 HUD",
+      "ctitle": "集群导航地图类型(0)",
+      "cdescr": "0: 普通地图\n1: 卫星地图\n更改后外部导航应用会自动重新连接。",
+      "min": 0,
+      "max": 1,
+      "default": 0,
+      "unit": 1
+    },
+    {
+      "group": "외부 HUD",
       "name": "ClusterHudLiveFps",
       "title": "외부 HUD 라이브 FPS 제한(1)",
       "descr": "0: 무제한(진단용)\n1: 10 FPS(기본)\n2: 20 FPS\n3: 30 FPS\n4: 40 FPS\n5: 50 FPS\n6: 60 FPS",
@@ -3191,15 +3225,15 @@
       "group": "외부 HUD",
       "name": "ClusterHudCameraViewMode",
       "title": "외부 HUD 카메라 뷰 모드(0)",
-      "descr": "0: 기본\n1: 모드1(하단뷰)",
+      "descr": "0: 기본\n1: 모드1(하단뷰)\n2: 전방 카메라 배경",
       "egroup": "CLUSTER HUD",
       "etitle": "External HUD Camera View Mode(0)",
-      "edescr": "0: Default\n1: Mode 1 (bottom view)",
+      "edescr": "0: Default\n1: Mode 1 (bottom view)\n2: Road camera background",
       "cgroup": "外部 HUD",
       "ctitle": "External HUD Camera View Mode(0)",
-      "cdescr": "0: Default\n1: Mode 1 (bottom view)",
+      "cdescr": "0: Default\n1: Mode 1 (bottom view)\n2: Road camera background",
       "min": 0,
-      "max": 1,
+      "max": 2,
       "default": 0,
       "unit": 1
     }

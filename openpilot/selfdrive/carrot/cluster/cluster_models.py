@@ -58,6 +58,8 @@ class RouteOverlay:
     video_height: int = 0
     video_frame_id: str | None = None
     video_status: str | None = None
+    panel_visible: bool = True
+    cutin_status: str | None = None
     data_lines: tuple[str, ...] = ()
 
 
@@ -79,6 +81,110 @@ class DebugPlotSnapshot:
     mode: int
     title: str
     values: tuple[float, float, float]
+
+
+@dataclass(frozen=True, slots=True)
+class NaviItemMeta:
+    sequence: int
+    source_timestamp_ms: int
+    received_mono_s: float
+
+
+@dataclass(frozen=True, slots=True)
+class NaviVehicleInfo:
+    meta: NaviItemMeta
+    latitude: float
+    longitude: float
+    heading_deg: float
+    speed_kph: float
+    road_name: str = ""
+    virtual_gps: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class NaviGuidanceInfo:
+    meta: NaviItemMeta
+    distance_m: int
+    time_s: int
+    turn_type: int
+    road_name: str = ""
+    main_text: str = ""
+    near_direction: str = ""
+    mid_direction: str = ""
+    far_direction: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class NaviLaneInfo:
+    meta: NaviItemMeta
+    count: int
+    distance_m: int
+    visible: bool
+    lane_play: bool
+    current_lane: int
+    turn_code: int
+    turn_info: tuple[int, ...] = ()
+    available: tuple[int, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class NaviSpeedInfo:
+    meta: NaviItemMeta
+    current_kph: float
+    road_limit_kph: int | None = None
+    sdi_type: int | None = None
+    sdi_distance_m: int | None = None
+    sdi_speed_limit_kph: int | None = None
+    section_active: bool = False
+    section_speed_limit_kph: int | None = None
+    section_average_kph: float | None = None
+    section_remaining_distance_m: float | None = None
+    section_remaining_time_s: int | None = None
+    section_progress: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class NaviCrossroadInfo:
+    meta: NaviItemMeta
+    visible: bool
+    distance_m: int
+    image_code: int
+
+
+@dataclass(frozen=True, slots=True)
+class NaviRouteInfo:
+    meta: NaviItemMeta
+    remaining_distance_m: int
+    remaining_time_s: int
+    moved_distance_m: int
+    moved_time_s: int
+    total_distance_m: int
+    polyline: tuple[tuple[float, float], ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class NaviStatusInfo:
+    meta: NaviItemMeta
+    mode: str
+    guidance_active: bool
+    off_route: bool
+    route_present: bool
+
+
+@dataclass(frozen=True, slots=True)
+class NaviLiveState:
+    generation: int
+    session_id: str
+    vehicle: NaviVehicleInfo | None = None
+    current: NaviGuidanceInfo | None = None
+    next: NaviGuidanceInfo | None = None
+    lane_current: NaviLaneInfo | None = None
+    lane_ahead: tuple[NaviLaneInfo, ...] = ()
+    speed: NaviSpeedInfo | None = None
+    traffic_light: NaviTrafficLightInfo | None = None
+    crossroad: NaviCrossroadInfo | None = None
+    route: NaviRouteInfo | None = None
+    status: NaviStatusInfo | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +210,7 @@ class NaviTrafficLightInfo:
     left_on: bool | None = None
     right_on: bool | None = None
     uturn_on: bool | None = None
+    meta: NaviItemMeta | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -113,6 +220,46 @@ class NaviGuidanceImage:
     image_hash: str = ""
     width: int = 0
     height: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class NaviMediaFrame:
+    key: str
+    sequence: int
+    present: bool
+    mime: str = ""
+    width: int = 0
+    height: int = 0
+    data: bytes | None = None
+    reason: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class NaviItemStatus:
+    key: str
+    sequence: int
+    present: bool
+    reason: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class NaviDashboardState:
+    connected: bool
+    endpoint: str
+    session_id: str = ""
+    app_version: str = ""
+    manifest_revision: int = 0
+    received_count: int = 0
+    last_received_age_ms: int | None = None
+    map_frame_age_ms: int | None = None
+    map_stream_stalled: bool = False
+    peer: str = "-"
+    error: str | None = None
+    media: tuple[NaviMediaFrame, ...] = ()
+    items: tuple[NaviItemStatus, ...] = ()
+    app_status: str = ""
+    camera_status: str = ""
+    composition_status: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,6 +278,7 @@ class DetectedVehicle:
     ttc_s: float | None = None
     x_std_m: float | None = None
     y_std_m: float | None = None
+    radar_track_id: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -213,6 +361,7 @@ class ClusterUiState:
     surround_pitch_deg: float
     surround_view_active: bool
     lanes: tuple[LaneMarking, ...]
+    onroad: bool = False
     camera_view_mode: int = 0
     extra_left_lane_visible: bool = False
     extra_right_lane_visible: bool = False
@@ -236,6 +385,8 @@ class ClusterUiState:
     live_debug: LiveDebugInfo | None = None
     debug_plot: DebugPlotSnapshot | None = None
     navi_debug: NaviDebugInfo | None = None
+    navi_live: NaviLiveState | None = None
+    navi_dashboard: NaviDashboardState | None = None
     debug_ui_visible: bool = False
     center_clock_text: str | None = None
     planned_speed_kph: float | None = None
@@ -272,6 +423,8 @@ class ClusterUiState:
     vision_yaw_rate_rps: float | None = None
     vision_speed_std_mps: float | None = None
     vision_yaw_rate_std_rps: float | None = None
+    camera_device_type: str | None = None
+    camera_sensor: str | None = None
     camera_calibration_euler: tuple[float, float, float] | None = None
     road_transform_trans: tuple[float, float, float] | None = None
     road_transform_std: tuple[float, float, float] | None = None
@@ -295,6 +448,7 @@ class ClusterUiState:
     lateral_plan_curvatures: tuple[float, ...] = ()
     lateral_plan_curvature_rates: tuple[float, ...] = ()
     display_speed_kph: float | None = None
+    traffic_state: int = 0
     git_status: GitBranchStatus | None = None
     actual_fps: float | None = None
     cluster_core_usage_text: str | None = None
