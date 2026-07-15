@@ -219,6 +219,30 @@ class TestMonitoring:
     assert alert_lvls[int((_stop_time+0.1)/DT_DMON)] == 2
     assert alert_lvls[int((_stop_time+0.5)/DT_DMON)] == 0
 
+  # engaged, face detected the whole time, eyes closed continuously
+  #  - is_drowsy should only flip on after _EYES_CLOSED_DROWSY_TIMEOUT and clear the instant eyes reopen
+  def test_drowsy_eyes_closed(self):
+    DM = DriverMonitoring()
+    s = DM.settings
+    closed_count = s._EYES_CLOSED_DROWSY_COUNT
+    for i in range(closed_count):
+      DM._update_states(msg_DISTRACTED, [0, 0, 0], 0, True, False)
+      assert DM.is_drowsy == (i + 1 >= closed_count), f"unexpected is_drowsy at frame {i}"
+
+    # eyes reopen -> clears immediately on the very next frame
+    DM._update_states(msg_ATTENTIVE, [0, 0, 0], 0, True, False)
+    assert not DM.is_drowsy
+
+  # engaged, eyes not detected (low eyeProb) should not be mistaken for eyes closed
+  def test_drowsy_ignores_undetected_eyes(self):
+    msg_eyes_undetected = make_msg(True, distracted=True)
+    msg_eyes_undetected.leftDriverData.leftEyeProb = 0.
+    msg_eyes_undetected.leftDriverData.rightEyeProb = 0.
+    DM = DriverMonitoring()
+    for _ in range(DM.settings._EYES_CLOSED_DROWSY_COUNT):
+      DM._update_states(msg_eyes_undetected, [0, 0, 0], 0, True, False)
+    assert not DM.is_drowsy
+
   # engaged, model is somehow uncertain and driver is distracted
   #  - should fall back to wheel touch after uncertain alert
   def test_somehow_indecisive_model(self):
