@@ -1,281 +1,202 @@
-#!/usr/bin/env python3
-"""Standalone model-based radar lead selection for radard."""
+from types import SimpleNamespace
 
-from __future__ import annotations
-
-import math
-from dataclasses import dataclass
-from typing import Any
-
-from openpilot.selfdrive.carrot.radar_lead_model import RadarLeadPrediction
-from openpilot.selfdrive.carrot.radar_lead_runtime import RadarLeadRuntime
+from openpilot.selfdrive.carrot.radar_lead_controller import RadarLeadModelController
+from openpilot.selfdrive.carrot.radar_lead_model import RadarLeadDecision, RadarLeadFeatures, RadarLeadPrediction
+from openpilot.selfdrive.carrot.radar_lead_runtime import RadarLeadRuntimeResult
+from openpilot.selfdrive.carrot.radar_object_fusion import FusedRadarObject
 
 
-def _cloudlog(level: str, message: str) -> None:
-  try:
-    from openpilot.common.swaglog import cloudlog
-    getattr(cloudlog, level)(message)
-  except (ImportError, ModuleNotFoundError):
-    pass
+def prediction(
+  track_id: int, y_rel: float, lead_prob: float, cutin_prob: float,
+  *, front: bool = True, scc: bool = False, v_lead: float = 19.0, a_lead: float = 0.0, j_lead: float = 0.0,
+) -> RadarLeadPrediction:
+  source = "scc" if scc else "front" if front else "corner"
+  obj = FusedRadarObject(
+    object_id=f"{source}:{track_id}", d_rel=12.0 + track_id / 10.0, y_rel=y_rel,
+    v_rel=-1.0, a_rel=0.0, yv_rel=-0.4, v_lead=v_lead,
+    front_track_id=track_id if front and not scc else None,
+    corner_track_id=None if front or scc else track_id,
+    scc_track_id=track_id if scc else None,
+    front_d_rel=12.0 if front and not scc else None,
+    corner_d_rel=None if front or scc else 12.0,
+    front_y_rel=y_rel if front and not scc else None,
+    corner_y_rel=None if front or scc else y_rel,
+    front_v_rel=-1.0 if front and not scc else None,
+    corner_v_rel=None if front or scc else -1.0,
+    distance_source="scc" if scc else "frontRadar" if front else "corner235",
+    lateral_source="scc" if scc else "frontRadar" if front else "corner235",
+    match_confidence=0.35, pair_age=8, a_lead=a_lead, j_lead=j_lead,
+  )
+  features = RadarLeadFeatures(f"{source}:{track_id}", (f"{source}:{track_id}",), obj, (), 8, y_rel, y_rel - 0.4, 0.4)
+  return RadarLeadPrediction(features, lead_prob, cutin_prob, max(lead_prob, cutin_prob))
 
 
-RADAR_TO_CAMERA = 1.52
-VISION_LEAD_MIN_PROB = 0.5
-MODEL_LEAD_MIN_PROB = 0.0
-CUTIN_DIRECT_MIN_PROB = 0.70
+class Runtime:
+  def __init__(self, available: bool = True) -> None:
+    self.available = available
 
-
-def _finite(value: Any, fallback: float = 0.0) -> float:
-  try:
-    parsed = float(value)
-  except (TypeError, ValueError, IndexError):
-    return fallback
-  return parsed if math.isfinite(parsed) else fallback
-
-
-def _first_finite(values: Any, fallback: float = 0.0) -> float:
-  try:
-    return _finite(values[0], fallback)
-  except (TypeError, IndexError):
-    return fallback
-
-
-@dataclass(frozen=True)
-class RadarLeadModelOutput:
-  available: bool
-  error: str = ""
-  lead_one: dict[str, Any] | None = None
-  lead_two: dict[str, Any] | None = None
-  lead_cutin: dict[str, Any] | None = None
-  lead_left: dict[str, Any] | None = None
-  lead_right: dict[str, Any] | None = None
-  leads_left: tuple[dict[str, Any], ...] = ()
-  leads_center: tuple[dict[str, Any], ...] = ()
-  leads_right: tuple[dict[str, Any], ...] = ()
-  leads_cutin: tuple[dict[str, Any], ...] = ()
-  leads_left2: tuple[dict[str, Any], ...] = ()
-  leads_right2: tuple[dict[str, Any], ...] = ()
-
-
-class RadarLeadModelController:
-  """Owns model inference, temporal decisions, and radarState selection."""
-
-  def __init__(self) -> None:
-    self.runtime = RadarLeadRuntime()
-    self.frames = 0
-    self.time_ms = 0.0
-    self.last_error = ""
-
-  @staticmethod
-  def _lead_from_prediction(
-    prediction: RadarLeadPrediction,
-    probability: float,
-  ) -> dict[str, Any] | None:
-    obj = prediction.features.radar_object
-    track_id = next((
-      track_id for track_id in (obj.front_track_id, obj.corner_track_id, obj.scc_track_id)
-      if track_id is not None
-    ), None)
-    if track_id is None:
-      return None
-    return {
-      "dRel": float(obj.d_rel),
-      "yRel": float(obj.y_rel),
-      "dPath": float(prediction.features.d_path),
-      "vRel": float(obj.v_rel),
-      "aRel": float(obj.a_rel),
-      "vLead": float(obj.v_lead),
-      "vLeadK": float(obj.v_lead),
-      "aLead": float(obj.a_lead),
-      "aLeadK": float(obj.a_lead),
-      "aLeadTau": 1.5,
-      "jLead": float(obj.j_lead),
-      "vLat": float(obj.yv_rel),
-      "status": True,
-      "fcw": probability > 0.9,
-      "modelProb": float(probability),
-      "radar": True,
-      "radarTrackId": int(track_id),
-      "score": float(prediction.risk_prob),
-    }
-
-  @staticmethod
-  def _lead_from_vision(model: Any, v_ego: float) -> dict[str, Any] | None:
-    leads = getattr(model, "leadsV3", ())
-    if not leads:
-      return None
-    lead = max(
-      (lead for lead in leads if _finite(getattr(lead, "prob", 0.0)) > VISION_LEAD_MIN_PROB),
-      key=lambda lead: _finite(getattr(lead, "prob", 0.0)),
-      default=None,
-    )
-    if lead is None:
-      return None
-    prob = _finite(getattr(lead, "prob", 0.0))
-    if not getattr(lead, "x", ()) or not getattr(lead, "y", ()) or not getattr(lead, "v", ()):
-      return None
-    d_rel = _finite(lead.x[0]) - RADAR_TO_CAMERA
-    if d_rel <= 0.5:
-      return None
-    y_rel = -_finite(lead.y[0])
-    model_v_ego = _first_finite(getattr(getattr(model, "velocity", None), "x", ()), v_ego)
-    v_rel = _finite(lead.v[0]) - model_v_ego
-    a_lead = _finite(lead.a[0]) if getattr(lead, "a", ()) else 0.0
-    path_y = 0.0
-    position = getattr(model, "position", None)
-    if position is not None and getattr(position, "x", ()) and getattr(position, "y", ()):
-      xs = tuple(_finite(value) for value in position.x)
-      ys = tuple(_finite(value) for value in position.y)
-      for index in range(1, min(len(xs), len(ys))):
-        if d_rel <= xs[index]:
-          x0, x1 = xs[index - 1], xs[index]
-          y0, y1 = ys[index - 1], ys[index]
-          ratio = 0.0 if x1 == x0 else (d_rel - x0) / (x1 - x0)
-          path_y = y0 + (y1 - y0) * ratio
-          break
-    return {
-      "dRel": float(d_rel),
-      "yRel": float(y_rel),
-      "dPath": float(y_rel + path_y),
-      "vRel": float(v_rel),
-      "aRel": float(a_lead),
-      "vLead": float(v_ego + v_rel),
-      "vLeadK": float(v_ego + v_rel),
-      "aLead": float(a_lead),
-      "aLeadK": float(a_lead),
-      "aLeadTau": 0.3,
-      "jLead": 0.0,
-      "vLat": 0.0,
-      "status": True,
-      "fcw": False,
-      "modelProb": float(prob),
-      "radar": False,
-      "radarTrackId": -1,
-      "score": float(prob),
-    }
-
-  @staticmethod
-  def _pick_side(leads: list[dict[str, Any]]) -> dict[str, Any] | None:
-    return min(
-      (lead for lead in leads if lead["dRel"] > 5.0 and abs(lead["dPath"]) < 3.5),
-      key=lambda lead: lead["dRel"],
-      default=None,
+  def update(self, *_args):
+    lead = prediction(40, 0.2, 0.92, 0.1)
+    cutin = prediction(41, 2.0, 0.3, 0.91)
+    return RadarLeadRuntimeResult(
+      self.available,
+      RadarLeadDecision((lead,), (cutin,)) if self.available else RadarLeadDecision((), ()),
+      (lead, cutin) if self.available else (),
+      0.1,
+      "" if self.available else "missing model",
     )
 
-  @staticmethod
-  def _pick_two(leads: list[dict[str, Any]], min_gap: float = 5.0) -> tuple[dict[str, Any], ...]:
-    usable = sorted((
-      lead for lead in leads
-      if lead.get("vLead", 0.0) > 2.0 and abs(lead.get("dPath", 0.0)) < 4.2 and lead.get("dRel", 0.0) > 2.0
-    ), key=lambda lead: lead["dRel"])
-    if not usable:
-      return ()
-    second = next((lead for lead in usable[1:] if lead["dRel"] - usable[0]["dRel"] >= min_gap), None)
-    return (usable[0],) if second is None else (usable[0], second)
 
-  @staticmethod
-  def _external_control_usable(prediction: RadarLeadPrediction) -> bool:
-    obj = prediction.features.radar_object
-    return obj.front_track_id is not None or (obj.d_rel > 2.0 and obj.v_lead > 2.0)
+def test_model_path_selects_lead_one_and_independent_cutin_lead_two() -> None:
+  controller = RadarLeadModelController()
+  controller.runtime = Runtime()
+  output = controller.update(0.0, 20.0, (), None)
+  assert output.available
+  assert output.lead_one is not None and output.lead_one["radarTrackId"] == 40
+  assert output.lead_two is not None and output.lead_two["radarTrackId"] == 41
+  assert output.leads_cutin[0]["modelProb"] == 0.91
 
-  @staticmethod
-  def _lead_one_prediction(predictions: tuple[RadarLeadPrediction, ...]) -> RadarLeadPrediction | None:
-    candidates = [
-      prediction for prediction in predictions
-      if (
-        prediction.features.radar_object.front_track_id is not None
-        or prediction.features.radar_object.scc_track_id is not None
-      )
-      and 0.5 < prediction.features.radar_object.d_rel < 160.0
-      and abs(prediction.features.d_path) < 2.4
-      and prediction.lead_prob > MODEL_LEAD_MIN_PROB
-    ]
-    return min(candidates, key=lambda prediction: (-prediction.lead_prob, prediction.features.radar_object.d_rel), default=None)
 
-  @staticmethod
-  def _direct_cutin_predictions(predictions: tuple[RadarLeadPrediction, ...]) -> tuple[RadarLeadPrediction, ...]:
-    return tuple(sorted((
-      prediction for prediction in predictions
-      if prediction.cutin_prob >= CUTIN_DIRECT_MIN_PROB
-    ), key=lambda prediction: (-prediction.cutin_prob, prediction.features.radar_object.d_rel))[:2])
+def test_model_failure_is_exposed_without_legacy_fallback() -> None:
+  controller = RadarLeadModelController()
+  controller.runtime = Runtime(available=False)
+  output = controller.update(0.0, 20.0, (), None)
+  assert not output.available
+  assert output.error == "missing model"
+  assert output.lead_one is None
+  assert output.lead_two is None
 
-  def update(
-    self,
-    time_s: float,
-    v_ego: float,
-    points: Any,
-    model: Any,
-  ) -> RadarLeadModelOutput:
-    result = self.runtime.update(time_s, v_ego, points, model)
-    self.frames += 1
-    self.time_ms += result.elapsed_ms
-    if result.error and result.error != self.last_error:
-      _cloudlog("error", f"radar lead model error: {result.error}")
-    self.last_error = result.error
-    if self.frames % 100 == 0:
-      _cloudlog("info",
-        f"radar lead model available={result.available} avg={self.time_ms / 100.0:.3f}ms "
-        f"points={len(result.predictions)} lead={len(result.decision.lead_candidates)} "
-        f"cutin={len(result.decision.cutin_candidates)}"
-      )
-      self.time_ms = 0.0
-    if not result.available:
-      return RadarLeadModelOutput(False, result.error, lead_one=self._lead_from_vision(model, v_ego))
 
-    left: list[dict[str, Any]] = []
-    center: list[dict[str, Any]] = []
-    right: list[dict[str, Any]] = []
-    for prediction in result.predictions:
-      lead = self._lead_from_prediction(
-        prediction, max(prediction.lead_prob, prediction.cutin_prob),
-      )
-      if lead is None:
-        continue
-      if abs(prediction.features.d_path) < 1.8:
-        center.append(lead)
-      elif prediction.features.radar_object.y_rel > 0.0:
-        left.append(lead)
-      else:
-        right.append(lead)
+def test_corner_only_lead_is_not_used_without_cutin_probability() -> None:
+  corner = prediction(204, 0.4, 0.95, 0.1, front=False, a_lead=-0.7, j_lead=0.3)
 
-    def selected(prediction: RadarLeadPrediction, probability: float) -> dict[str, Any] | None:
-      lead = self._lead_from_prediction(prediction, probability)
-      if lead is None:
-        return None
-      return lead
+  class CornerRuntime:
+    def update(self, *_args):
+      return RadarLeadRuntimeResult(True, RadarLeadDecision((corner,), ()), (corner,), 0.1)
 
-    lead_one_prediction = self._lead_one_prediction(result.predictions)
-    lead_one = selected(lead_one_prediction, lead_one_prediction.lead_prob) if lead_one_prediction else None
-    if lead_one is None:
-      lead_one = self._lead_from_vision(model, v_ego)
-    lead_one_object = lead_one_prediction.features.object_id if lead_one_prediction else None
+  controller = RadarLeadModelController()
+  controller.runtime = CornerRuntime()
+  output = controller.update(0.0, 20.0, (), None)
+  assert output.lead_one is None
+  assert output.lead_two is None
 
-    cutin_pairs = [
-      (prediction, selected(prediction, prediction.cutin_prob))
-      for prediction in (*result.decision.cutin_candidates, *self._direct_cutin_predictions(result.predictions))
-    ]
-    cutin_leads = tuple(lead for _, lead in cutin_pairs if lead is not None)
 
-    lead_two = next((
-      lead for prediction, lead in cutin_pairs
-      if lead is not None and prediction.features.object_id != lead_one_object
-      and self._external_control_usable(prediction)
-    ), None)
+def test_corner_cutin_probability_can_fill_lead_two() -> None:
+  corner = prediction(204, 0.4, 0.1, 0.95, front=False, a_lead=-0.7, j_lead=0.3)
 
-    left.sort(key=lambda lead: lead["dRel"])
-    center.sort(key=lambda lead: lead["dRel"])
-    right.sort(key=lambda lead: lead["dRel"])
-    return RadarLeadModelOutput(
-      available=True,
-      lead_one=lead_one,
-      lead_two=lead_two,
-      lead_cutin=cutin_leads[0] if cutin_leads else None,
-      lead_left=self._pick_side(left),
-      lead_right=self._pick_side(right),
-      leads_left=tuple(left),
-      leads_center=tuple(center),
-      leads_right=tuple(right),
-      leads_cutin=cutin_leads,
-      leads_left2=self._pick_two(left),
-      leads_right2=self._pick_two(right),
-    )
+  class CornerRuntime:
+    def update(self, *_args):
+      return RadarLeadRuntimeResult(True, RadarLeadDecision((), ()), (corner,), 0.1)
+
+  controller = RadarLeadModelController()
+  controller.runtime = CornerRuntime()
+  output = controller.update(0.0, 20.0, (), None)
+  assert output.lead_one is None
+  assert output.lead_two is not None and output.lead_two["radarTrackId"] == 204
+  assert output.lead_two["aLead"] == -0.7
+  assert output.lead_two["jLead"] == 0.3
+
+
+def test_stationary_corner_only_lead_is_not_used_for_control() -> None:
+  corner = prediction(204, 0.4, 0.95, 0.9, front=False, v_lead=0.0)
+
+  class CornerRuntime:
+    def update(self, *_args):
+      return RadarLeadRuntimeResult(True, RadarLeadDecision((corner,), (corner,)), (corner,), 0.1)
+
+  controller = RadarLeadModelController()
+  controller.runtime = CornerRuntime()
+  output = controller.update(0.0, 20.0, (), None)
+  assert output.lead_one is None
+  assert output.lead_two is None
+
+
+def test_front_prediction_fills_lead_one_even_before_temporal_decision() -> None:
+  lead = prediction(40, 0.2, 0.01, 0.1)
+
+  class WarmupRuntime:
+    def update(self, *_args):
+      return RadarLeadRuntimeResult(True, RadarLeadDecision((), ()), (lead,), 0.1)
+
+  controller = RadarLeadModelController()
+  controller.runtime = WarmupRuntime()
+  output = controller.update(0.0, 20.0, (), None)
+  assert output.lead_one is not None and output.lead_one["radarTrackId"] == 40
+
+
+def test_largest_positive_front_probability_selects_lead_one() -> None:
+  weak = prediction(40, 0.2, 0.20, 0.1)
+  strong = prediction(41, 0.2, 0.55, 0.1)
+
+  class WarmupRuntime:
+    def update(self, *_args):
+      return RadarLeadRuntimeResult(True, RadarLeadDecision((), ()), (weak, strong), 0.1)
+
+  controller = RadarLeadModelController()
+  controller.runtime = WarmupRuntime()
+  output = controller.update(0.0, 20.0, (), None)
+  assert output.lead_one is not None and output.lead_one["radarTrackId"] == 41
+
+
+def test_scc_prediction_can_fill_lead_one_when_front_tracks_are_missing() -> None:
+  lead = prediction(0, 0.1, 0.6, 0.0, front=False, scc=True)
+
+  class SccRuntime:
+    def update(self, *_args):
+      return RadarLeadRuntimeResult(True, RadarLeadDecision((lead,), ()), (lead,), 0.1)
+
+  controller = RadarLeadModelController()
+  controller.runtime = SccRuntime()
+  output = controller.update(0.0, 20.0, (), None)
+  assert output.lead_one is not None and output.lead_one["radarTrackId"] == 0
+
+
+def test_vision_lead_fills_lead_one_when_model_runtime_fails() -> None:
+  model = SimpleNamespace(
+    leadsV3=(SimpleNamespace(prob=0.82, x=(21.52,), y=(0.2,), v=(18.0,), a=(-0.1,)),),
+    velocity=SimpleNamespace(x=(20.0,)),
+    position=SimpleNamespace(x=(0.0, 30.0), y=(0.0, 0.0)),
+  )
+
+  controller = RadarLeadModelController()
+  controller.runtime = Runtime(available=False)
+  output = controller.update(0.0, 20.0, (), model)
+  assert not output.available
+  assert output.lead_one is not None
+  assert output.lead_one["status"]
+  assert not output.lead_one["radar"]
+
+
+def test_vision_lead_requires_more_than_half_probability_and_uses_largest() -> None:
+  model = SimpleNamespace(
+    leadsV3=(
+      SimpleNamespace(prob=0.49, x=(11.52,), y=(0.0,), v=(19.0,), a=(0.0,)),
+      SimpleNamespace(prob=0.62, x=(31.52,), y=(-0.3,), v=(18.0,), a=(-0.1,)),
+      SimpleNamespace(prob=0.75, x=(21.52,), y=(0.2,), v=(17.0,), a=(-0.2,)),
+    ),
+    velocity=SimpleNamespace(x=(20.0,)),
+    position=SimpleNamespace(x=(0.0, 40.0), y=(0.0, 0.0)),
+  )
+
+  controller = RadarLeadModelController()
+  controller.runtime = Runtime(available=False)
+  output = controller.update(0.0, 20.0, (), model)
+  assert output.lead_one is not None
+  assert output.lead_one["dRel"] == 20.0
+  assert output.lead_one["modelProb"] == 0.75
+
+
+def test_direct_cutin_requires_threshold() -> None:
+  lead = prediction(40, 0.2, 0.2, 0.1)
+  low_cutin = prediction(41, 2.0, 0.1, 0.69)
+  high_cutin = prediction(42, 2.0, 0.1, 0.71)
+
+  class CutinRuntime:
+    def update(self, *_args):
+      return RadarLeadRuntimeResult(True, RadarLeadDecision((), ()), (lead, low_cutin, high_cutin), 0.1)
+
+  controller = RadarLeadModelController()
+  controller.runtime = CutinRuntime()
+  output = controller.update(0.0, 20.0, (), None)
+  assert output.lead_one is not None and output.lead_one["radarTrackId"] == 40
+  assert output.lead_two is not None and output.lead_two["radarTrackId"] == 42
