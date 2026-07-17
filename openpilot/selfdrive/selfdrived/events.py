@@ -585,6 +585,22 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       Priority.HIGH, VisualAlert.steerRequired, AudibleAlert.warningImmediate, .1),
   },
 
+  EventName.driverDrowsy: {
+    ET.PERMANENT: Alert(
+      "Touch Steering Wheel",
+      "Drowsy Driving Detected",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.MID, VisualAlert.steerRequired, AudibleAlert.promptDistracted, .1),
+  },
+
+  EventName.driverEyesNotFound: {
+    ET.PERMANENT: Alert(
+      "Touch Steering Wheel",
+      "Eyes Not Detected",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.MID, VisualAlert.steerRequired, AudibleAlert.promptDistracted, .1),
+  },
+
   EventName.manualRestart: {
     ET.WARNING: Alert(
       "TAKE CONTROL",
