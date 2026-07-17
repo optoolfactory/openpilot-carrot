@@ -243,6 +243,29 @@ class TestMonitoring:
       DM._update_states(msg_eyes_undetected, [0, 0, 0], 0, True, False)
     assert not DM.is_drowsy
 
+  # engaged, face detected but eyes not confidently found (sunglasses/glare/angle) continuously
+  #  - eyes_not_found should only flip on after _EYES_NOT_FOUND_TIMEOUT and clear the instant eyes are found again
+  def test_eyes_not_found_triggers_after_timeout(self):
+    msg_eyes_undetected = make_msg(True, distracted=True)
+    msg_eyes_undetected.leftDriverData.leftEyeProb = 0.
+    msg_eyes_undetected.leftDriverData.rightEyeProb = 0.
+    DM = DriverMonitoring()
+    s = DM.settings
+    for i in range(s._EYES_NOT_FOUND_COUNT):
+      DM._update_states(msg_eyes_undetected, [0, 0, 0], 0, True, False)
+      assert DM.eyes_not_found == (i + 1 >= s._EYES_NOT_FOUND_COUNT), f"unexpected eyes_not_found at frame {i}"
+
+    # eyes found again -> clears immediately on the very next frame
+    DM._update_states(msg_ATTENTIVE, [0, 0, 0], 0, True, False)
+    assert not DM.eyes_not_found
+
+  # engaged, no face at all should not count as "eyes not found" (that's handled by the wheeltouch fallback)
+  def test_eyes_not_found_requires_face_detected(self):
+    DM = DriverMonitoring()
+    for _ in range(DM.settings._EYES_NOT_FOUND_COUNT):
+      DM._update_states(msg_NO_FACE_DETECTED, [0, 0, 0], 0, True, False)
+    assert not DM.eyes_not_found
+
   # engaged, model is somehow uncertain and driver is distracted
   #  - should fall back to wheel touch after uncertain alert
   def test_somehow_indecisive_model(self):
