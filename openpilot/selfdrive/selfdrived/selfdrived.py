@@ -128,7 +128,6 @@ class SelfdriveD:
     self.personality = self.read_personality_param()
     self.recalibrating_seen = False
     self.dm_lockout_set = False
-    self.cutin_audio_active = False
     self.dm_uncertain_alerted = False
     self.state_machine = StateMachine()
     self.rk = Ratekeeper(100, print_delay_threshold=None)
@@ -193,11 +192,6 @@ class SelfdriveD:
     if self.CP.passive:
       return
 
-    cutin_active = self.enabled and self.sm.valid['radarState'] and len(self.sm['radarState'].leadsCutIn) > 0
-    if cutin_active and not self.cutin_audio_active:
-      self.events.add(EventName.audioPrompt)
-    self.cutin_audio_active = cutin_active
-
     # Block resume if cruise never previously enabled
     resume_pressed = any(be.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for be in CS.buttonEvents)
     if not self.CP.pcmCruise and CS.vCruise > 250 and resume_pressed:
@@ -223,6 +217,9 @@ class SelfdriveD:
       # Eyes closed 3+ seconds while face is detected -> drowsy driving warning
       if self.sm['driverMonitoringState'].visionPolicyState.isDrowsy:
         self.events.add(EventName.driverDrowsy)
+      # Eyes not confidently found 3+ seconds while face is detected (sunglasses/glare/angle) -> separate warning
+      if self.sm['driverMonitoringState'].visionPolicyState.eyesNotFound:
+        self.events.add(EventName.driverEyesNotFound)
       # Warn consistent DM uncertainty
       if self.sm['driverMonitoringState'].visionPolicyState.uncertainOffroadAlertPercent >= 100 and not self.dm_uncertain_alerted:
         set_offroad_alert("Offroad_DriverMonitoringUncertain", True)
