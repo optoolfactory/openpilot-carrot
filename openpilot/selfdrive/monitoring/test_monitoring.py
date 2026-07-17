@@ -11,13 +11,13 @@ DISTRACTED_SECONDS_TO_RED = dm_settings._VISION_POLICY_ALERT_3_TIMEOUT + 1
 INVISIBLE_SECONDS_TO_ORANGE = dm_settings._WHEELTOUCH_POLICY_ALERT_2_TIMEOUT + 1
 INVISIBLE_SECONDS_TO_RED = dm_settings._WHEELTOUCH_POLICY_ALERT_3_TIMEOUT + 1
 
-def make_msg(face_detected, distracted=False, model_uncertain=False):
+def make_msg(face_detected, distracted=False, model_uncertain=False, left_eye_prob=1., right_eye_prob=1.):
   ds = log.DriverStateV2.new_message()
   ds.leftDriverData.faceOrientation = [0., 0., 0.]
   ds.leftDriverData.facePosition = [0., 0.]
   ds.leftDriverData.faceProb = 1. * face_detected
-  ds.leftDriverData.leftEyeProb = 1.
-  ds.leftDriverData.rightEyeProb = 1.
+  ds.leftDriverData.leftEyeProb = left_eye_prob
+  ds.leftDriverData.rightEyeProb = right_eye_prob
   ds.leftDriverData.leftBlinkProb = 1. * distracted
   ds.leftDriverData.rightBlinkProb = 1. * distracted
   ds.leftDriverData.faceOrientationStd = [1.*model_uncertain, 1.*model_uncertain, 1.*model_uncertain]
@@ -79,6 +79,12 @@ class TestMonitoring:
     assert alert_lvls[int((s._VISION_POLICY_ALERT_3_TIMEOUT + \
                     (TEST_TIMESPAN - 10 - s._VISION_POLICY_ALERT_3_TIMEOUT) / 2) / DT_DMON)] == 3
     assert isinstance(d_status.awareness, float)
+
+  def test_eye_closed_for_three_seconds_triggers_red(self):
+    msgs = [make_msg(True, left_eye_prob=0.0, right_eye_prob=0.0)] * int((3.1 / DT_DMON))
+    alert_lvls, d_status = self._run_seq(msgs, always_false, always_true, always_false)
+    assert alert_lvls[-1] == 3
+    assert d_status.alert_3_cnt >= 1
 
   # engaged, distracted past red and beyond the no-response window -> unavailability response + lockout
   def test_distracted_lockout(self):
