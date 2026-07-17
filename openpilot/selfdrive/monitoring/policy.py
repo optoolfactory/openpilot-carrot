@@ -49,6 +49,7 @@ class DRIVER_MONITOR_SETTINGS:
     self._EYE_THRESHOLD = 0.65
     self._SG_THRESHOLD = 0.9
     self._BLINK_THRESHOLD = 0.865
+    self._EYE_CLOSED_ALERT_TIMEOUT = 3.
     self._PHONE_THRESH = 0.5
     self._POSE_PITCH_THRESHOLD = 0.3133
     self._POSE_PITCH_THRESHOLD_SLACK = 0.3237
@@ -162,6 +163,7 @@ class DriverMonitoring:
     self.threshold_alert_2 = 0.
     self.dcam_uncertain_cnt = 0
     self.dcam_reset_cnt = 0
+    self.eye_missing_cnt = 0
     self.too_distracted = Params().get_bool("DriverTooDistracted")
 
     self._reset_awareness()
@@ -275,6 +277,12 @@ class DriverMonitoring:
                       * (driver_data.sunglassesProb < self.settings._SG_THRESHOLD)
     self.phone_prob = driver_data.phoneProb
 
+    eyes_missing = driver_data.leftEyeProb <= self.settings._EYE_THRESHOLD and driver_data.rightEyeProb <= self.settings._EYE_THRESHOLD
+    if self.face_detected and eyes_missing:
+      self.eye_missing_cnt += 1
+    else:
+      self.eye_missing_cnt = 0
+
     self._get_distracted_types()
     self.driver_distracted = any(self.distracted_types.values()) and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std
     self.driver_distraction_filter.update(self.driver_distracted)
@@ -319,6 +327,20 @@ class DriverMonitoring:
         self.cnt_since_alert_3 = 0
         self.no_response_cnt = 0
         self.lockout_time = 0
+
+    eye_closed_timeout = int(self.settings._EYE_CLOSED_ALERT_TIMEOUT / DT_DMON)
+    awareness_prev = self.awareness
+    if self.face_detected and self.eye_missing_cnt >= eye_closed_timeout:
+      self.awareness = -0.1
+      self.alert_level = AlertLevel.three
+      if awareness_prev > 0:
+        self.alert_3_cnt += 1
+        self.cnt_since_alert_3 = 0
+      else:
+        self.cnt_since_alert_3 += 1
+      if self.cnt_since_alert_3 == self.no_response_timeout:
+        self.no_response_cnt += 1
+      return
 
     always_on_valid = self.always_on and not wrong_gear
     if (self.driver_interacting and self.awareness > 0 and self.active_policy == MonitoringPolicy.wheeltouch) or \
