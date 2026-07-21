@@ -29,10 +29,10 @@ class DRIVER_MONITOR_SETTINGS:
 
     self._WHEELTOUCH_POLICY_ALERT_1_TIMEOUT = 3.
     self._WHEELTOUCH_POLICY_ALERT_2_TIMEOUT = 5.
-    self._WHEELTOUCH_POLICY_ALERT_3_TIMEOUT = 8.
+    self._WHEELTOUCH_POLICY_ALERT_3_TIMEOUT = 6.
     self._VISION_POLICY_ALERT_1_TIMEOUT = 3.
     self._VISION_POLICY_ALERT_2_TIMEOUT = 5.
-    self._VISION_POLICY_ALERT_3_TIMEOUT = 8.
+    self._VISION_POLICY_ALERT_3_TIMEOUT = 6.
 
     # no response = alert_3 sustained for certain amount of time
     self._NO_RESPONSE_TIMEOUT = 5.
@@ -46,10 +46,10 @@ class DRIVER_MONITOR_SETTINGS:
     self._TIMEOUT_RECOVERY_FACTOR_MIN = 1.25
 
     self._FACE_THRESHOLD = 0.7
-    self._EYE_THRESHOLD = 0.75
+    self._EYE_THRESHOLD = 0.80
     self._SG_THRESHOLD = 0.9
     self._BLINK_THRESHOLD = 0.865
-    self._EYES_CLOSED_DROWSY_TIMEOUT = 3.  # continuous eyes-closed time to trigger a drowsy driving warning
+    self._EYES_CLOSED_DROWSY_TIMEOUT = 2.  # continuous eyes-closed time to trigger a drowsy driving warning
     self._EYES_CLOSED_DROWSY_COUNT = int(self._EYES_CLOSED_DROWSY_TIMEOUT / DT_DMON)
     self._EYES_NOT_FOUND_TIMEOUT = 3.  # continuous eyes-undetected time (face detected, eyes not) to trigger a warning
     self._EYES_NOT_FOUND_COUNT = int(self._EYES_NOT_FOUND_TIMEOUT / DT_DMON)
