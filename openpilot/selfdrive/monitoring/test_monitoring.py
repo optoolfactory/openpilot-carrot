@@ -11,15 +11,16 @@ DISTRACTED_SECONDS_TO_RED = dm_settings._VISION_POLICY_ALERT_3_TIMEOUT + 1
 INVISIBLE_SECONDS_TO_ORANGE = dm_settings._WHEELTOUCH_POLICY_ALERT_2_TIMEOUT + 1
 INVISIBLE_SECONDS_TO_RED = dm_settings._WHEELTOUCH_POLICY_ALERT_3_TIMEOUT + 1
 
-def make_msg(face_detected, distracted=False, model_uncertain=False):
+def make_msg(face_detected, distracted=False, model_uncertain=False, eyes_closed=False):
+  # `distracted` simulates general (pose-based) distraction via a large yaw offset, independent of eye state
   ds = log.DriverStateV2.new_message()
-  ds.leftDriverData.faceOrientation = [0., 0., 0.]
+  ds.leftDriverData.faceOrientation = [0., 1. * distracted, 0.]
   ds.leftDriverData.facePosition = [0., 0.]
   ds.leftDriverData.faceProb = 1. * face_detected
   ds.leftDriverData.leftEyeProb = 1.
   ds.leftDriverData.rightEyeProb = 1.
-  ds.leftDriverData.leftBlinkProb = 1. * distracted
-  ds.leftDriverData.rightBlinkProb = 1. * distracted
+  ds.leftDriverData.leftBlinkProb = 1. * eyes_closed
+  ds.leftDriverData.rightBlinkProb = 1. * eyes_closed
   ds.leftDriverData.faceOrientationStd = [1.*model_uncertain, 1.*model_uncertain, 1.*model_uncertain]
   ds.leftDriverData.facePositionStd = [1.*model_uncertain, 1.*model_uncertain]
   # TODO: test both separately when e2e is used
@@ -34,6 +35,7 @@ msg_DISTRACTED = make_msg(True, distracted=True)
 msg_ATTENTIVE_UNCERTAIN = make_msg(True, model_uncertain=True)
 msg_DISTRACTED_UNCERTAIN = make_msg(True, distracted=True, model_uncertain=True)
 msg_DISTRACTED_BUT_SOMEHOW_UNCERTAIN = make_msg(True, distracted=True, model_uncertain=dm_settings._HI_STD_THRESHOLD*1.5)
+msg_EYES_CLOSED = make_msg(True, eyes_closed=True)
 
 # driver interaction with car
 car_interaction_DETECTED = True
@@ -43,6 +45,7 @@ car_interaction_NOT_DETECTED = False
 always_no_face = [msg_NO_FACE_DETECTED] * int(TEST_TIMESPAN / DT_DMON)
 always_attentive = [msg_ATTENTIVE] * int(TEST_TIMESPAN / DT_DMON)
 always_distracted = [msg_DISTRACTED] * int(TEST_TIMESPAN / DT_DMON)
+always_eyes_closed = [msg_EYES_CLOSED] * int(TEST_TIMESPAN / DT_DMON)
 always_true = [True] * int(TEST_TIMESPAN / DT_DMON)
 always_false = [False] * int(TEST_TIMESPAN / DT_DMON)
 
@@ -229,3 +232,25 @@ class TestMonitoring:
     assert alert_lvls[int((INVISIBLE_SECONDS_TO_ORANGE-1+DT_DMON*s._HI_STD_FALLBACK_TIME-0.1)/DT_DMON)] == 1
     assert alert_lvls[int((INVISIBLE_SECONDS_TO_ORANGE-1+DT_DMON*s._HI_STD_FALLBACK_TIME+0.1)/DT_DMON)] == 2
     assert alert_lvls[int((INVISIBLE_SECONDS_TO_RED-1+DT_DMON*s._HI_STD_FALLBACK_TIME+0.1)/DT_DMON)] == 3
+
+  # engaged, driver's eyes are continuously closed
+  #  - should force an orange (two) alert once closed for the eye-closed timeout, well before the
+  #    normal vision-policy alert_2 timeout would otherwise be reached
+  def test_eyes_closed_forces_orange(self):
+    alert_lvls, d_status = self._run_seq(always_eyes_closed, always_false, always_true, always_false)
+    s = d_status.settings
+    just_before = int((s._EYE_CLOSED_ALERT_2_TIMEOUT - 0.1) / DT_DMON)
+    just_after = int((s._EYE_CLOSED_ALERT_2_TIMEOUT + 0.1) / DT_DMON)
+    assert alert_lvls[just_before] == 0
+    assert alert_lvls[just_after] == 2
+    assert d_status.eye_closed_cnt >= s._EYE_CLOSED_ALERT_2_COUNT
+
+  # engaged, driver blinks briefly (well under the eye-closed timeout) then opens eyes again
+  #  - momentary eye closure should never force an alert
+  def test_brief_blink_does_not_force_orange(self):
+    _blink_time = 0.5  # seconds, well under _EYE_CLOSED_ALERT_2_TIMEOUT
+    ds_vector = always_attentive[:]
+    ds_vector[int(5/DT_DMON):int((5+_blink_time)/DT_DMON)] = [msg_EYES_CLOSED] * int(_blink_time/DT_DMON)
+    alert_lvls, d_status = self._run_seq(ds_vector, always_false, always_true, always_false)
+    assert all(a == 0 for a in alert_lvls)
+    assert d_status.eye_closed_cnt == 0
