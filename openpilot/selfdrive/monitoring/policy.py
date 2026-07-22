@@ -27,11 +27,11 @@ class DRIVER_MONITOR_SETTINGS:
     # https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202501899
     self._ALERT_MIN_SPEED = 2.8  # 10 km/h
 
-    self._WHEELTOUCH_POLICY_ALERT_1_TIMEOUT = 3.
-    self._WHEELTOUCH_POLICY_ALERT_2_TIMEOUT = 5.
+    self._WHEELTOUCH_POLICY_ALERT_1_TIMEOUT = 5.
+    self._WHEELTOUCH_POLICY_ALERT_2_TIMEOUT = 15.
     self._WHEELTOUCH_POLICY_ALERT_3_TIMEOUT = 25.
-    self._VISION_POLICY_ALERT_1_TIMEOUT = 3.
-    self._VISION_POLICY_ALERT_2_TIMEOUT = 5.
+    self._VISION_POLICY_ALERT_1_TIMEOUT = 5.
+    self._VISION_POLICY_ALERT_2_TIMEOUT = 8.
     self._VISION_POLICY_ALERT_3_TIMEOUT = 13.
 
     # no response = alert_3 sustained for certain amount of time
@@ -49,10 +49,7 @@ class DRIVER_MONITOR_SETTINGS:
     self._EYE_THRESHOLD = 0.65
     self._SG_THRESHOLD = 0.9
     self._BLINK_THRESHOLD = 0.865
-    self._EYES_CLOSED_DROWSY_TIMEOUT = 3.  # continuous eyes-closed time to trigger a drowsy driving warning
-    self._EYES_CLOSED_DROWSY_COUNT = int(self._EYES_CLOSED_DROWSY_TIMEOUT / DT_DMON)
-    self._EYES_NOT_FOUND_TIMEOUT = 3.  # continuous eyes-undetected time (face detected, eyes not) to trigger a warning
-    self._EYES_NOT_FOUND_COUNT = int(self._EYES_NOT_FOUND_TIMEOUT / DT_DMON)
+    self._EYE_CLOSED_ALERT_TIMEOUT = 3.
     self._PHONE_THRESH = 0.5
     self._POSE_PITCH_THRESHOLD = 0.3133
     self._POSE_PITCH_THRESHOLD_SLACK = 0.3237
@@ -151,10 +148,6 @@ class DriverMonitoring:
     self.wheel_on_right_last = None
     self.wheel_on_right_default = rhd_saved
     self.face_detected = False
-    self.eyes_closed_cnt = 0
-    self.is_drowsy = False
-    self.eyes_not_found_cnt = 0
-    self.eyes_not_found = False
     self.alert_3_cnt = 0
     self.cnt_since_alert_3 = 0
     self.no_response_timeout = int(self.settings._NO_RESPONSE_TIMEOUT / DT_DMON)
@@ -170,6 +163,7 @@ class DriverMonitoring:
     self.threshold_alert_2 = 0.
     self.dcam_uncertain_cnt = 0
     self.dcam_reset_cnt = 0
+    self.eye_missing_cnt = 0
     self.too_distracted = Params().get_bool("DriverTooDistracted")
 
     self._reset_awareness()
@@ -283,25 +277,13 @@ class DriverMonitoring:
                       * (driver_data.sunglassesProb < self.settings._SG_THRESHOLD)
     self.phone_prob = driver_data.phoneProb
 
+    eyes_missing = driver_data.leftEyeProb <= self.settings._EYE_THRESHOLD and driver_data.rightEyeProb <= self.settings._EYE_THRESHOLD
+    if eyes_missing:
+      self.eye_missing_cnt += 1
+    else:
+      self.eye_missing_cnt = 0
+
     self._get_distracted_types()
-
-    # face detected but eyes closed continuously -> drowsy driving warning, clears as soon as eyes reopen
-    if self.face_detected and self.distracted_types['eye']:
-      self.eyes_closed_cnt += 1
-    else:
-      self.eyes_closed_cnt = 0
-    self.is_drowsy = self.eyes_closed_cnt >= self.settings._EYES_CLOSED_DROWSY_COUNT
-
-    # face detected but eyes not confidently found continuously (sunglasses/glare/angle) -> separate warning,
-    # clears as soon as eyes are found again; distinct from is_drowsy which requires eyes to be seen as closed
-    eyes_undetected = self.face_detected and driver_data.leftEyeProb <= self.settings._EYE_THRESHOLD \
-                      and driver_data.rightEyeProb <= self.settings._EYE_THRESHOLD
-    if eyes_undetected:
-      self.eyes_not_found_cnt += 1
-    else:
-      self.eyes_not_found_cnt = 0
-    self.eyes_not_found = self.eyes_not_found_cnt >= self.settings._EYES_NOT_FOUND_COUNT
-
     self.driver_distracted = any(self.distracted_types.values()) and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std
     self.driver_distraction_filter.update(self.driver_distracted)
 
@@ -345,6 +327,20 @@ class DriverMonitoring:
         self.cnt_since_alert_3 = 0
         self.no_response_cnt = 0
         self.lockout_time = 0
+
+    eye_closed_timeout = int(self.settings._EYE_CLOSED_ALERT_TIMEOUT / DT_DMON)
+    awareness_prev = self.awareness
+    if self.eye_missing_cnt >= eye_closed_timeout:
+      self.awareness = -0.1
+      self.alert_level = AlertLevel.three
+      if awareness_prev > 0:
+        self.alert_3_cnt += 1
+        self.cnt_since_alert_3 = 0
+      else:
+        self.cnt_since_alert_3 += 1
+      if self.cnt_since_alert_3 == self.no_response_timeout:
+        self.no_response_cnt += 1
+      return
 
     always_on_valid = self.always_on and not wrong_gear
     if (self.driver_interacting and self.awareness > 0 and self.active_policy == MonitoringPolicy.wheeltouch) or \
@@ -426,8 +422,6 @@ class DriverMonitoring:
     dm.visionPolicyState.distractedTypes.eye = self.distracted_types['eye']
     dm.visionPolicyState.distractedTypes.phone = self.distracted_types['phone']
     dm.visionPolicyState.faceDetected = self.face_detected
-    dm.visionPolicyState.isDrowsy = self.is_drowsy
-    dm.visionPolicyState.eyesNotFound = self.eyes_not_found
     dm.visionPolicyState.pose.pitch = self.pose.pitch
     dm.visionPolicyState.pose.yaw = self.pose.yaw
     dm.visionPolicyState.pose.calibrated = self.pose.calibrated
