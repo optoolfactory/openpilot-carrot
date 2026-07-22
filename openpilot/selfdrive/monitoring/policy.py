@@ -46,9 +46,11 @@ class DRIVER_MONITOR_SETTINGS:
     self._TIMEOUT_RECOVERY_FACTOR_MIN = 1.25
 
     self._FACE_THRESHOLD = 0.7
-    self._EYE_THRESHOLD = 0.65
+    self._EYE_THRESHOLD = 0.75
     self._SG_THRESHOLD = 0.9
     self._BLINK_THRESHOLD = 0.865
+    self._EYE_CLOSED_ALERT_2_TIMEOUT = 3.
+    self._EYE_CLOSED_ALERT_2_COUNT = int(self._EYE_CLOSED_ALERT_2_TIMEOUT / DT_DMON)
     self._PHONE_THRESH = 0.5
     self._POSE_PITCH_THRESHOLD = 0.3133
     self._POSE_PITCH_THRESHOLD_SLACK = 0.3237
@@ -162,6 +164,7 @@ class DriverMonitoring:
     self.threshold_alert_2 = 0.
     self.dcam_uncertain_cnt = 0
     self.dcam_reset_cnt = 0
+    self.eye_closed_cnt = 0
     self.too_distracted = Params().get_bool("DriverTooDistracted")
 
     self._reset_awareness()
@@ -279,6 +282,11 @@ class DriverMonitoring:
     self.driver_distracted = any(self.distracted_types.values()) and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std
     self.driver_distraction_filter.update(self.driver_distracted)
 
+    if self.distracted_types['eye'] and self.face_detected and self.pose.low_std:
+      self.eye_closed_cnt += 1
+    else:
+      self.eye_closed_cnt = 0
+
     # only update offsetter when driver is actively driving the car above a certain speed
     if self.face_detected and car_speed > self.settings._POSE_CALIB_MIN_SPEED and self.pose.low_std and (not op_engaged or not self.driver_distracted):
       self.pose.pitch_offsetter.push_and_update(self.pose.pitch)
@@ -304,6 +312,12 @@ class DriverMonitoring:
     elif self.face_detected and self.pose.low_std:
       self.hi_stds = 0
 
+  def _apply_eye_closed_override(self):
+    # force at least an orange (two) alert once eyes have been continuously closed for the timeout,
+    # regardless of where the awareness-based state machine landed
+    if self.eye_closed_cnt >= self.settings._EYE_CLOSED_ALERT_2_COUNT and self.alert_level in (AlertLevel.none, AlertLevel.one):
+      self.alert_level = AlertLevel.two
+
   def _update_events(self, driver_engaged, op_engaged, lowspeed, wrong_gear):
     self.alert_level = AlertLevel.none
     self.driver_interacting = driver_engaged
@@ -326,6 +340,7 @@ class DriverMonitoring:
        (always_on_valid and not op_engaged and self.awareness <= 0):
       # always reset on disengage with normal mode; disengage resets only on red if always on
       self._reset_awareness()
+      self._apply_eye_closed_override()
       return
 
     awareness_prev = self.awareness
@@ -338,6 +353,7 @@ class DriverMonitoring:
        ((self.driver_distraction_filter.x < 0.37 and self.face_detected and self.pose.low_std) or lowspeed_exemption):
       if self.driver_interacting:
         self._reset_awareness()
+        self._apply_eye_closed_override()
         return
       # only restore awareness when paying attention and alert is not red
       self.awareness = min(self.awareness + ((self.settings._TIMEOUT_RECOVERY_FACTOR_MAX-self.settings._TIMEOUT_RECOVERY_FACTOR_MIN)*
@@ -346,6 +362,7 @@ class DriverMonitoring:
         self.last_wheeltouch_awareness = min(self.last_wheeltouch_awareness + self.step_change, 1.)
       # don't display alert banner when awareness is recovering and has cleared orange
       if self.awareness > self.threshold_alert_2:
+        self._apply_eye_closed_override()
         return
 
     certainly_distracted = self.driver_distraction_filter.x > 0.63 and self.driver_distracted and self.face_detected
@@ -372,6 +389,8 @@ class DriverMonitoring:
         self.alert_level = AlertLevel.two
       elif self.awareness <= self.threshold_alert_1:
         self.alert_level = AlertLevel.one
+
+    self._apply_eye_closed_override()
 
   def get_state_packet(self, valid=True):
     # build driverMonitoringState packet
