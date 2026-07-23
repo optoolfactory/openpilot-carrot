@@ -46,7 +46,7 @@ class DRIVER_MONITOR_SETTINGS:
     self._TIMEOUT_RECOVERY_FACTOR_MIN = 1.25
 
     self._FACE_THRESHOLD = 0.7
-    self._EYE_THRESHOLD = 0.80
+    self._EYE_THRESHOLD = 0.55
     self._SG_THRESHOLD = 0.9
     self._BLINK_THRESHOLD = 0.865
     self._EYES_CLOSED_DROWSY_TIMEOUT = 2.  # continuous eyes-closed time to trigger a drowsy driving warning
