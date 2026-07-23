@@ -243,6 +243,18 @@ class TestMonitoring:
       DM._update_states(msg_eyes_undetected, [0, 0, 0], 0, True, False)
     assert not DM.is_drowsy
 
+  # engaged, one or both eyes not detected should eventually raise a level two warning
+  def test_eyes_not_found_triggers_level_two(self):
+    msg_eyes_one_undetected = make_msg(True, distracted=True)
+    msg_eyes_one_undetected.leftDriverData.leftEyeProb = 0.
+    msg_eyes_one_undetected.leftDriverData.rightEyeProb = 1.
+    DM = DriverMonitoring()
+    for _ in range(DM.settings._EYES_NOT_FOUND_COUNT + int(DM.settings._VISION_POLICY_ALERT_2_TIMEOUT / DT_DMON) + 5):
+      DM._update_states(msg_eyes_one_undetected, [0, 0, 0], 0, True, False)
+      DM._update_events(False, True, False, 0)
+    assert DM.eyes_not_found
+    assert DM.alert_level == log.DriverMonitoringState.AlertLevel.two
+
   # engaged, face detected but eyes not confidently found (sunglasses/glare/angle) continuously
   #  - eyes_not_found should only flip on after _EYES_NOT_FOUND_TIMEOUT and clear the instant eyes are found again
   def test_eyes_not_found_triggers_after_timeout(self):
