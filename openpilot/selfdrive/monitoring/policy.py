@@ -27,12 +27,12 @@ class DRIVER_MONITOR_SETTINGS:
     # https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202501899
     self._ALERT_MIN_SPEED = 2.8  # 10 km/h
 
-    self._WHEELTOUCH_POLICY_ALERT_1_TIMEOUT = 5.
-    self._WHEELTOUCH_POLICY_ALERT_2_TIMEOUT = 15.
-    self._WHEELTOUCH_POLICY_ALERT_3_TIMEOUT = 25.
-    self._VISION_POLICY_ALERT_1_TIMEOUT = 5.
-    self._VISION_POLICY_ALERT_2_TIMEOUT = 8.
-    self._VISION_POLICY_ALERT_3_TIMEOUT = 13.
+    self._WHEELTOUCH_POLICY_ALERT_1_TIMEOUT = 3.
+    self._WHEELTOUCH_POLICY_ALERT_2_TIMEOUT = 5.
+    self._WHEELTOUCH_POLICY_ALERT_3_TIMEOUT = 6.
+    self._VISION_POLICY_ALERT_1_TIMEOUT = 3.
+    self._VISION_POLICY_ALERT_2_TIMEOUT = 5.
+    self._VISION_POLICY_ALERT_3_TIMEOUT = 6.
 
     # no response = alert_3 sustained for certain amount of time
     self._NO_RESPONSE_TIMEOUT = 5.
@@ -46,9 +46,13 @@ class DRIVER_MONITOR_SETTINGS:
     self._TIMEOUT_RECOVERY_FACTOR_MIN = 1.25
 
     self._FACE_THRESHOLD = 0.7
-    self._EYE_THRESHOLD = 0.65
+    self._EYE_THRESHOLD = 0.55
     self._SG_THRESHOLD = 0.9
     self._BLINK_THRESHOLD = 0.865
+    self._EYES_CLOSED_DROWSY_TIMEOUT = 2.  # continuous eyes-closed time to trigger a drowsy driving warning
+    self._EYES_CLOSED_DROWSY_COUNT = int(self._EYES_CLOSED_DROWSY_TIMEOUT / DT_DMON)
+    self._EYES_NOT_FOUND_TIMEOUT = 3.  # continuous eyes-undetected time (face detected, eyes not) to trigger a warning
+    self._EYES_NOT_FOUND_COUNT = int(self._EYES_NOT_FOUND_TIMEOUT / DT_DMON)
     self._PHONE_THRESH = 0.5
     self._POSE_PITCH_THRESHOLD = 0.3133
     self._POSE_PITCH_THRESHOLD_SLACK = 0.3237
@@ -147,6 +151,10 @@ class DriverMonitoring:
     self.wheel_on_right_last = None
     self.wheel_on_right_default = rhd_saved
     self.face_detected = False
+    self.eyes_closed_cnt = 0
+    self.is_drowsy = False
+    self.eyes_not_found_cnt = 0
+    self.eyes_not_found = False
     self.alert_3_cnt = 0
     self.cnt_since_alert_3 = 0
     self.no_response_timeout = int(self.settings._NO_RESPONSE_TIMEOUT / DT_DMON)
@@ -162,7 +170,6 @@ class DriverMonitoring:
     self.threshold_alert_2 = 0.
     self.dcam_uncertain_cnt = 0
     self.dcam_reset_cnt = 0
-    self.no_eye_detected_cnt = 0
     self.too_distracted = Params().get_bool("DriverTooDistracted")
 
     self._reset_awareness()
@@ -235,7 +242,6 @@ class DriverMonitoring:
     pitch_threshold = self.settings._POSE_PITCH_THRESHOLD * self.pose.cfactor_pitch if self.pose.calibrated else self.settings._PITCH_NATURAL_THRESHOLD
     yaw_threshold = self.settings._POSE_YAW_THRESHOLD * self.pose.cfactor_yaw
 
-    self.distracted_types['noEyes'] = self.no_eye_detected_cnt >= (3 / DT_DMON)
     self.distracted_types['pose'] = bool((pitch_error > pitch_threshold) or (yaw_error > yaw_threshold))
     self.distracted_types['eye'] = bool((self.blink.left + self.blink.right)*0.5 > self.settings._BLINK_THRESHOLD)
     self.distracted_types['phone'] = bool(self.phone_prob > self.settings._PHONE_THRESH)
@@ -277,12 +283,25 @@ class DriverMonitoring:
                       * (driver_data.sunglassesProb < self.settings._SG_THRESHOLD)
     self.phone_prob = driver_data.phoneProb
 
-    if not (driver_data.leftEyeProb > self.settings._EYE_THRESHOLD and driver_data.rightEyeProb > self.settings._EYE_THRESHOLD):
-      self.no_eye_detected_cnt += 1
-    else:
-      self.no_eye_detected_cnt = 0
-
     self._get_distracted_types()
+
+    # face detected but eyes closed continuously -> drowsy driving warning, clears as soon as eyes reopen
+    if self.face_detected and self.distracted_types['eye']:
+      self.eyes_closed_cnt += 1
+    else:
+      self.eyes_closed_cnt = 0
+    self.is_drowsy = self.eyes_closed_cnt >= self.settings._EYES_CLOSED_DROWSY_COUNT
+
+    # face detected but either eye is not confidently found continuously (sunglasses/glare/angle) -> separate warning,
+    # clears as soon as both eyes are found again; distinct from is_drowsy which requires eyes to be seen as closed
+    eyes_undetected = self.face_detected and (driver_data.leftEyeProb <= self.settings._EYE_THRESHOLD \
+                                              or driver_data.rightEyeProb <= self.settings._EYE_THRESHOLD)
+    if eyes_undetected:
+      self.eyes_not_found_cnt += 1
+    else:
+      self.eyes_not_found_cnt = 0
+    self.eyes_not_found = self.eyes_not_found_cnt >= self.settings._EYES_NOT_FOUND_COUNT
+
     self.driver_distracted = any(self.distracted_types.values()) and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std
     self.driver_distraction_filter.update(self.driver_distracted)
 
@@ -336,6 +355,10 @@ class DriverMonitoring:
       return
 
     awareness_prev = self.awareness
+    if self.eyes_not_found and self.face_detected:
+      self.alert_level = AlertLevel.two
+      return
+
     _reaching_alert_1 = self.awareness - self.step_change <= self.threshold_alert_1
     _reaching_alert_3 = self.awareness - self.step_change <= 0
     lowspeed_exemption = lowspeed and _reaching_alert_1
@@ -380,9 +403,6 @@ class DriverMonitoring:
       elif self.awareness <= self.threshold_alert_1:
         self.alert_level = AlertLevel.one
 
-    if self.distracted_types['noEyes']:
-      self.alert_level = max(self.alert_level, AlertLevel.two)
-
   def get_state_packet(self, valid=True):
     # build driverMonitoringState packet
     dat = messaging.new_message('driverMonitoringState', valid=valid)
@@ -409,8 +429,9 @@ class DriverMonitoring:
     dm.visionPolicyState.distractedTypes.pose = self.distracted_types['pose']
     dm.visionPolicyState.distractedTypes.eye = self.distracted_types['eye']
     dm.visionPolicyState.distractedTypes.phone = self.distracted_types['phone']
-    dm.visionPolicyState.distractedTypes.noEyes = self.distracted_types['noEyes']
     dm.visionPolicyState.faceDetected = self.face_detected
+    dm.visionPolicyState.isDrowsy = self.is_drowsy
+    dm.visionPolicyState.eyesNotFound = self.eyes_not_found
     dm.visionPolicyState.pose.pitch = self.pose.pitch
     dm.visionPolicyState.pose.yaw = self.pose.yaw
     dm.visionPolicyState.pose.calibrated = self.pose.calibrated
