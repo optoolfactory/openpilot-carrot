@@ -332,7 +332,7 @@ class DriverMonitoring:
     awareness_prev = self.awareness
     if self.eye_missing_cnt >= eye_closed_timeout:
       self.awareness = -0.1
-      self.alert_level = AlertLevel.three
+      self.alert_level = AlertLevel.two
       if awareness_prev > 0:
         self.alert_3_cnt += 1
         self.cnt_since_alert_3 = 0
