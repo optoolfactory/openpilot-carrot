@@ -162,6 +162,7 @@ class DriverMonitoring:
     self.threshold_alert_2 = 0.
     self.dcam_uncertain_cnt = 0
     self.dcam_reset_cnt = 0
+    self.no_eye_detected_cnt = 0
     self.too_distracted = Params().get_bool("DriverTooDistracted")
 
     self._reset_awareness()
@@ -234,6 +235,7 @@ class DriverMonitoring:
     pitch_threshold = self.settings._POSE_PITCH_THRESHOLD * self.pose.cfactor_pitch if self.pose.calibrated else self.settings._PITCH_NATURAL_THRESHOLD
     yaw_threshold = self.settings._POSE_YAW_THRESHOLD * self.pose.cfactor_yaw
 
+    self.distracted_types['noEyes'] = self.no_eye_detected_cnt >= (3 / DT_DMON)
     self.distracted_types['pose'] = bool((pitch_error > pitch_threshold) or (yaw_error > yaw_threshold))
     self.distracted_types['eye'] = bool((self.blink.left + self.blink.right)*0.5 > self.settings._BLINK_THRESHOLD)
     self.distracted_types['phone'] = bool(self.phone_prob > self.settings._PHONE_THRESH)
@@ -274,6 +276,11 @@ class DriverMonitoring:
     self.blink.right = driver_data.rightBlinkProb * (driver_data.rightEyeProb > self.settings._EYE_THRESHOLD) \
                       * (driver_data.sunglassesProb < self.settings._SG_THRESHOLD)
     self.phone_prob = driver_data.phoneProb
+
+    if not (driver_data.leftEyeProb > self.settings._EYE_THRESHOLD or driver_data.rightEyeProb > self.settings._EYE_THRESHOLD):
+      self.no_eye_detected_cnt += 1
+    else:
+      self.no_eye_detected_cnt = 0
 
     self._get_distracted_types()
     self.driver_distracted = any(self.distracted_types.values()) and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std
@@ -373,6 +380,9 @@ class DriverMonitoring:
       elif self.awareness <= self.threshold_alert_1:
         self.alert_level = AlertLevel.one
 
+    if self.distracted_types['noEyes']:
+      self.alert_level = max(self.alert_level, AlertLevel.two)
+
   def get_state_packet(self, valid=True):
     # build driverMonitoringState packet
     dat = messaging.new_message('driverMonitoringState', valid=valid)
@@ -399,6 +409,7 @@ class DriverMonitoring:
     dm.visionPolicyState.distractedTypes.pose = self.distracted_types['pose']
     dm.visionPolicyState.distractedTypes.eye = self.distracted_types['eye']
     dm.visionPolicyState.distractedTypes.phone = self.distracted_types['phone']
+    dm.visionPolicyState.distractedTypes.noEyes = self.distracted_types['noEyes']
     dm.visionPolicyState.faceDetected = self.face_detected
     dm.visionPolicyState.pose.pitch = self.pose.pitch
     dm.visionPolicyState.pose.yaw = self.pose.yaw
