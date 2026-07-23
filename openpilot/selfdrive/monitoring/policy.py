@@ -46,7 +46,7 @@ class DRIVER_MONITOR_SETTINGS:
     self._TIMEOUT_RECOVERY_FACTOR_MIN = 1.25
 
     self._FACE_THRESHOLD = 0.7
-    self._EYE_THRESHOLD = 0.65
+    self._EYE_THRESHOLD = 0.75
     self._SG_THRESHOLD = 0.9
     self._BLINK_THRESHOLD = 0.865
     self._PHONE_THRESH = 0.5
@@ -277,7 +277,7 @@ class DriverMonitoring:
                       * (driver_data.sunglassesProb < self.settings._SG_THRESHOLD)
     self.phone_prob = driver_data.phoneProb
 
-    if not (driver_data.leftEyeProb > self.settings._EYE_THRESHOLD or driver_data.rightEyeProb > self.settings._EYE_THRESHOLD):
+    if not (driver_data.leftEyeProb > self.settings._EYE_THRESHOLD and driver_data.rightEyeProb > self.settings._EYE_THRESHOLD):
       self.no_eye_detected_cnt += 1
     else:
       self.no_eye_detected_cnt = 0
