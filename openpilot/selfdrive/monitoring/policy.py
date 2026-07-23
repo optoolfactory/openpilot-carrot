@@ -29,10 +29,10 @@ class DRIVER_MONITOR_SETTINGS:
 
     self._WHEELTOUCH_POLICY_ALERT_1_TIMEOUT = 3.
     self._WHEELTOUCH_POLICY_ALERT_2_TIMEOUT = 5.
-    self._WHEELTOUCH_POLICY_ALERT_3_TIMEOUT = 6.
+    self._WHEELTOUCH_POLICY_ALERT_3_TIMEOUT = 10.
     self._VISION_POLICY_ALERT_1_TIMEOUT = 3.
     self._VISION_POLICY_ALERT_2_TIMEOUT = 5.
-    self._VISION_POLICY_ALERT_3_TIMEOUT = 6.
+    self._VISION_POLICY_ALERT_3_TIMEOUT = 10.
 
     # no response = alert_3 sustained for certain amount of time
     self._NO_RESPONSE_TIMEOUT = 5.
@@ -46,7 +46,7 @@ class DRIVER_MONITOR_SETTINGS:
     self._TIMEOUT_RECOVERY_FACTOR_MIN = 1.25
 
     self._FACE_THRESHOLD = 0.7
-    self._EYE_THRESHOLD = 0.80
+    self._EYE_THRESHOLD = 0.75
     self._SG_THRESHOLD = 0.9
     self._BLINK_THRESHOLD = 0.865
     self._EYES_CLOSED_DROWSY_TIMEOUT = 2.  # continuous eyes-closed time to trigger a drowsy driving warning
@@ -292,10 +292,10 @@ class DriverMonitoring:
       self.eyes_closed_cnt = 0
     self.is_drowsy = self.eyes_closed_cnt >= self.settings._EYES_CLOSED_DROWSY_COUNT
 
-    # face detected but eyes not confidently found continuously (sunglasses/glare/angle) -> separate warning,
-    # clears as soon as eyes are found again; distinct from is_drowsy which requires eyes to be seen as closed
-    eyes_undetected = self.face_detected and driver_data.leftEyeProb <= self.settings._EYE_THRESHOLD \
-                      and driver_data.rightEyeProb <= self.settings._EYE_THRESHOLD
+    # face detected but either eye is not confidently found continuously (sunglasses/glare/angle) -> separate warning,
+    # clears as soon as both eyes are found again; distinct from is_drowsy which requires eyes to be seen as closed
+    eyes_undetected = self.face_detected and (driver_data.leftEyeProb <= self.settings._EYE_THRESHOLD \
+                                              or driver_data.rightEyeProb <= self.settings._EYE_THRESHOLD)
     if eyes_undetected:
       self.eyes_not_found_cnt += 1
     else:
@@ -355,6 +355,10 @@ class DriverMonitoring:
       return
 
     awareness_prev = self.awareness
+    if self.eyes_not_found and self.face_detected:
+      self.alert_level = AlertLevel.two
+      return
+
     _reaching_alert_1 = self.awareness - self.step_change <= self.threshold_alert_1
     _reaching_alert_3 = self.awareness - self.step_change <= 0
     lowspeed_exemption = lowspeed and _reaching_alert_1
