@@ -229,3 +229,15 @@ class TestMonitoring:
     assert alert_lvls[int((INVISIBLE_SECONDS_TO_ORANGE-1+DT_DMON*s._HI_STD_FALLBACK_TIME-0.1)/DT_DMON)] == 1
     assert alert_lvls[int((INVISIBLE_SECONDS_TO_ORANGE-1+DT_DMON*s._HI_STD_FALLBACK_TIME+0.1)/DT_DMON)] == 2
     assert alert_lvls[int((INVISIBLE_SECONDS_TO_RED-1+DT_DMON*s._HI_STD_FALLBACK_TIME+0.1)/DT_DMON)] == 3
+
+  # engaged, one eye not detected for 3 seconds
+  def test_no_eyes_alert(self):
+    msg_NO_EYES = make_msg(True)
+    msg_NO_EYES.leftDriverData.rightEyeProb = 0.
+    no_eyes_seq = [msg_ATTENTIVE] * int(2 / DT_DMON) + [msg_NO_EYES] * int(3.1 / DT_DMON) + \
+                  [msg_ATTENTIVE] * int(5 / DT_DMON)
+    alert_lvls, d_status = self._run_seq(no_eyes_seq, always_false, always_true, always_false)
+    assert alert_lvls[int(4.9 / DT_DMON)] == 0
+    assert alert_lvls[int(5.0 / DT_DMON)] == 2
+    assert alert_lvls[int(5.2 / DT_DMON)] == 0
+    assert d_status.distracted_types['noEyes']
