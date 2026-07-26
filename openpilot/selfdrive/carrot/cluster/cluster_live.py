@@ -19,7 +19,7 @@ from cluster_models import (
     NaviGuidanceImage,
     NaviTrafficLightInfo,
 )
-from cluster_navi import fresh_carrot_navi, parse_carrot_navi
+from cluster_navi import fresh_carrot_navi, parse_carrot_navi, resolve_navi_speed_limit
 from cluster_navi_source import NaviIpcMediaSource
 from cluster_route_replay import RouteLogParser, finite_float, frame_to_state, safe_get, safe_optional_float
 from cluster_utils import clamp
@@ -44,6 +44,31 @@ LIVE_NAVI_IMAGE_BASE64_MAX_CHARS = 2 * 1024 * 1024
 LIVE_NAVI_IMAGE_MAX_DIMENSION = 2048
 ACCELERATION_DUE_TO_GRAVITY = 9.80665
 DEFAULT_MAX_LATERAL_ACCEL = 3.0
+DECELERATION_SOURCE_LABELS = {
+    "cam": "cam:n",
+    "section": "section:n",
+    "bump": "bump:n",
+    "police": "police:n",
+    "waze": "waze:n",
+    "road": "road:n",
+    "atc": "turn:n",
+    "atc2": "turn:n",
+    "hda": "cam:v",
+    "route": "route:v",
+    "gas": "gas:v",
+    "vturn": "turn:c",
+    "model": "turn:c",
+    "turn": "turn:c",
+}
+
+
+def deceleration_source_display_label(source: str | None) -> str:
+    normalized = str(source or "").strip().lower()
+    if not normalized:
+        return "apply"
+    if normalized.endswith((":n", ":v", ":c")):
+        return normalized
+    return DECELERATION_SOURCE_LABELS.get(normalized, normalized[:8])
 
 
 def _limited_items(items: Any, max_items: int):
@@ -362,17 +387,22 @@ class OpenpilotLiveSource:
         )
         external_nav_active = (active_carrot is not None and active_carrot > 0.0) or navi_guidance_active
 
-        speed_limit_kph = state.speed_limit_kph
-        speed_limit_source = state.speed_limit_source
-        if speed_limit_kph is None and navi_live is not None and navi_live.speed is not None:
-            navi_limit = navi_live.speed.road_limit_kph
-            if navi_limit is not None and navi_limit > 0:
-                speed_limit_kph = navi_limit
-                speed_limit_source = "n"
+        speed_limit_kph, speed_limit_source = resolve_navi_speed_limit(
+            state.speed_limit_kph,
+            state.speed_limit_source,
+            navi_live,
+        )
 
         cruise_override_kph = None
         cruise_override_label = None
         cruise_override_color_mode = 0
+        driving_mode = (
+            state.driving_mode
+            if state.driving_mode in (1, 2, 3, 4)
+            and self._service_alive("longitudinalPlan")
+            and self._service_valid("longitudinalPlan")
+            else None
+        )
         if state.cruise_kph is not None and state.cruise_display_state != "off":
             # Keep this priority and the thresholds in sync with mici's SetSpeedOverride.
             longitudinal_plan = self._service_data("longitudinalPlan")
@@ -386,7 +416,7 @@ class OpenpilotLiveSource:
                 desired_source = str(safe_get(carrot_man, "desiredSource", "") or "").strip()
                 if desired_speed is not None and 0.0 < desired_speed < 200.0 and desired_speed < state.cruise_kph:
                     cruise_override_kph = desired_speed
-                    cruise_override_label = (desired_source or "apply")[:8]
+                    cruise_override_label = deceleration_source_display_label(desired_source)
                     cruise_override_color_mode = 2
 
         return replace(
@@ -403,6 +433,7 @@ class OpenpilotLiveSource:
             fuel_gauge=fuel_gauge,
             energy_gauge_label=energy_gauge_label,
             urea_gauge=urea_gauge,
+            driving_mode=driving_mode,
             cruise_override_kph=cruise_override_kph,
             cruise_override_label=cruise_override_label,
             cruise_override_color_mode=cruise_override_color_mode,
@@ -482,11 +513,11 @@ class OpenpilotLiveSource:
         elif service == "carrotNavi":
             self._update_carrot_navi(data)
         elif service == "longitudinalPlan":
-            self.parser._update_longitudinal_plan(data)
+            self.parser._update_longitudinal_plan(data, self._service_valid(service))
         elif service == "controlsState":
             self.parser._update_controls_state(data)
         elif service == "selfdriveState":
-            self.parser._update_selfdrive_state(data)
+            self.parser._update_selfdrive_state(data, event_t)
         elif service == "carControl":
             self.parser._update_car_control(data)
         elif service == "deviceState":
@@ -515,7 +546,7 @@ class OpenpilotLiveSource:
             return
         now = time.monotonic()
         self._carrot_navi_generation = generation
-        self._carrot_navi = parse_carrot_navi(data, now)
+        self._carrot_navi = parse_carrot_navi(data, now, self._carrot_navi)
         self._carrot_navi, self._carrot_navi_next_expiry_s = fresh_carrot_navi(self._carrot_navi, now)
 
     def _current_carrot_navi(self, now: float):

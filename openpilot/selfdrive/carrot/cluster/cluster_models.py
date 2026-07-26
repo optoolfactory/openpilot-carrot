@@ -135,6 +135,9 @@ class NaviSpeedInfo:
     sdi_type: int | None = None
     sdi_distance_m: int | None = None
     sdi_speed_limit_kph: int | None = None
+    secondary_sdi_type: int | None = None
+    secondary_sdi_distance_m: int | None = None
+    secondary_sdi_speed_limit_kph: int | None = None
     section_active: bool = False
     section_speed_limit_kph: int | None = None
     section_average_kph: float | None = None
@@ -232,6 +235,9 @@ class NaviMediaFrame:
     height: int = 0
     data: bytes | None = None
     reason: str | None = None
+    plane_data: tuple[bytes, bytes, bytes] | None = None
+    plane_strides: tuple[int, int, int] | None = None
+    hardware_buffer: object | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -362,6 +368,7 @@ class ClusterUiState:
     surround_view_active: bool
     lanes: tuple[LaneMarking, ...]
     onroad: bool = False
+    active_lane_line: bool | None = None
     camera_view_mode: int = 0
     extra_left_lane_visible: bool = False
     extra_right_lane_visible: bool = False
@@ -449,6 +456,7 @@ class ClusterUiState:
     lateral_plan_curvature_rates: tuple[float, ...] = ()
     display_speed_kph: float | None = None
     traffic_state: int = 0
+    driving_mode: int | None = None
     git_status: GitBranchStatus | None = None
     actual_fps: float | None = None
     cluster_core_usage_text: str | None = None
@@ -461,9 +469,13 @@ class ClusterUiState:
     fuel_gauge: float | None = None
     energy_gauge_label: Literal["fuel", "battery"] = "fuel"
     urea_gauge: float | None = None
+    ev_mode_valid: bool = False
+    ev_mode_active: bool = False
     cruise_override_kph: float | None = None
     cruise_override_label: str | None = None
     cruise_override_color_mode: int = 0
+    recorded_cutin_active: bool = False
+    recorded_cutin_sound: bool = False
 
 
 @dataclass(frozen=True, slots=True)

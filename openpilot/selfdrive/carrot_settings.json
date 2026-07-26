@@ -423,6 +423,15 @@
             "MaxAngleFrames",
             "SpeedFromPCM"
           ]
+        },
+        {
+          "id": "VEH_DEVICE",
+          "ko": "기기 하드웨어",
+          "en": "Device Hardware",
+          "zh": "设备硬件",
+          "params": [
+            "HardwareC3xLite"
+          ]
         }
       ]
     },
@@ -490,7 +499,8 @@
                 "ClusterHudMirror",
                 "ClusterHudTheme",
                 "ClusterNaviMapTheme",
-                "ClusterNaviMapType"
+                "ClusterNaviMapType",
+                "ClusterNaviMapFps"
               ]
             },
             {
@@ -614,7 +624,8 @@
       "min": -150,
       "max": 150,
       "default": 0,
-      "unit": 1
+      "unit": 1,
+      "display_unit": "distanceCm"
     },
     {
       "group": "조향일반",
@@ -982,7 +993,8 @@
       "min": 0,
       "max": 2500,
       "default": 0,
-      "unit": 50
+      "unit": 50,
+      "display_unit": "distanceCm"
     },
     {
       "group": "크루즈",
@@ -998,7 +1010,8 @@
       "min": 0,
       "max": 10,
       "default": 2,
-      "unit": 1
+      "unit": 1,
+      "display_unit": "speedKph"
     },
     {
       "group": "크루즈",
@@ -1062,7 +1075,8 @@
       "min": 30,
       "max": 200,
       "default": 0,
-      "unit": 1
+      "unit": 1,
+      "display_unit": "percent"
     },
     {
       "group": "가속설정",
@@ -1190,7 +1204,8 @@
       "min": 400,
       "max": 1000,
       "default": 600,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "distanceCm"
     },
     {
       "group": "주행튜닝",
@@ -1222,7 +1237,8 @@
       "min": -600,
       "max": 600,
       "default": -150,
-      "unit": 100
+      "unit": 100,
+      "display_unit": "distanceCm"
     },
     {
       "group": "주행튜닝",
@@ -1334,7 +1350,8 @@
       "min": 0,
       "max": 200,
       "default": 100,
-      "unit": 1
+      "unit": 1,
+      "display_unit": "percent"
     },
     {
       "group": "감속제어",
@@ -1350,7 +1367,8 @@
       "min": 50,
       "max": 300,
       "default": 100,
-      "unit": 5
+      "unit": 5,
+      "display_unit": "percent"
     },
     {
       "group": "조향일반",
@@ -1382,7 +1400,8 @@
       "min": 0,
       "max": 100,
       "default": 20,
-      "unit": 5
+      "unit": 5,
+      "display_unit": "speedKph"
     },
     {
       "group": "조향일반",
@@ -1526,7 +1545,8 @@
       "min": 1,
       "max": 100,
       "default": 10,
-      "unit": 1
+      "unit": 1,
+      "display_unit": "speedKph"
     },
     {
       "group": "버튼설정",
@@ -1558,7 +1578,8 @@
       "min": 1,
       "max": 100,
       "default": 10,
-      "unit": 1
+      "unit": 1,
+      "display_unit": "speedKph"
     },
     {
       "group": "버튼설정",
@@ -1574,7 +1595,8 @@
       "min": 0,
       "max": 160,
       "default": 10,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "speedKph"
     },
     {
       "group": "버튼설정",
@@ -1590,7 +1612,8 @@
       "min": 1,
       "max": 160,
       "default": 10,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "speedKph"
     },
     {
       "group": "버튼설정",
@@ -1606,7 +1629,8 @@
       "min": 1,
       "max": 160,
       "default": 10,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "speedKph"
     },
     {
       "group": "버튼설정",
@@ -1622,7 +1646,8 @@
       "min": 1,
       "max": 160,
       "default": 10,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "speedKph"
     },
     {
       "group": "버튼설정",
@@ -1638,7 +1663,8 @@
       "min": 1,
       "max": 160,
       "default": 10,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "speedKph"
     },
     {
       "group": "버튼설정",
@@ -1686,7 +1712,8 @@
       "min": 0,
       "max": 200,
       "default": 0,
-      "unit": 5
+      "unit": 5,
+      "display_unit": "speedKph"
     },
     {
       "group": "오토크루즈",
@@ -1702,7 +1729,8 @@
       "min": 0,
       "max": 200,
       "default": 30,
-      "unit": 5
+      "unit": 5,
+      "display_unit": "speedKph"
     },
     {
       "group": "오토크루즈",
@@ -1878,7 +1906,8 @@
       "min": 0,
       "max": 3000,
       "default": 60,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "timeMin"
     },
     {
       "group": "시작",
@@ -1942,7 +1971,8 @@
       "min": 0,
       "max": 200,
       "default": 0,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "percent"
     },
     {
       "group": "감속제어",
@@ -1958,7 +1988,8 @@
       "min": -1,
       "max": 100,
       "default": 0,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "percent"
     },
     {
       "group": "크루즈",
@@ -1990,7 +2021,9 @@
       "min": -120,
       "max": 120,
       "default": 0,
-      "unit": 1
+      "unit": 1,
+      "display_unit": "percent",
+      "risk": "high"
     },
     {
       "group": "화면",
@@ -2123,14 +2156,14 @@
     {
       "group": "화면패스",
       "name": "CarrotTireTrajectory",
-      "title": "타이어 궤적 표시(0)",
-      "descr": "타이어 궤적 그라데이션 표시 여부를 설정합니다.\n 0: 끄기\n 1: 켜기",
+      "title": "타이어 궤적",
+      "descr": "차선 이탈 정도를 타이어 경로에 그라데이션(초록→빨강)으로 표시하고 하단에 편차(L/R/C, m)를 함께 표시합니다.\n0:끄기, 1:켜기",
       "egroup": "DISP",
       "etitle": "Tire Trajectory",
-      "edescr": "Shows the tire trajectory gradient on the screen.\n 0: Off, 1: On",
+      "edescr": "Display tire paths with a lane-departure gradient (green->red) over the predicted path, plus an L/R/C offset indicator.\n0:Off, 1:On",
       "cgroup": "显示设置",
-      "ctitle": "显示轮胎轨迹",
-      "cdescr": "显示轮胎轨迹。0: 关闭, 1: 开启",
+      "ctitle": "轮胎轨迹",
+      "cdescr": "在预测路径上以渐变色(绿→红)显示车道偏离程度, 并在底部显示偏移量(L/R/C, m)。\n0:关, 1:开",
       "min": 0,
       "max": 1,
       "default": 0,
@@ -2150,7 +2183,8 @@
       "min": 0,
       "max": 15,
       "default": 9,
-      "unit": 1
+      "unit": 1,
+      "control": "select"
     },
     {
       "group": "화면패스",
@@ -2166,7 +2200,8 @@
       "min": 0,
       "max": 20,
       "default": 12,
-      "unit": 1
+      "unit": 1,
+      "control": "select"
     },
     {
       "group": "화면패스",
@@ -2182,7 +2217,8 @@
       "min": 0,
       "max": 19,
       "default": 1,
-      "unit": 1
+      "unit": 1,
+      "control": "select"
     },
     {
       "group": "화면패스",
@@ -2198,7 +2234,8 @@
       "min": 0,
       "max": 15,
       "default": 11,
-      "unit": 1
+      "unit": 1,
+      "control": "select"
     },
     {
       "group": "화면패스",
@@ -2214,7 +2251,8 @@
       "min": 0,
       "max": 20,
       "default": 3,
-      "unit": 1
+      "unit": 1,
+      "control": "select"
     },
     {
       "group": "화면",
@@ -2230,7 +2268,8 @@
       "min": 0,
       "max": 8,
       "default": 0,
-      "unit": 1
+      "unit": 1,
+      "control": "select"
     },
     {
       "group": "레인모드",
@@ -2246,7 +2285,8 @@
       "min": 0,
       "max": 200,
       "default": 0,
-      "unit": 1
+      "unit": 1,
+      "display_unit": "speedKph"
     },
     {
       "group": "레인모드",
@@ -2262,7 +2302,8 @@
       "min": 0,
       "max": 200,
       "default": 0,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "speedKph"
     },
     {
       "group": "레인모드",
@@ -2278,7 +2319,8 @@
       "min": 0,
       "max": 500,
       "default": 0,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "distanceCm"
     },
     {
       "group": "조향일반",
@@ -2410,6 +2452,24 @@
     },
     {
       "group": "시작",
+      "name": "HardwareC3xLite",
+      "title": "C3X Lite 하드웨어",
+      "descr": "C3X Lite에서만 켜세요. 스피커·앰프 대신 GPIO 부저를 사용하며 오디오·로그 기록 프로세스를 끕니다. 변경 후 기기를 재부팅하세요.",
+      "egroup": "START",
+      "etitle": "C3X Lite Hardware",
+      "edescr": "Enable only on C3X Lite. Uses the GPIO buzzer instead of the speaker/amplifier and disables audio and logging processes. Reboot the device after changing.",
+      "cgroup": "启动设置",
+      "ctitle": "C3X Lite 硬件",
+      "cdescr": "仅在 C3X Lite 上启用。使用 GPIO 蜂鸣器代替扬声器/功放，并停用音频和日志记录进程。更改后请重启设备。",
+      "min": 0,
+      "max": 1,
+      "default": 0,
+      "unit": 1,
+      "control": "toggle",
+      "risk": "high"
+    },
+    {
+      "group": "시작",
       "name": "CanfdHDA2",
       "title": "CANFD HDA2지원(0)",
       "descr": "1: HDA2 차량",
@@ -2476,13 +2536,13 @@
       "group": "레이더",
       "name": "RadarLeadModelMode",
       "title": "레이더 리드 방식(0)",
-      "descr": "0: 기존 방식\n1: 모델 방식 (radard 재시작 후 적용)",
+      "descr": "0: 기존 방식\n1: 독립 하이브리드 (vision-radar leadOne + 모델 cut-in/external, 차량 재시동 또는 기기 재부팅 후 적용)",
       "egroup": "RADAR",
       "etitle": "Radar lead method(0)",
-      "edescr": "0: Legacy\n1: Model (applied after radard restart)",
+      "edescr": "0: Legacy\n1: Independent hybrid (vision-radar leadOne + model cut-in/external; applied after an ignition cycle or device reboot)",
       "cgroup": "RADAR",
       "ctitle": "Radar lead method(0)",
-      "cdescr": "0: Legacy\n1: Model (applied after radard restart)",
+      "cdescr": "0: 传统方式\n1: 模型方式（车辆重新启动或设备重启后生效）",
       "min": 0,
       "max": 1,
       "default": 0,
@@ -2531,7 +2591,8 @@
       "cgroup": "启动设置",
       "ctitle": "声音语言",
       "cdescr": "选择提示音使用的语言。自动会跟随设备语言设置。",
-      "default": "auto"
+      "default": "auto",
+      "control": "select"
     },
     {
       "group": "시작",
@@ -2547,7 +2608,8 @@
       "min": 5,
       "max": 200,
       "default": 0,
-      "unit": 5
+      "unit": 5,
+      "display_unit": "percent"
     },
     {
       "group": "시작",
@@ -2563,7 +2625,8 @@
       "min": 5,
       "max": 200,
       "default": 0,
-      "unit": 5
+      "unit": 5,
+      "display_unit": "percent"
     },
     {
       "group": "차량간격",
@@ -2675,7 +2738,8 @@
       "min": 20,
       "max": 100,
       "default": 0,
-      "unit": 5
+      "unit": 5,
+      "display_unit": "percent"
     },
     {
       "group": "차량간격",
@@ -2691,7 +2755,8 @@
       "min": 0,
       "max": 100,
       "default": 50,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "percent"
     },
     {
       "group": "감속제어",
@@ -2707,22 +2772,23 @@
       "min": 10,
       "max": 200,
       "default": 30,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "speedKph"
     },
     {
       "group": "주행튜닝",
       "name": "StoppingAccel",
-      "title": "정지시작가속도x0.01(0)",
+      "title": "정지시작가속도x0.01(-50)",
       "descr": "정지시작가속도 조정, 0: 기존방식",
       "egroup": "LONG",
-      "etitle": "StoppingStartAccelx0.01(0)",
+      "etitle": "StoppingStartAccelx0.01(-50)",
       "edescr": "stopping acceleration, 0: Traditional method",
       "cgroup": "纵向控制",
-      "ctitle": "停止起步加速度 x0.01(0)",
+      "ctitle": "停止起步加速度 x0.01(-50)",
       "cdescr": "停止加速度，0: 传统方式",
       "min": -100,
       "max": 0,
-      "default": 0,
+      "default": -50,
       "unit": 10
     },
     {
@@ -2787,7 +2853,8 @@
       "min": 3,
       "max": 20,
       "default": 6,
-      "unit": 1
+      "unit": 1,
+      "display_unit": "timeSec"
     },
     {
       "group": "감속제어",
@@ -2819,7 +2886,8 @@
       "min": -1,
       "max": 100,
       "default": -1,
-      "unit": 1
+      "unit": 1,
+      "display_unit": "speedKph"
     },
     {
       "group": "감속제어",
@@ -2835,7 +2903,8 @@
       "min": 1,
       "max": 50,
       "default": 1,
-      "unit": 1
+      "unit": 1,
+      "display_unit": "timeSec"
     },
     {
       "group": "감속제어",
@@ -2851,7 +2920,8 @@
       "min": 10,
       "max": 100,
       "default": 35,
-      "unit": 5
+      "unit": 5,
+      "display_unit": "speedKph"
     },
     {
       "group": "감속제어",
@@ -2915,7 +2985,8 @@
       "min": 50,
       "max": 300,
       "default": 100,
-      "unit": 10
+      "unit": 10,
+      "display_unit": "percent"
     },
     {
       "group": "감속제어",
@@ -2947,7 +3018,8 @@
       "min": 80,
       "max": 120,
       "default": 105,
-      "unit": 1
+      "unit": 1,
+      "display_unit": "percent"
     },
     {
       "group": "화면",
@@ -2963,7 +3035,8 @@
       "min": 0,
       "max": 100,
       "default": 100,
-      "unit": 5
+      "unit": 5,
+      "display_unit": "percent"
     },
     {
       "group": "화면",
@@ -2985,15 +3058,15 @@
       "group": "외부 HUD",
       "name": "ClusterHud",
       "title": "외부 HUD 활성화(0)",
-      "descr": "0: 끄기\n1: TURZX 9.2인치\n2: TURZX 12.3인치",
+      "descr": "0: 끄기\n1: TURZX 9.2인치",
       "egroup": "CLUSTER HUD",
       "etitle": "External HUD Display(0)",
-      "edescr": "0: Off\n1: TURZX 9.2 inch\n2: TURZX 12.3 inch",
+      "edescr": "0: Off\n1: TURZX 9.2 inch",
       "cgroup": "外部 HUD",
       "ctitle": "外部 HUD 显示(0)",
-      "cdescr": "0: 关闭\n1: TURZX 9.2 英寸\n2: TURZX 12.3 英寸",
+      "cdescr": "0: 关闭\n1: TURZX 9.2 英寸",
       "min": 0,
-      "max": 2,
+      "max": 1,
       "default": 0,
       "unit": 1
     },
@@ -3043,7 +3116,8 @@
       "min": 0,
       "max": 100,
       "default": 0,
-      "unit": 1
+      "unit": 1,
+      "display_unit": "percent"
     },
     {
       "group": "외부 HUD",
@@ -3091,7 +3165,25 @@
       "min": 0,
       "max": 2,
       "default": 1,
-      "unit": 1
+      "unit": 1,
+      "control": "select",
+      "options": {
+        "ko": [
+          "자동",
+          "다크",
+          "라이트"
+        ],
+        "en": [
+          "Auto",
+          "Dark",
+          "Light"
+        ],
+        "zh": [
+          "自动",
+          "深色",
+          "浅色"
+        ]
+      }
     },
     {
       "group": "외부 HUD",
@@ -3107,7 +3199,58 @@
       "min": 0,
       "max": 1,
       "default": 0,
-      "unit": 1
+      "unit": 1,
+      "control": "select",
+      "options": {
+        "ko": [
+          "일반 지도",
+          "위성 지도"
+        ],
+        "en": [
+          "Normal map",
+          "Satellite map"
+        ],
+        "zh": [
+          "普通地图",
+          "卫星地图"
+        ]
+      }
+    },
+    {
+      "group": "외부 HUD",
+      "name": "ClusterNaviMapFps",
+      "title": "클러스터 내비 지도 FPS(1)",
+      "descr": "0: 5 FPS\n1: 10 FPS(기본)\n2: 20 FPS\n3: 30 FPS\nHUD FPS와는 별개이며 지도 비트레이트는 자동 설정됩니다.\n변경하면 외부 내비가 자동으로 다시 연결됩니다.",
+      "egroup": "CLUSTER HUD",
+      "etitle": "Cluster Navi Map FPS(1)",
+      "edescr": "0: 5 FPS\n1: 10 FPS (default)\n2: 20 FPS\n3: 30 FPS\nThis is independent of HUD FPS and map bitrate is selected automatically.\nThe external navigation app reconnects automatically when changed.",
+      "cgroup": "外部 HUD",
+      "ctitle": "集群导航地图 FPS(1)",
+      "cdescr": "0: 5 FPS\n1: 10 FPS（默认）\n2: 20 FPS\n3: 30 FPS\n此设置独立于 HUD FPS，地图比特率自动设置。\n更改后外部导航应用会自动重新连接。",
+      "min": 0,
+      "max": 3,
+      "default": 1,
+      "unit": 1,
+      "options": {
+        "ko": [
+          "5 FPS",
+          "10 FPS",
+          "20 FPS",
+          "30 FPS"
+        ],
+        "en": [
+          "5 FPS",
+          "10 FPS",
+          "20 FPS",
+          "30 FPS"
+        ],
+        "zh": [
+          "5 FPS",
+          "10 FPS",
+          "20 FPS",
+          "30 FPS"
+        ]
+      }
     },
     {
       "group": "외부 HUD",
@@ -3139,7 +3282,8 @@
       "min": 0,
       "max": 5,
       "default": 0,
-      "unit": 1
+      "unit": 1,
+      "control": "select"
     },
     {
       "group": "외부 HUD",
@@ -3155,7 +3299,8 @@
       "min": 0,
       "max": 4,
       "default": 4,
-      "unit": 1
+      "unit": 1,
+      "control": "select"
     },
     {
       "group": "외부 HUD",
@@ -3193,13 +3338,13 @@
       "group": "외부 HUD",
       "name": "ClusterHudCoreMode",
       "title": "외부 HUD CPU 코어 지정(0)",
-      "descr": "CLUSTER_REALTIME=1일 때만 적용\n0: 1,2,3,4\n1: 모든 코어\n변경 시 클러스터 HUD를 재시작합니다.",
+      "descr": "0: 1,2,3,4\n1: 모든 코어\n변경 시 클러스터 HUD를 재시작합니다.",
       "egroup": "CLUSTER HUD",
       "etitle": "External HUD CPU Core Mode(0)",
-      "edescr": "Applies only when CLUSTER_REALTIME=1\n0: cores 1,2,3,4\n1: all cores\nChanging this restarts the cluster HUD process.",
+      "edescr": "0: cores 1,2,3,4\n1: all cores\nChanging this restarts the cluster HUD process.",
       "cgroup": "外部 HUD",
       "ctitle": "External HUD CPU Core Mode(0)",
-      "cdescr": "Applies only when CLUSTER_REALTIME=1\n0: cores 1,2,3,4\n1: all cores\nChanging this restarts the cluster HUD process.",
+      "cdescr": "0: cores 1,2,3,4\n1: all cores\nChanging this restarts the cluster HUD process.",
       "min": 0,
       "max": 1,
       "default": 0,
@@ -3209,13 +3354,13 @@
       "group": "외부 HUD",
       "name": "ClusterHudPriority",
       "title": "외부 HUD 실시간 우선순위(10)",
-      "descr": "CLUSTER_REALTIME=1일 때만 적용\n1-99\n기본 10\n변경 시 클러스터 HUD를 재시작합니다.",
+      "descr": "1-99\n기본 10\n변경 시 클러스터 HUD를 재시작합니다.",
       "egroup": "CLUSTER HUD",
       "etitle": "External HUD Realtime Priority(10)",
-      "edescr": "Applies only when CLUSTER_REALTIME=1\n1-99\nDefault 10\nChanging this restarts the cluster HUD process.",
+      "edescr": "1-99\nDefault 10\nChanging this restarts the cluster HUD process.",
       "cgroup": "外部 HUD",
       "ctitle": "External HUD Realtime Priority(10)",
-      "cdescr": "Applies only when CLUSTER_REALTIME=1\n1-99\nDefault 10\nChanging this restarts the cluster HUD process.",
+      "cdescr": "1-99\nDefault 10\nChanging this restarts the cluster HUD process.",
       "min": 1,
       "max": 99,
       "default": 10,

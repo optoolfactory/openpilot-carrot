@@ -1,8 +1,8 @@
 # Carrot Cluster
 
-Standalone raylib cluster UI bundle for openpilot devices. Live and replay views
-show tire pressures beside the ego vehicle's four wheel positions when TPMS data
-is available; pressures below 31 psi are highlighted in red.
+Standalone raylib cluster UI bundle for openpilot devices. The normal and road
+camera HUDs show available tire pressures around a fixed vehicle diagram beside
+the navigation panel; pressures below 31 psi are highlighted in red.
 
 Run from the openpilot root:
 
@@ -54,12 +54,18 @@ The replay wrapper opens camera/debug data and seek controls in a separate
 `Carrot Cluster Replay Tools` window. The 1920x480 cluster window and USB frame
 remain clean and use the same renderer output. Use `--route-tools overlay` for
 the previous in-frame controls or `--route-tools off` to disable replay tools.
+The maintained cut-in route regression set and expected results are documented
+in [CUTIN_VALIDATION.md](CUTIN_VALIDATION.md); its 16 current-code checks can
+be run together with `validate_cutin_routes.py` and reviewed sequentially with
+`review_cutin_routes.py`.
 
 Pass `--screen-mode default` to inspect the normal HUD with its navigation
-panel instead. When the managed cluster HUD is enabled on a device, the cluster
-owns TCP 7714 and merges the embedded receiver snapshot directly. Managed
-autorun does not publish and subscribe the same state through `carrotNavi`;
-explicit standalone/CLI cereal publication remains available.
+panel instead. On a managed device, the permanent `carrot_navi` process owns
+TCP 7714 and publishes structured state through `carrotNavi` and binary media
+through `carrotNaviMedia`. Cluster autorun launches `--input live` and consumes
+both cereal services; it does not create an embedded receiver. The direct
+`--input navi` and `--navi-overlay` receiver paths remain available for explicit
+CLI runs when TCP 7714 is free.
 
 `--usb-jpeg-encoder auto` tries optional `turbojpeg` first and falls back to
 Pillow. Route replay defaults to `--route-overlay compact`, which shows the
@@ -71,12 +77,17 @@ should match live rendering cost more closely.
 renders directly into the Qualcomm/Venus-aligned NV12 layout before submit, so
 the cluster hardware path no longer depends on libyuv or a CPU RGBA-to-NV12
 conversion. On TICI with the current native bridge, the pipeline leases a cached
-ION/V4L2 input buffer and GLES reads the packed framebuffer directly into it;
-VIDC then queues the same buffer. This removes the per-frame raylib CPU image and
-C++ NV12 memcpy. It is direct handoff, not full zero-copy, because `glReadPixels`
-still performs a synchronous GPU readback. Missing symbols, an incompatible
-layout, or a first-use GL error retains/re-enters the staged compatibility path;
-set `CLUSTER_DIRECT_NV12_READBACK=0` to force that path for device A/B tests.
+ION/V4L2 input buffer. By default GLES imports that DMA-BUF as an ABGR8888
+byte-view framebuffer and runs the existing packed-NV12 shader directly into
+it. A bounded GLES fence completes before cached-ION synchronization and VIDC
+submit. This removes `glReadPixels`, PBO mapping, and the full-frame CPU copy
+without changing shader bytes, orientation, encoder geometry, or cadence.
+Set `CLUSTER_NV12_DMABUF_OUTPUT=0` to select the persistent three-slot PBO/fence
+fallback. An EGL/FBO/fence error also selects PBO automatically. PBO failure
+falls back to synchronous direct-ION readback; an incompatible layout or
+direct-readback failure retains the staged compatibility path. Set
+`CLUSTER_ASYNC_NV12_READBACK=0` to force synchronous direct-ION A/B testing, or
+`CLUSTER_DIRECT_NV12_READBACK=0` to force staged readback.
 H264 defaults to the same exact portrait upload geometry used by
 the working JPEG/PNG and earlier ffmpeg H264 paths. For a 9.2-inch panel that
 means a 462x1920 H264 stream, with no 16-pixel render-size padding unless
@@ -89,8 +100,9 @@ that the TURZX panel accepts, and patches hardware SPS frame-crop metadata for
 non-macroblock geometry such as 462x1920. It also asks the V4L2 encoder for
 multi-slice output capped by `--usb-h264-slice-max-bytes` so the resulting NAL
 sizes are closer to the ffmpeg/libx264 stream accepted by TURZX. The default
-H264 bitrate is `auto`, which keeps roughly the same bits per frame as FPS
-changes and resolves to `7M` at 30 FPS. The native default is all-I
+H264 bitrate is `auto`, which preserves the `7M` at 30 FPS per-frame budget
+across the supported live-FPS modes and resolves to `14M` at 60 FPS. The native
+default is all-I
 (`--usb-h264-gop 1`) because TURZX panel corruption measurements improved as
 P-frame references were removed. GOP 3 route replay was much better than the
 earlier long-GOP runs, and GOP 2 further improved compact-overlay tests, but a
@@ -98,8 +110,11 @@ route replay without the overlay showed frequent small block artifacts at GOP 2.
 GOP 1 at 6M removed the visible squares on the same route, with only slightly
 softer compression detail, and a follow-up GOP 1 / 7M run also stayed clean, so
 GOP 1 is the measured stability default for now.
-An explicit `8M` route replay was worse and pushed H264 USB
-chunk writes into large latency spikes, so the auto cap is limited to `7M`. The
+An explicit `8M` route replay was worse and pushed H264 USB chunk writes into
+large latency spikes. That result remains transport evidence, not a reason to
+halve the per-frame quality budget at higher FPS. High-FPS testing therefore
+keeps proportional bitrate and treats any resulting sender or receiver stall as
+the implementation bottleneck. The
 larger `--usb-h264-slice-max-bytes 8192` A/B also looked worse than the default
 4096-byte slice cap, and `2048` caused smaller but more frequent smearing, so
 keep the default slice setting for normal tests. The
@@ -111,6 +126,7 @@ the native library before hardware testing:
 
 ```bash
 scons system/loggerd/libcluster_h264_encoder_bridge.so
+scons system/loggerd/libcluster_h264_decoder_bridge.so
 ```
 
 Use `--usb-h264-backend ffmpeg --usb-h264-ffmpeg-encoder libx264` to compare
@@ -259,18 +275,19 @@ debug UI before navi data has arrived. When output is gated off,
 remain visible.
 The autorun watcher normalizes locale before this dim-only USB path too, so
 vendor USB initialization does not fail before the renderer is launched.
-Manager autostart sets `CLUSTER_REALTIME=0` by default and explicitly restores
-`SCHED_OTHER`. CPU affinity remains enabled: `ClusterHudCoreMode=0` maps to cores
-`1,2,3,4`, while mode `1` maps to all initially allowed CPU cores. Set
-`CLUSTER_REALTIME=1` only for an explicit diagnostic override; in that mode,
-`ClusterHudPriority` controls the common openpilot realtime helper priority with
-range `1..99`, default `10`.
+Manager autostart always configures the cluster process through openpilot's
+realtime helper. `ClusterHudCoreMode=0` maps to cores `1,2,3,4`, while mode `1`
+maps to all initially allowed CPU cores. `ClusterHudPriority` always controls
+the FIFO priority with range `1..99`, default `10`; `CLUSTER_REALTIME` is no
+longer read.
 Changing either param makes the running HUD exit so `cluster_autorun` can
 relaunch it with the new affinity/scheduler settings, without a whole system restart.
-Explicit `CLUSTER_REALTIME`, `CLUSTER_REALTIME_CORES`, or
-`CLUSTER_REALTIME_PRIORITY` environment values still win.
-On TICI, the HUD reads the local Git branch directly but does not start remote
-`ls-remote` or `fetch` work. PC/window runs retain the periodic remote status.
+Explicit `CLUSTER_REALTIME_CORES` or `CLUSTER_REALTIME_PRIORITY` environment
+values still override the corresponding Params.
+The HUD reads the local Git branch immediately on every platform and refreshes
+the upstream update state asynchronously at most every 60 seconds. The Git
+worker changes itself to `SCHED_OTHER` before `ls-remote`/`fetch`, so TICI does
+not run those commands in the render process's FIFO scheduling class.
 Native H.264 callback output is queued as complete access units. The bounded
 queue retains the latest codec config, keyframe, and frame without waiting for
 USB; stale access units are dropped and reported instead of failing the run.
@@ -316,11 +333,41 @@ ratio and is taller than before while the gap bars keep their own size/spacing;
 all four gap bars stay visible, sit close together, and bottom-align to the
 vehicle while inactive bars are gray and active bars use `#bb3d91`. Cruise set
 speed and `km/h` use the same font size and color; paused cruise keeps the set
-speed but draws it gray, and inactive cruise draws gray `--- km/h`. The
-lane-change icon is not drawn; the LFA icon uses
+speed but draws it gray, and inactive cruise draws gray `--- km/h`. The orange
+deceleration override keeps the selected `carrotMan.desiredSource` control
+value unchanged but annotates its displayed origin: navigation camera `cam:n`,
+vehicle/HDA camera `cam:v`, vehicle-side route curvature `route:v`, and
+comma-model turn prediction `turn:c`. Navigation TBT turn control displays
+`turn:n`; the label font scales down slightly for longer values such as
+`section:n` instead of dropping the origin suffix. The separate lane-change
+icon is not drawn. The LFA icon uses
 `selfdrive/assets/icons_mici/carrot_wheel_org.png`, rotates by
 `-carState.steeringAngleDeg`, and recolors its white pixels green when LFA is
-active.
+active. When `controlsState.activeLaneLine` is true, the fixed
+`carrot_wheel_lane.png` left/right lane overlay is drawn in the same position
+and color contract as the C4 HUD.
+When `carState.evModeValid` and `carState.evModeActive` are both true, the HUD
+shows a compact green `EV` indicator between the vehicle speed and cruise-set
+speed in the normal HUD. Full navigation mode intentionally omits it. It is
+also omitted when the decoded EV state is off, or for unsupported vehicles,
+invalid samples, and stale `carState` data.
+Hyundai/Kia CAN-FD hybrids enable this capability only when both `0xFA` and
+`0x230` are present on ECAN with DLC32. The four-bit power-flow mode in `0x230`
+shows `EV` for observed values 1, 2, and 6; all other values remain hidden.
+The normal HUD also shows the current `longitudinalPlan.myDrivingMode` beside
+the model traffic-state icon above vehicle speed: `1` eco in green, `2` safe
+in orange, `3` normal in white, and `4` high speed in red. Unknown modes and
+missing, invalid, or stale longitudinal plans hide the badge. The red and
+green traffic-state icons share the slot immediately to its left and remain
+independent of driving mode. Full navigation mode omits both speed-mode
+indicators.
+The normal and road camera HUDs use the same fixed TPMS diagram below the
+acceleration, steering, fuel, and DEF gauges. It remains hidden only when all
+four pressure values are unavailable; individual missing values show `--`, and
+values below 31 psi are red. The surrounding area stays transparent. When
+external navigation is active or its dashboard is connected, the green `NAV`
+status appears below the Wi-Fi icon instead of the former lower-right `NAVI`
+label. The center clock, EV indicator, and fuel/DEF gauges are unchanged.
 When `--fps` is omitted, `ClusterHudLiveFps` controls the render limit and is
 polled about once per second while running: `0` uncapped diagnostic mode, `1`
 10 Hz default, `2` 20 Hz, `3` 30 Hz, `4` 40 Hz, `5` 50 Hz, and `6` 60 Hz.
@@ -329,6 +376,14 @@ H264 runs on the `--usb-h264-fps` safety cap. Explicit `--fps` remains a fixed
 override. For H264 USB output, changing the effective FPS exits the current HUD
 process so autostart can relaunch with a matching encoder FPS when a launcher
 is present.
+
+`ClusterNaviMapFps` independently controls the Android MAP MAIN request: mode
+`0` is 5 Hz, `1` is the 10 Hz default, `2` is 20 Hz, and `3` is 30 Hz. At
+960x540 these modes select 1500, 3000, 3000, and 6000 kbps respectively; other
+resolutions scale the selected bitrate by pixel count within the protocol's
+1..12000 kbps bounds. There is no user-facing map bitrate setting. A changed
+MAP mode reconnects the Android navigation stream with a new manifest without
+changing the HUD FPS.
 Runs also show a compact lower-right cluster-process CPU overlay by current
 core, formatted like `[0(10),1(25)]`, with 2 px bottom/right margins. The
 sampler reads the current cluster process and direct child processes only,
@@ -345,8 +400,9 @@ run for supervisor retry without silently changing codec. Direct CLI auto uses n
 first encoder choice. `1` forces JPEG, `2` forces native hardware H264, and `3`
 forces ffmpeg/libx264 software H264.
 Native hardware H264 always uses GPU NV12 packing. Supported TICI builds report
-`direct_ion=on` and submit the leased encoder input without an intermediate copy;
-otherwise they report `direct_ion=off` and use staged NV12 readback. If backend
+`dmabuf_output=on` and submit the leased encoder input without readback or an
+intermediate copy. They also report the availability of `async_pbo` and
+`direct_ion` fallbacks. Unsupported builds use the first available fallback. If backend
 `auto` falls back to ffmpeg, the run uses the software RGBA pipe.
 Changing this setting while the HUD is running makes the current HUD process
 exit so `cluster_autorun` can relaunch it with the new encoder choice.
@@ -380,11 +436,13 @@ detected positions. The older fixed rear-tire-depth 2D arrow/label is removed.
 The default drive camera sits closer to the ego roof, lower than the earlier
 high view, tilted downward, shifted `5m` forward, and uses a `31` degree
 vertical field of view so nearby vehicles retain a useful apparent size.
-Detected vehicles, radar points, and desired-distance markers
-compress signed longitudinal placement by `0.5` in the rendered scene only, so
-actual `20m` and `-10m` draw at rendered `10m` and `-5m`. Distance labels keep
-the actual signed longitudinal values. The ego vehicle is drawn half a vehicle
-length behind the raw `0m` reference so its front bumper aligns to that
+Detected vehicles, radar points, desired-distance markers, model lane markings,
+the model-derived lane-change floor, model road edges, and the model planned
+path compress signed longitudinal placement by `0.5` in the rendered 3D scene,
+so actual `20m` and `-10m` draw at rendered `10m` and `-5m`. Road-camera mode
+keeps those overlays at `1:1` for image alignment. Distance labels and all
+lateral coordinates keep their actual values. The ego vehicle is drawn half a
+vehicle length behind the raw `0m` reference so its front bumper aligns to that
 reference. The temporary radar-zero, lane-start, and ego-zero debug marker bars
 are no longer rendered.
 `ClusterHudCameraViewMode=0` keeps this current camera. Mode `1` uses a
@@ -435,11 +493,11 @@ lane color codes, the current lane markings use that color first
 (`+10=white`, `+20=yellow`) before falling back to the cluster model colors.
 The planned path draws `longitudinalPlan.desiredDistance` as a magenta
 horizontal bar across the current lane width at the matching forward position.
-Changing `ClusterHud` to another supported mode or `0` makes the running HUD
-exit; cleanup sends TURZX brightness zero before releasing the USB device.
-When autorun passes a HUD mode, USB open is pinned to that mode's TURZX PID
-(`1 -> 0x0092`, `2 -> 0x0123`) so a second connected TURZX panel is not opened
-by the vendor library's generic device scan.
+Changing `ClusterHud` away from supported mode `1`, including legacy value `2`
+or `0`, makes the running HUD exit; cleanup sends TURZX brightness zero before
+releasing the USB device. When autorun passes HUD mode `1`, USB open is pinned
+to TURZX PID `0x0092` so a second connected TURZX panel is not opened by the
+vendor library's generic device scan.
 If frame or H264 chunk writes report that the USB device was disconnected, the
 active HUD exits instead of trying to recover in-process. Autorun calls the
 launcher in non-exiting mode so the error returns to the watcher loop, letting
@@ -455,10 +513,27 @@ system/platform fonts if KaiGen is not present.
 Latin/numeric text uses the 160-pixel primary font. The complete Korean glyph
 set uses a separate 32-pixel base atlas with bilinear filtering and no mip chain;
 a host resource smoke produced `8192x4096` rather than the former `8192x8192`.
-Incoming Navi H.264 is decoded on a bounded worker. If it falls behind, dependent
-frames are discarded until the next keyframe, and stale completed frames cannot
-replace a newer requested sequence. RGBA texture upload reuses the immutable
-frame buffer through CFFI rather than making another full-frame copy.
+Dynamic stroked HUD text keeps the original eight outline draws plus one fill
+draw, but calls the same raylib `DrawTextEx` C symbol directly after preparing
+the font, measurement, UTF-8 text, anchor, and colors once. Set
+`CLUSTER_RAW_STROKED_TEXT=0` to restore the pyray-wrapper path for an A/B or
+recovery run. The switch does not select a different shader, glyph atlas,
+outline algorithm, resolution, or text update cadence.
+Incoming Navi H.264 is decoded on a bounded worker. The default path attempts
+Qualcomm VIDC `/dev/video32` on every platform to produce leased linear NV12
+DMA-BUFs, imports them as EGLImages, and composes them through an external OpenGL
+texture without a decoded-pixel CPU copy or texture upload. Decoder-generation
+changes discard stale EGLImages before importing the new capture pool. If native
+decode or EGL import fails, the worker logs the reason and lazily falls back to
+PyAV YUV420P; platform markers do not control selection. Set
+`CLUSTER_HARDWARE_H264_DECODE=0` for an explicit software A/B. Diagnostic
+overrides are `CLUSTER_H264_DECODER_LIBRARY`, `CLUSTER_H264_DECODER_DEVICE`,
+`CLUSTER_H264_DECODE_TIMEOUT_MS`, and `CLUSTER_H264_DECODER_DEBUG=1`.
+
+If the decode worker falls behind, dependent frames are discarded until the
+next keyframe, and stale completed frames cannot replace a newer requested
+sequence. The PyAV fallback preserves YUV420P plane strides and uploads three
+reusable plane textures rather than expanding to RGBA.
 
 USB frame upload runs in no-ACK mode by default because some TURZX panels accept
 image data but never return a frame-upload response. Use `--usb-wait-frame-ack`
