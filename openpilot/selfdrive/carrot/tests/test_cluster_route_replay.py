@@ -15,6 +15,7 @@ from cluster_route_replay import (
   StableCornerObjectTracker,
   adjacent_route_log_path,
   blend_frames,
+  car_state_corner_detections,
   corner_track_label,
   frame_to_state,
   model_lead_detections_from_model_v2,
@@ -48,6 +49,30 @@ def radar_lead(track_id, d_rel=25.0, y_rel=2.0):
     vLat=0.0,
     aLeadK=0.0,
   )
+
+
+def test_blindspot_flags_do_not_create_virtual_corner_vehicles():
+  detections = car_state_corner_detections(SimpleNamespace(
+    leftBlindspot=True,
+    rightBlindspot=True,
+  ))
+
+  assert detections == ()
+
+
+def test_blindspot_rear_distance_still_creates_measured_corner_vehicle():
+  detections = car_state_corner_detections(SimpleNamespace(
+    leftBlindspot=True,
+    rightBlindspot=False,
+    leftRearLongDist=3.2,
+    leftRearLatDist=2.4,
+  ))
+
+  assert len(detections) == 1
+  assert detections[0].label == "LR"
+  assert detections[0].longitudinal_m == -3.2
+  assert detections[0].lateral_m == -2.4
+  assert detections[0].source == "carState"
 
 
 def test_corner_430_track_labels_preserve_radar_group():
@@ -93,6 +118,26 @@ def test_reconstructed_corner_tracks_include_filtered_lead_dynamics():
   assert len(output) == 1
   assert output[0].aLead > 0.05
   assert output[0].jLead != 0.0
+
+
+def test_reconstructed_live_tracks_can_reject_stale_measurements():
+  tracker = StableCornerObjectTracker()
+  for index in range(4):
+    tracker.update(corner_object(
+      1.0 + index * 0.02,
+      1,
+      46,
+      index + 1,
+      12.0,
+      2.0,
+      1.0,
+      -1.0,
+    ))
+
+  assert tracker.live_tracks_at(1.08, 15.0, max_measurement_age_s=0.10)
+  assert not tracker.live_tracks_at(
+    1.20, 15.0, max_measurement_age_s=0.10,
+  )
 
 
 def test_recorded_cutin_display_requires_current_leads_cutin_membership():

@@ -44,8 +44,10 @@ from cluster_models import (
     RADAR_MOVING_VEHICLE_MIN_SPEED_KPH,
     RouteOverlay,
     TpmsInfo,
+    TripReportState,
     radar_position_is_zero,
 )
+from cluster_trip_report import TripReportTracker
 from cluster_utils import clamp, smoothstep
 from openpilot.selfdrive.controls.lib.cutin_helpers import (
     associate_cutin_tracks,
@@ -202,8 +204,6 @@ REPLAY_CUTIN_YAW_GAIN = 0.6
 NAV_SPEED_LIMIT_HOLD_SECONDS = 10.0
 ROAD_EDGE_VEHICLE_OUTSIDE_MARGIN_M = 0.25
 NEAR_ROAD_EDGE_VEHICLE_BLOCK_DISTANCE_M = 10.0
-BSD_SUMMARY_LONGITUDINAL_M = -1.6
-BSD_SUMMARY_LATERAL_M = 2.9
 LANE_CHANGE_REINDEX_PEAK_THRESHOLD = 0.22
 LANE_CHANGE_REINDEX_RESET_THRESHOLD = -0.08
 CONTINUOUS_LANE_CHANGE_REBASE_PROGRESS = 0.12
@@ -320,13 +320,19 @@ class StableCornerObjectTracker:
         match.age = obj.age
         match.hits += 1
 
-    def _visible_tracks_at(self, t: float) -> tuple[tuple[StableCornerTrack, float, float], ...]:
+    def _visible_tracks_at(
+        self,
+        t: float,
+        max_measurement_age_s: float | None = None,
+    ) -> tuple[tuple[StableCornerTrack, float, float], ...]:
         self._expire(t)
         visible_tracks: list[tuple[StableCornerTrack, float, float]] = []
         for track in self.tracks.values():
             if track.hits < RAW_CORNER_TRACK_DISPLAY_MIN_HITS:
                 continue
             dt = max(0.0, t - track.last_t)
+            if max_measurement_age_s is not None and dt > max_measurement_age_s:
+                continue
             x = track.x + track.vx * dt
             y = track.y + track.vy * dt
             if abs(y) > RAW_CORNER_TRACK_DISPLAY_OUTER_ABS_Y_M and track.hits < RAW_CORNER_TRACK_DISPLAY_OUTER_MIN_HITS:
@@ -338,9 +344,14 @@ class StableCornerObjectTracker:
             visible_tracks.append((track, x, y))
         return tuple(visible_tracks)
 
-    def live_tracks_at(self, t: float, v_ego: float) -> tuple[ReconstructedLiveTrack, ...]:
+    def live_tracks_at(
+        self,
+        t: float,
+        v_ego: float,
+        max_measurement_age_s: float | None = None,
+    ) -> tuple[ReconstructedLiveTrack, ...]:
         live_tracks: list[ReconstructedLiveTrack] = []
-        for track, x, y in self._visible_tracks_at(t):
+        for track, x, y in self._visible_tracks_at(t, max_measurement_age_s):
             v_lead = v_ego + track.vx
             a_lead, j_lead = self._update_lead_dynamics(track, t, v_lead)
             live_tracks.append(ReconstructedLiveTrack(
@@ -579,6 +590,11 @@ class RouteReplayFrame:
     cutin_debug_text: str = "NEW CUTIN: waiting"
     recorded_cutin_active: bool = False
     recorded_cutin_sound: bool = False
+    trip_report: TripReportState | None = None
+    cpu_usage_percent: float | None = None
+    cpu_temp_c: float | None = None
+    memory_used_percent: float | None = None
+    disk_used_percent: float | None = None
 
 
 @dataclass
@@ -1430,6 +1446,9 @@ class RouteLogParser:
         self.active_lane_line: bool | None = None
         self.selfdrive_enabled: bool | None = None
         self.controls_enabled: bool | None = None
+        self.wheelbase_m = 2.7
+        self.steer_ratio = 15.0
+        self.trip_report_tracker = TripReportTracker()
         self.lane_width_m = DEFAULT_LANE_WIDTH_M
         self.left_lane_y_m: float | None = None
         self.right_lane_y_m: float | None = None
@@ -1485,6 +1504,10 @@ class RouteLogParser:
         self.vision_yaw_rate_std_rps: float | None = None
         self.camera_device_type: str | None = None
         self.camera_sensor: str | None = None
+        self.cpu_usage_percent: float | None = None
+        self.cpu_temp_c: float | None = None
+        self.memory_used_percent: float | None = None
+        self.disk_used_percent: float | None = None
         self.camera_calibration_euler: tuple[float, float, float] | None = None
         self.road_transform_trans: tuple[float, float, float] | None = None
         self.road_transform_std: tuple[float, float, float] | None = None
@@ -1591,7 +1614,7 @@ class RouteLogParser:
             elif event_type == "cameraOdometry":
                 self._update_camera_odometry(event.cameraOdometry, bool(safe_get(event, "valid", True)))
             elif event_type == "livePose":
-                self._update_cutin_live_pose(event.livePose)
+                self._update_live_pose(event.livePose, event_t)
             elif event_type == "liveCalibration":
                 self._update_live_calibration(event.liveCalibration, bool(safe_get(event, "valid", True)))
             elif event_type == "carParams":
@@ -1676,6 +1699,20 @@ class RouteLogParser:
         tpms = tpms_info_from_car_state(car_state)
         ev_mode_valid = bool(safe_get(car_state, "evModeValid", False))
         ev_mode_active = ev_mode_valid and bool(safe_get(car_state, "evModeActive", False))
+        selfdrive_enabled = (
+            self.selfdrive_enabled
+            if self.selfdrive_enabled is not None
+            else bool(self.controls_enabled)
+        )
+        trip_report = self.trip_report_tracker.update(
+            event_t,
+            speed_mps,
+            accel_mps2,
+            steering_angle_deg,
+            selfdrive_enabled,
+            self.wheelbase_m,
+            self.steer_ratio,
+        )
 
         return RouteReplayFrame(
             t=event_t,
@@ -1769,6 +1806,10 @@ class RouteLogParser:
             vision_yaw_rate_std_rps=self.vision_yaw_rate_std_rps,
             camera_device_type=self.camera_device_type,
             camera_sensor=self.camera_sensor,
+            cpu_usage_percent=self.cpu_usage_percent,
+            cpu_temp_c=self.cpu_temp_c,
+            memory_used_percent=self.memory_used_percent,
+            disk_used_percent=self.disk_used_percent,
             camera_calibration_euler=self.camera_calibration_euler,
             road_transform_trans=self.road_transform_trans,
             road_transform_std=self.road_transform_std,
@@ -1794,6 +1835,7 @@ class RouteLogParser:
             cutin_debug_text=self.cutin_debug_text,
             recorded_cutin_active=event_t - self.recorded_cutin_t <= RECORDED_CUTIN_REPLAY_HOLD_S,
             recorded_cutin_sound=event_t - self.recorded_cutin_sound_t <= RECORDED_CUTIN_REPLAY_HOLD_S,
+            trip_report=trip_report,
         )
 
     def _display_speed_kph_from_car_state(self, car_state: Any, fallback_speed_mps: float) -> float:
@@ -2073,6 +2115,28 @@ class RouteLogParser:
         device_type = safe_get(device_state, "deviceType", None)
         if device_type is not None:
             self.camera_device_type = str(device_type).strip().lower()
+        cpu_usage = numeric_tuple(
+            safe_get(device_state, "cpuUsagePercent"),
+            limit=64,
+            minimum=0.0,
+            maximum=100.0,
+        )
+        if cpu_usage:
+            self.cpu_usage_percent = sum(cpu_usage) / len(cpu_usage)
+        cpu_temps = numeric_tuple(
+            safe_get(device_state, "cpuTempC"),
+            limit=64,
+            minimum=-50.0,
+            maximum=200.0,
+        )
+        if cpu_temps:
+            self.cpu_temp_c = max(cpu_temps)
+        memory_used_percent = safe_optional_float(device_state, "memoryUsagePercent")
+        if memory_used_percent is not None and 0.0 <= memory_used_percent <= 100.0:
+            self.memory_used_percent = memory_used_percent
+        free_space_percent = safe_optional_float(device_state, "freeSpacePercent")
+        if free_space_percent is not None and 0.0 <= free_space_percent <= 100.0:
+            self.disk_used_percent = 100.0 - free_space_percent
 
     def _update_road_camera_state(self, camera_state: Any) -> None:
         sensor = safe_get(camera_state, "sensor", None)
@@ -2081,9 +2145,18 @@ class RouteLogParser:
 
     def _update_car_params(self, car_params: Any) -> None:
         self.car_brand = str(safe_get(car_params, "brand", "") or "").lower()
+        wheelbase_m = safe_optional_float(car_params, "wheelbase")
+        if wheelbase_m is not None and 1.5 <= wheelbase_m <= 5.0:
+            self.wheelbase_m = wheelbase_m
+        steer_ratio = safe_optional_float(car_params, "steerRatio")
+        if steer_ratio is not None and 1.0 <= steer_ratio <= 40.0:
+            self.steer_ratio = steer_ratio
         ext_flags = safe_optional_int(car_params, "extFlags")
         if not self.front_radar_only and ext_flags is not None and (ext_flags & CORNER_RADAR_OBJECTS_EXT_FLAGS):
             self.corner_radar_supported = True
+
+    def _update_live_pose(self, live_pose: Any, _event_t: float) -> None:
+        self._update_cutin_live_pose(live_pose)
 
     def corner_radar_active_for_display(self) -> bool:
         return not self.front_radar_only and (self.corner_radar_supported or self.corner_radar_tracks_seen)
@@ -3705,6 +3778,11 @@ def frame_to_state(frame: RouteReplayFrame) -> ClusterUiState:
         display_speed_kph=frame.display_speed_kph,
         traffic_state=frame.traffic_state,
         driving_mode=frame.driving_mode,
+        trip_report=frame.trip_report,
+        cpu_usage_percent=frame.cpu_usage_percent,
+        cpu_temp_c=frame.cpu_temp_c,
+        memory_used_percent=frame.memory_used_percent,
+        disk_used_percent=frame.disk_used_percent,
         recorded_cutin_active=frame.recorded_cutin_active,
         recorded_cutin_sound=frame.recorded_cutin_sound,
     )
@@ -3887,6 +3965,10 @@ def blend_frames(left: RouteReplayFrame, right: RouteReplayFrame, amount: float)
         vision_yaw_rate_std_rps=lerp_optional(left.vision_yaw_rate_std_rps, right.vision_yaw_rate_std_rps),
         camera_device_type=discrete.camera_device_type,
         camera_sensor=discrete.camera_sensor,
+        cpu_usage_percent=lerp_optional(left.cpu_usage_percent, right.cpu_usage_percent),
+        cpu_temp_c=lerp_optional(left.cpu_temp_c, right.cpu_temp_c),
+        memory_used_percent=lerp_optional(left.memory_used_percent, right.memory_used_percent),
+        disk_used_percent=lerp_optional(left.disk_used_percent, right.disk_used_percent),
         camera_calibration_euler=discrete.camera_calibration_euler,
         road_transform_trans=discrete.road_transform_trans,
         road_transform_std=discrete.road_transform_std,
@@ -3912,6 +3994,7 @@ def blend_frames(left: RouteReplayFrame, right: RouteReplayFrame, amount: float)
         cutin_debug_text=discrete.cutin_debug_text,
         recorded_cutin_active=discrete.recorded_cutin_active,
         recorded_cutin_sound=discrete.recorded_cutin_sound,
+        trip_report=discrete.trip_report,
     )
 
 
@@ -4396,29 +4479,7 @@ def car_state_corner_detections(car_state: Any) -> tuple[DetectedVehicle, ...]:
                 source="carState",
             )
         )
-    if left_blindspot and not car_state_has_near_side_detection(detections, -1.0):
-        detections.append(blindspot_summary_detection("LR", -1.0))
-    if right_blindspot and not car_state_has_near_side_detection(detections, 1.0):
-        detections.append(blindspot_summary_detection("RR", 1.0))
     return tuple(detections)
-
-
-def car_state_has_near_side_detection(detections: list[DetectedVehicle], side: float) -> bool:
-    return any(
-        math.copysign(1.0, vehicle.lateral_m) == side
-        and -8.0 <= vehicle.longitudinal_m <= 8.0
-        for vehicle in detections
-    )
-
-
-def blindspot_summary_detection(label: str, side: float) -> DetectedVehicle:
-    return DetectedVehicle(
-        label=label,
-        longitudinal_m=BSD_SUMMARY_LONGITUDINAL_M,
-        lateral_m=side * BSD_SUMMARY_LATERAL_M,
-        source="carState",
-        probability=0.85,
-    )
 
 
 def parse_corner_radar_message(
