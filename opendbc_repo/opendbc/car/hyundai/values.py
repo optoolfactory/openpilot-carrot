@@ -752,7 +752,7 @@ class CAR(Platforms):
   HYUNDAI_NEXO_FE = HyundaiCanFDPlatformConfig(
     [HyundaiCarDocs("Hyundai NexoFE", "All", car_parts=CarParts.common([CarHarness.hyundai_a]))],
     CarSpecs(mass=1885, wheelbase=2.79, steerRatio=15.3, tireStiffnessFactor=0.385),
-    flags=HyundaiFlags.EV,
+    flags=HyundaiFlags.EV | HyundaiFlags.ANGLE_CONTROL,
   )
   KIA_MOHAVE = HyundaiPlatformConfig(
     [HyundaiCarDocs("Kia Mohave 2019", "All", car_parts=CarParts.common([CarHarness.hyundai_k]))],
