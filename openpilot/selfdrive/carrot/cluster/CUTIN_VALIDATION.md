@@ -18,25 +18,41 @@ runs only `openpilot/selfdrive/carrot/radar/radard_dpath.py`, first calculates
 the normal front/SCC vision-matched `leadOne` or a vision-seeded physically
 continuous stationary `leadOne`, then supplies `leadTwo` from either a
 different measured moving point already in the current path or a physically
-confirmed dPath CUT-IN. An in-path second lead may be beyond leadOne, while a
-predicted CUT-IN must be closer than leadOne. It rejects the primary object
+confirmed dPath CUT-IN. A third path may expose a central stopped front-radar
+return behind a moving lead that is cutting out, but only when an independent
+slow corner-radar return agrees in range, model-path position, and speed for
+the full confirmation interval. Front-only returns and nearby moving corner
+returns cannot start this stationary `leadTwo`. After confirmation, the same
+state-2 front identity remains eligible through corner dropouts while its
+reported position stays physically continuous; it cannot transfer that trust
+to a new or reused track. A central slow corner point that was itself
+vision-confirmed as leadOne may likewise hand off to leadTwo when the primary
+matcher switches to a farther object; this support expires after one second
+unless leadTwo has already retained the same physically continuous identity.
+An in-path second lead may be
+beyond leadOne, while a predicted CUT-IN must be closer than leadOne. It rejects
+the primary object
 itself and every candidate beyond the fixed 80 m limit. An outside candidate
 within ±8 m longitudinally of leadOne also needs an actual corridor-entry
 sample in its two-second forecast; proximity alone cannot promote a same-row
 vehicle. Front, SCC, and corner inputs retain their production source identity.
-CUT-OUT remains a diagnostic prediction only. It never removes leadOne,
-latches an identity out, or excludes either control-lead candidate. LeadOne
-changes only when the primary model-to-front/SCC-radar matcher loses its match
-or switches to another object. This intentionally prefers a brief conservative
-hold on a departing vehicle over a no-lead acceleration gap caused by an
-uncertain future-path prediction. A separate measured moving object already in
-the current path still needs the normal motion history before starting leadTwo.
+CUT-OUT never removes leadOne, latches an identity out, or excludes either
+control-lead candidate. Its only control use is arming the cross-sensor-confirmed
+stationary `leadTwo` path above. LeadOne changes only when the primary
+model-to-front/SCC-radar matcher loses its match or switches to another object.
+This intentionally prefers a brief conservative hold on a departing vehicle
+over a no-lead acceleration gap caused by an uncertain future-path prediction.
+A separate measured moving object already in the current path still needs the
+normal motion history before starting leadTwo.
 
 The stationary leadOne path requires a measured in-path point with
 `|vLead| <= 4.0 m/s`, model-lead support at probability 0.40 or higher, and
 0.25 seconds of physical continuity. A front-only stationary point needs three
-vision-supported frames. A central radar-only corner/SCC point instead uses a
-0.50 second confirmation and a narrow center gate. When a front point and a
+vision-supported frames. A radar point that needs the broader immediate
+vision-correlated recovery path must already have been measured continuously
+for 0.25 seconds; brief infrastructure reflections remain pending instead of
+borrowing a nearby visual lead. A central radar-only corner/SCC point instead
+uses a 0.50 second confirmation and a narrow center gate. When a front point and a
 corner point are mutually consistent within 5 m longitudinally, 0.75 m raw
 lateral position, and 2.5 m/s target speed, a high-uncertainty visual lead may
 seed the front point despite up to 30 m visual range error. The front point
@@ -48,6 +64,18 @@ radar pair releases the hold. This path never creates leadTwo. A fresh moving
 leadOne also needs at least `1e-4` joint distance/lateral/velocity likelihood,
 matching conventional radard's score floor; an already continuous identity
 may tolerate a brief lower score.
+
+Hyundai CAN-FD group-2 front-radar slots retain the radar's categorical
+`VALID` state in `RadarPoint.trackState`. A state-1 tentative object remains
+available for vision matching, corner/physical CUT-IN corroboration, and later
+state-2/3 promotion. With no independent existence evidence it needs 0.75
+seconds of continuous radar-only observation instead of the normal 0.25
+seconds before becoming a moving leadOne. This still admits a persistent
+vision-invisible target while rejecting the maintained state-1 overpass
+reflection, which disappears after 0.66 seconds in `liveTracks`. Sources
+without this metadata use state 0 and preserve their existing behavior. PC
+replay reconstructs the state from raw CAN for older logs before lead
+selection.
 
 PC visual replay runs only the new `DPathRadarController` and
 `RadarMotionPredictor`. Its lead roles are recalculated from logged model and
@@ -107,8 +135,10 @@ The predictor:
 14. scales path-proximity evidence by inward displacement relative to measured
    path uncertainty, so static proximity or sub-noise drift is insufficient;
 15. for corner radar, checks position-derived normal motion against the most
-   recent 0.1 seconds of reported lateral velocity and promptly lowers motion
-   confidence when current motion no longer supports an older inward trend;
+   recent 0.1 seconds of reported lateral velocity; a strongly established
+   one-way position history uses narrower hold hysteresis so small directional
+   metric jitter cannot reset CUT-IN confirmation, while loss of recent inward
+   rate or raw lateral support still promptly lowers confidence;
 16. for front-only radar, requires a new predicted CUT-IN to sustain at least
    `0.75 m/s` of inward long-window `dPath` motion independently of the
    path-proximity sensitivity;
@@ -149,6 +179,9 @@ python openpilot/selfdrive/carrot/validate_radar_lead_model.py --case carnival-5
 
 # Treat existing-radard expectation failures as a nonzero result
 python openpilot/selfdrive/carrot/validate_radar_lead_model.py --strict-radard
+
+# Treat physical dPath expectation failures as a nonzero result
+python openpilot/selfdrive/carrot/validate_radar_lead_model.py --strict-shadow
 
 # Remove corner inputs
 python openpilot/selfdrive/carrot/validate_radar_lead_model.py --front-only

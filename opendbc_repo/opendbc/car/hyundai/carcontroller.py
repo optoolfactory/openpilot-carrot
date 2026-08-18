@@ -34,14 +34,17 @@ PRE_OVERRIDE_CONFIRM_FRAMES = 2
 PRE_OVERRIDE_MAX_TORQUE_DELTA = -10.0
 LOW_SPEED_ANGLE_RATE_RAMP_SPEED = 15.0 * CV.KPH_TO_MS
 MID_SPEED_ANGLE_RATE_LIMIT_SPEED = 40.0 * CV.KPH_TO_MS
+LARGE_ANGLE_UNWIND_RATE = 1.5  # deg/tick: allow a quicker return from the EPS fault-angle region
 CANFD_JERK_UPPER_MIN = 1.0
 CANFD_JERK_LIMIT_MAX = 5.0
 CANFD_JERK_ERROR_DELAY = 0.5
 CANFD_JERK_ERROR_FILTER_TIME = 0.4
 CANFD_JERK_ERROR_DEADBAND = 0.25
-CANFD_JERK_ERROR_GAIN = 1.0
-CANFD_JERK_ERROR_MAX = 0.5
-# Stock CAN-FD SCC raises the lower jerk limit with deceleration demand instead of relying on MPC jerk alone.
+CANFD_JERK_ERROR_FULL_SCALE = 0.5
+CANFD_JERK_RELEASE_THRESHOLD = 0.1
+# Some CAN-FD SCC implementations need a higher lower-jerk limit to follow sustained
+# deceleration requests. Keep the historical MPC-jerk limit as the default and blend
+# toward this stock-like feedforward only after measured under-deceleration.
 CANFD_JERK_LOWER_ACCEL_BP = [0.0, 0.8, 1.2, 1.5, 2.0, 2.5, 3.2]
 CANFD_JERK_LOWER_LIMIT_V = [1.2, 1.2, 1.2, 1.7, 3.0, 3.3, 3.7]
 
@@ -83,14 +86,20 @@ def rate_limit(x, x_last, lo, hi):
 
 
 def calculate_canfd_jerk_limits(accel: float, jerk: float, tracking_error: float = 0.0) -> tuple[float, float]:
+  jerk_u = np.clip(jerk * 2.0, CANFD_JERK_UPPER_MIN, CANFD_JERK_LIMIT_MAX)
+  jerk_l_mpc = np.clip(-jerk * 4.0, 1.0, CANFD_JERK_LIMIT_MAX)
+
+  # A clearly positive jerk means the plan is releasing deceleration. In that case, or when
+  # the vehicle is already tracking the request, return to the historical jerk-based
+  # limit immediately instead of allowing acceleration demand alone to hold braking.
+  assist_ratio = 0.0
+  if jerk <= CANFD_JERK_RELEASE_THRESHOLD:
+    assist_ratio = np.clip((tracking_error - CANFD_JERK_ERROR_DEADBAND) / CANFD_JERK_ERROR_FULL_SCALE, 0.0, 1.0)
+
   decel_request = max(0.0, -accel)
   jerk_l_feedforward = np.interp(decel_request, CANFD_JERK_LOWER_ACCEL_BP, CANFD_JERK_LOWER_LIMIT_V)
-  jerk_l_mpc = np.clip(-jerk * 4.0, CANFD_JERK_LOWER_LIMIT_V[0], CANFD_JERK_LIMIT_MAX)
-  jerk_l_error = np.clip((tracking_error - CANFD_JERK_ERROR_DEADBAND) * CANFD_JERK_ERROR_GAIN, 0.0, CANFD_JERK_ERROR_MAX)
-
-  jerk_u = np.clip(jerk * 2.0, CANFD_JERK_UPPER_MIN, CANFD_JERK_LIMIT_MAX)
-  jerk_l = np.clip(max(jerk_l_feedforward, jerk_l_mpc) + jerk_l_error,
-                   CANFD_JERK_LOWER_LIMIT_V[0], CANFD_JERK_LIMIT_MAX)
+  jerk_l_assist = 1.0 + assist_ratio * (jerk_l_feedforward - 1.0)
+  jerk_l = np.clip(max(jerk_l_mpc, jerk_l_assist), 1.0, CANFD_JERK_LIMIT_MAX)
   return float(jerk_u), float(jerk_l)
 
 def apply_steer_angle_limits_physics(desired_sw_deg: float,
@@ -138,6 +147,13 @@ def apply_steer_angle_limits_physics(desired_sw_deg: float,
   err = abs(target_sw - last_sw_deg)
   if err > 20.0:
     max_sw_rate_deg_per_tick = min(max_sw_rate_deg_per_tick, 1.0)
+
+  # Once steering is in the large-angle region, do not make the return toward center wait on
+  # the normal low-speed/large-error cap. This only relaxes unwinding; winding farther into the
+  # turn keeps all existing limits.
+  unwinding_large_angle = abs(last_sw_deg) >= MAX_ANGLE and last_sw_deg * (target_sw - last_sw_deg) < 0.0
+  if unwinding_large_angle:
+    max_sw_rate_deg_per_tick = max(max_sw_rate_deg_per_tick, LARGE_ANGLE_UNWIND_RATE)
 
   max_drw_per_tick_deg = min(
     max_drw_per_tick_deg,
@@ -805,12 +821,22 @@ class HyundaiJerk:
         tracking_error_active = actuators.longControlState == LongCtrlState.pid and not CS.out.brakePressed and not CS.out.gasPressed
         if tracking_error_active:
           self.accel_request_history.append(float(accel))
+          request_is_sustained = False
           if len(self.accel_request_history) == self.accel_request_history.maxlen:
             delayed_accel = self.accel_request_history[0]
             request_is_sustained = delayed_accel < -1.0 and accel < -1.0 and abs(accel - delayed_accel) < 0.5
             if request_is_sustained:
-              tracking_error = CS.out.aEgo - delayed_accel
-          filtered_tracking_error = self.jerk_error_filter.process(max(0.0, tracking_error))
+              # Only assist when measured deceleration is weaker than both the
+              # current request and the delay-aligned request. The current-request
+              # comparison makes the assist release promptly while aReq unwinds.
+              tracking_error = min(CS.out.aEgo - delayed_accel, CS.out.aEgo - accel)
+          # Require sustained measured under-deceleration before slowly enabling
+          # feedforward. Release it immediately once the plan unwinds or the vehicle
+          # meets/exceeds either request, avoiding a filtered braking tail.
+          if request_is_sustained and self.jerk <= CANFD_JERK_RELEASE_THRESHOLD and tracking_error > 0.0:
+            filtered_tracking_error = self.jerk_error_filter.process(tracking_error)
+          else:
+            filtered_tracking_error = self.jerk_error_filter.set_all(0.0)
         else:
           self.accel_request_history.clear()
           filtered_tracking_error = self.jerk_error_filter.set_all(0.0)
