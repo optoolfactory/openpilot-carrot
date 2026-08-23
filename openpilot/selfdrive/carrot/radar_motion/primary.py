@@ -100,7 +100,8 @@ STATIONARY_CLOSER_HANDOFF_MIN_COST_GAIN = 0.10
 RADAR_ONLY_MOVING_MIN_VLEAD_MPS = STATIONARY_MAX_ABS_VLEAD_MPS
 RADAR_ONLY_MOVING_CONFIRMATION_S = 0.25
 RADAR_ONLY_MOVING_TENTATIVE_CONFIRMATION_S = 0.75
-RADAR_ONLY_MOVING_CORNER_MAX_LONGITUDINAL_ERROR_RATE_MPS = 3.0
+RADAR_ONLY_MOVING_FAR_CORNER_CONFIRMATION_S = 1.0
+RADAR_ONLY_MOVING_CORNER_MAX_LONGITUDINAL_ERROR_RATE_MPS = 2.0
 RADAR_ONLY_MOVING_CLOSER_SWITCH_MIN_GAP_M = 3.0
 RADAR_ONLY_MOVING_CLOSER_SWITCH_MAX_DPATH_M = 0.5
 RADAR_ONLY_MOVING_MAX_DREL_M = 100.0
@@ -1932,6 +1933,29 @@ class VisionRadarMatcher:
         self._identity(point) == selected_identity
         for point, _, _ in supported
       )
+      radar_only_pending_discontinuous = (
+        selected_identity == self._stationary_pending_identity
+        and selected_has_current_support
+        and self._stationary_seed_probability
+        < STATIONARY_VISION_MIN_PROB
+        and not self._stationary_pending_weak_pair_supported
+        and self._stationary_last_point is not None
+        and self._stationary_last_time_s is not None
+        and not self._stationary_position_continuous(
+          self._stationary_last_point,
+          self._stationary_last_time_s,
+          selected[0],
+          time_s,
+        )
+      )
+      if radar_only_pending_discontinuous:
+        # A persistent raw corner ID is not sufficient evidence by itself.
+        # Roadside reflections can keep the ID while their range jumps by
+        # several metres. Radar-only stationary acquisition must therefore
+        # maintain the same kinematic continuity as a held lead throughout
+        # its confirmation dwell.
+        self._reset_stationary()
+        return None
       if selected_identity != self._stationary_pending_identity:
         carry_vision_supported_handoff = (
           self._stationary_seed_probability
@@ -2270,11 +2294,19 @@ class VisionRadarMatcher:
     if not pending_continuous:
       self._radar_only_moving_pending_identity = None
     self._update_radar_only_moving_longitudinal_history(point, time_s)
-    confirmation_s = (
-      RADAR_ONLY_MOVING_TENTATIVE_CONFIRMATION_S
-      if point.radar_track_state == 1
-      else RADAR_ONLY_MOVING_CONFIRMATION_S
-    )
+    if point.radar_track_state == 1:
+      confirmation_s = RADAR_ONLY_MOVING_TENTATIVE_CONFIRMATION_S
+    elif (
+      point.source.startswith("corner")
+      and point.d_rel > RADAR_ONLY_MOVING_FAR_DREL_M
+    ):
+      # A distant corner-only tunnel/overpass return can look like a moving
+      # vehicle for the first few cycles. Observe one full consistency window
+      # before publishing L1; a mutually visible front point wins source
+      # ranking above, and a vision-supported point uses the regular matcher.
+      confirmation_s = RADAR_ONLY_MOVING_FAR_CORNER_CONFIRMATION_S
+    else:
+      confirmation_s = RADAR_ONLY_MOVING_CONFIRMATION_S
     confirmation_complete = (
       self._radar_only_moving_pending_since_s is not None
       and time_s - self._radar_only_moving_pending_since_s
