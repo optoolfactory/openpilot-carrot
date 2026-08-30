@@ -234,6 +234,9 @@ SDI를 지울 때는 더 큰 sequence로 `present: false`, `value: null`, 비어
 | 차량 수신 과속카메라 | `carState.speedLimit/speedLimitDistance` | 동일 | 차량 CAN에서 단속속도만 수신하며 Hyundai `CarState`가 `speedLimit × (VehicleSpeedCameraDistanceTime / 10)`으로 가상거리 생성. `VehicleSpeedCameraControlMode`에 따라 미사용·항상 적용·가속페달 속도 하한·가속페달 입력 중 해제를 선택 | `hda` / 라벤더 `cam`, 하한 적용 시 `gas` |
 | 차량 내비 CAN 정확거리/구간 | `carState.speedLimitDistance/speedBumpDistance/vehicleNaviSectionActive` | 동일 | `VehicleNaviCanControl`이 켜진 Hyundai CAN-FD에서 0x4BE alert spot의 Offset을 휠 주행거리로 추적. 카메라는 기존 `hda`, Value 6 방지턱은 별도 후보, 종류 7의 30 초과 제한속도 구간은 안전계수를 적용한 연속 상한으로 계산 | `hda`, `hda_section`, `hda_bump` / 라벤더 `cam`, `section`, `bump` |
 | 차량 내비 CAN 30 km/h 구간 | `carState.schoolZoneActive` | 동일 | `VehicleNaviSchoolZoneControl`이 켜지고 0x4BE 종류 7이 30 km/h를 알리면 30 km/h 후보 적용. 차량의 30 카메라 상태 종료, 비-30 종류 7, 경로 재계산 또는 1 km 주행 시 해제. 가속페달 동작은 `VehicleSpeedCameraControlMode`를 따름 | `school` / 라벤더 `school`, mode 2 하한 적용 시 `gas` |
+
+차량 순정 내비의 0x4BA 곡률 프로파일은 경로·차선 연계 신뢰도가 충분하지 않아 파싱, 속도제어,
+설정 및 화면 표시에서 사용하지 않는다. 0x4BE 기반 카메라·구간단속·방지턱·school 기능과는 별개다.
 | 도로 제한속도 | `nRoadLimitSpeed` | `road_limit_kph` | `AutoRoadSpeedLimitOffset >= 0`, active >= 2, road limit valid일 때 limit+offset | `road` / 주황 `road` |
 | 현재 TBT | `nTBTTurnType/nTBTDist` | `guidance_current.turn_type/distance_m` | 지원 turn type이 `xTurnInfo`로 변환되고 `AutoTurnControl`이 2 또는 3일 때 속도 목표 계산 | `atc` / 주황 `turn` |
 | 다음 TBT | `nTBTTurnTypeNext/nTBTDistNext` | `guidance_next` | 현재 거리 + 다음 거리를 사용하고 같은 ATC 설정 적용 | `atc2` / 주황 `turn` |
@@ -589,34 +592,3 @@ km/h다.
   실행하여 각각 `(22,22,93)`과 `(-1,0,0)`을 재현했다.
 - `test_carrot_navi_route_bridge.py`는 양쪽 route 경로와 7714 tombstone/disconnect ownership을 단언한다.
 - Windows 환경에는 전체 openpilot Linux 의존성과 pytest가 없어 전체 test suite는 실행하지 못했다.
-
-## 차량 순정 내비 0x4BA 커브 후보
-
-Hyundai CAN-FD 차량에서 수신되는 `0x4BA` ADASIS v2 Profile Short의 `ProfileType=1`은 전방 도로
-곡률이다. `Value0`은 ADASIS v2 표준의 10-bit 비선형 곡률값으로 복호화하고, `Offset`을 현재
-위치로부터 해당 곡률점까지의 거리로 사용한다. 확인한 아이오닉5 로그에서는 `Value1`이 항상 0으로
-채워져 있어 제어에는 검증된 `Value0` 곡률점만 사용한다.
-
-`CarState`는 곡률점을 주행거리 기준으로 추적하여 다음 세 필드를 발행한다.
-
-- `vehicleNaviCurveDistance`: 현재 선택된 곡률점까지 거리
-- `vehicleNaviCurveSpeed`: 목표 횡가속도 1.9 m/s²로 계산한 100% 기준 속도
-- `vehicleNaviCurveCurvature`: 복호화한 곡률(1/m)
-
-`VehicleNaviCurveControl=1`이고 목적지 탐색 경로(`CalculatedRoute=1`)일 때 `CarrotServ`가 이 값을
-감속 후보로 추가한다. `VehicleNaviCurveMppControl=1`을 추가로 켜면 목적지가 없는 예상 경로
-(`CalculatedRoute=0`, MPP)에서도 곡률 감속을 허용한다. 최종 목표속도는
-`vehicleNaviCurveSpeed × VehicleNaviCurveSpeedFactor / 100`이며, 기본 100%, 조절 범위는
-50~200%다. 기존 `AutoCurveSpeedLowerLimit`, `AutoNaviSpeedCtrlEnd`,
-`AutoNaviSpeedDecelRate`를 그대로 적용하고, 후보가 이기면 `desiredSource=hda_curve`, UI label은
-차량 내비 색상의 `curve`다. 두 설정은 주행 중 다시 읽으므로 재시작이 필요 없다.
-
-선택된 커브 곡률점을 통과한 뒤에도 제한속도를 즉시 해제하지 않는다. 뒤따르는 0x4BA 점 중
-곡률이 충분히 작아 기준속도가 250 km/h로 포화되는 점을 해당 커브의 종료점으로 보고, 그 지점을
-통과하는 순간 커브 제한을 해제한다. 종료점 프로파일이 누락된 경우에만 곡률점 이후 120 m를
-보수적인 fallback 종료거리로 사용한다. 제한이 해제되면 종방향 제어의 일반 가속 제한 안에서
-기존 크루즈 설정속도로 복귀한다.
-
-목적지가 없을 때 `0x4B9 CalculatedRoute=0`은 내비가 예측한 전방 경로(MPP)를 뜻하고, 목적지를
-탐색한 경로는 `CalculatedRoute=1`로 전달된다. `CalculatedRoute=2` 재탐색 신호에서는 기존
-곡률 캐시를 즉시 비워 이전 경로의 커브가 남지 않게 한다.
