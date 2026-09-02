@@ -67,6 +67,19 @@
       "scene": "Right-lane vehicle briefly appears to move inward, then its recent trajectory reverses and it remains outside; a stale CUT-IN or pre-deceleration hold must not resurface"
     },
     {
+      "id": "k8-2db-56-stopped-cross-sensor-duplicate-22",
+      "vehicle_folder": "KIA_K8_HEV_1ST_GEN b34d1abb87cce93b",
+      "log": "000002db--6b934dd8b1--56/rlog.zst",
+      "source": "front+corner",
+      "window": [20.50, 23.50],
+      "expected": "clear",
+      "human_verified": true,
+      "validation_stage": "lead_two",
+      "required_lead_one_ids": [55],
+      "forbidden_lead_two_ids": [5961],
+      "scene": "Front track 55 and corner track 5961 are the same stopped vehicle; the corner stationary hypothesis must not duplicate the configured front leadOne as leadTwo"
+    },
+    {
       "id": "k8-2db-56-stopped-motorcycle-leadone-35",
       "vehicle_folder": "KIA_K8_HEV_1ST_GEN b34d1abb87cce93b",
       "log": "000002db--6b934dd8b1--56/rlog.zst",
@@ -75,6 +88,18 @@
       "expected": "clear",
       "required_lead_one_ids": [35],
       "scene": "Strong vision range and a distinct closer front-radar track should hand leadOne from the stopped car to the motorcycle without SCC support"
+    },
+    {
+      "id": "ioniq9-2c5-23-close-born-rear-pass-53",
+      "vehicle_folder": "HYUNDAI_IONIQ_9 c92fab3f15c0dbfb",
+      "log": "000002c5--86044a22d0--23/rlog.zst",
+      "source": "front+corner",
+      "window": [53.45, 54.20],
+      "expected": "clear",
+      "human_verified": true,
+      "target_track_ids": [3284, 3286],
+      "forbidden_lead_two_ids": [3284, 3286],
+      "scene": "The right vehicle first appears beside the rear bumper and pulls ahead while the left vehicle remains parallel; weak perspective drift with close cross-sensor support must not become a CUT-IN"
     },
     {
       "id": "k8-2e3-33-close-low-speed-predecel-3423",
@@ -345,6 +370,19 @@
       "scene": "A truck stays in the adjacent right lane while quantized front-radar lateral position briefly moves inward; weak directional consistency must not promote track 57 to leadTwo"
     },
     {
+      "id": "niro-63c-5-close-front-lateral-wander-35",
+      "vehicle_folder": "KIA_NIRO_HEV_2ND_GEN c903ce877d9129f9",
+      "log": "0000063c--4b9b21b7f0--5/rlog.zst",
+      "source": "front",
+      "window": [53.50, 56.50],
+      "expected": "clear",
+      "human_verified": true,
+      "validation_stage": "lead_two",
+      "target_track_ids": [35],
+      "forbidden_lead_two_ids": [35],
+      "scene": "At close range, front-radar lateral wander on a vehicle remaining in the adjacent right lane must not become CUT-IN, pre-deceleration, or leadTwo"
+    },
+    {
       "id": "carnival-ed-11-motorcycle-cutout-stationary-shadow",
       "vehicle_folder": "KIA_CARNIVAL_4TH_GEN c4dcf95545dafe68",
       "log": "000000ed--9fbaeb1dea--11/rlog.zst",
@@ -375,17 +413,17 @@
       "vehicle_folder": "HYUNDAI_IONIQ_9 c92fab3f15c0dbfb",
       "log": "00000263--89012ce993--16/rlog.zst",
       "source": "front+corner",
-      "window": [20.95, 21.20],
+      "window": [21.25, 21.55],
       "expected": "detect",
       "human_verified": true,
       "validation_stage": "lead_two",
       "target_track_ids": [1039],
       "target_spatial_match": {
-        "d_rel": [40.0, 45.0],
+        "d_rel": [36.0, 42.0],
         "y_rel": [-0.5, 0.5]
       },
-      "latest_detection_s": 21.05,
-      "scene": "Vision-confirmed central stopped corner track 1039 must hand off from leadOne to closer leadTwo when farther front track 55 becomes leadOne"
+      "latest_detection_s": 21.35,
+      "scene": "After stationary confirmation, farther front track 55 exclusively owns leadOne while the continuous closer stopped corner hypothesis remains auxiliary leadTwo"
     },
     {
       "id": "ioniq5-352-5-overhead-sign-stationary-shadow-48",
@@ -589,10 +627,11 @@
       "expected": "detect",
       "human_verified": true,
       "validation_stage": "lead_one",
-      "target_track_ids": [41, 1005, 2175, 2190, 2198],
-      "latest_detection_s": 27.22,
-      "lead_one_continuous_window": [27.21, 29.20],
-      "scene": "Comma vision continuously identifies the same far central lead while corner slots 2175/2190/2198 hand off to central front track 41; bounded corner velocity outliers and slot changes must preserve L1 continuity"
+      "target_track_ids": [41],
+      "forbidden_lead_one_ids": [1005, 2175, 2190, 2198],
+      "latest_detection_s": 28.75,
+      "lead_one_continuous_window": [28.70, 29.20],
+      "scene": "Corner slots may track the distant hypothesis but cannot own leadOne; once central front track 41 becomes physically consistent it must acquire and continuously own L1"
     },
     {
       "id": "k5-224-11-weak-vision-front-stationary-ghost",
@@ -605,6 +644,32 @@
       "validation_stage": "lead_one",
       "target_track_ids": [34],
       "scene": "Empty road after a weak visual seed: offset stationary front-radar reflection 34 must release when current vision support disappears"
+    },
+    {
+      "id": "carnival-166-2-adjacent-vision-stationary-l1",
+      "vehicle_folder": "KIA_CARNIVAL_4TH_GEN c4dcf95545dafe68",
+      "log": "00000166--a0a89dc8d2--2/rlog.zst",
+      "source": "front+corner",
+      "window": [12.70, 14.50],
+      "expected": "clear",
+      "human_verified": true,
+      "validation_stage": "lead_one",
+      "target_track_ids": [45],
+      "forbidden_lead_one_ids": [45],
+      "scene": "An adjacent visual lead and an opposite-side stationary front-radar reflection must not be associated as leadOne"
+    },
+    {
+      "id": "niro-63f-2-median-vision-stationary-l1",
+      "vehicle_folder": "KIA_NIRO_HEV_2ND_GEN c903ce877d9129f9",
+      "log": "0000063f--0131464865--2/rlog.zst",
+      "source": "front",
+      "window": [53.35, 55.35],
+      "expected": "clear",
+      "human_verified": true,
+      "validation_stage": "lead_one",
+      "target_track_ids": [37],
+      "forbidden_lead_one_ids": [37],
+      "scene": "A moving visual lead must not let the offset stationary center-divider reflection 37 become leadOne"
     },
     {
       "id": "palisade-bef-2-motorcycle-leadone",
