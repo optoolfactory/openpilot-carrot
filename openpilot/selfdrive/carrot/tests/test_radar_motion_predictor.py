@@ -3318,6 +3318,8 @@ def test_stationary_front_rejects_opposite_side_uncertain_vision_match() -> None
   (20.0, 8.5, False, False),
   (20.0, 0.0, False, True),
   (20.0, 8.5, True, True),
+  (20.0, 4.8, False, True),
+  (20.0, 4.8, True, True),
   (90.0, 8.5, False, True),
 ))
 def test_near_stationary_front_cannot_borrow_precise_moving_vision(
@@ -3365,6 +3367,28 @@ def test_near_stationary_speed_conflict_revokes_pending_and_held_identity() -> N
         assert matcher._stationary_pending_identity is None
       elif index == seed_frames - 1 and seed_frames == 10:
         assert match is not None
+
+
+@pytest.mark.parametrize("mode", (1, 2, 3))
+def test_low_speed_moving_lead_does_not_seed_a_close_stationary_reflection(mode: int) -> None:
+  controller = DPathRadarController(enable_radar_tracks=mode, prefer_corner_radar=True)
+  for index in range(50):
+    time_s = index * 0.05
+    moving_distance = 9.8 + 0.5 * time_s
+    points = [Point(44, moving_distance, 0.5, v_rel=0.5, trackState=2)]
+    if index >= 20:
+      points.append(Point(43, 6.8 - 4.65 * (time_s - 1.0), 0.3,
+                          v_rel=-4.65, trackState=2))
+    model = model_with_lead(moving_distance - 0.5, 0.5, 4.8, probability=0.999)
+    model.leadsV3[0].xStd = (0.9,)
+    model.leadsV3[0].vStd = (0.4,)
+    output = controller.update(time_s=time_s, v_ego=4.65, radar_points=points, model=model)
+    if index >= 20:
+      assert output.lead_one is not None
+      assert output.lead_one["radarTrackId"] == 44
+      assert output.lead_two is None or output.lead_two["radarTrackId"] != 43
+      assert controller.primary_matcher.stationary_identity != ("frontRadar", 43)
+      assert controller.primary_matcher._stationary_pending_identity != ("frontRadar", 43)
 
 
 def test_stationary_front_rejects_offset_moving_vision_median_reflection() -> None:
@@ -7797,6 +7821,35 @@ def test_controller_uses_fixed_lead_dynamics_and_raw_jerk() -> None:
   assert quiet.lead_one is not None
   assert quiet.lead_one["aLeadTau"] == pytest.approx(1.5)
   assert quiet.lead_one["jLead"] == pytest.approx(0.0)
+
+
+@pytest.mark.parametrize("a_lead", (-0.45, 0.0, 0.3))
+@pytest.mark.parametrize("v_rel,closing", ((-0.51, True), (-0.5, False), (-0.49, False), (1.0, False)))
+def test_controller_lead_tau_persists_while_closing_and_recovers(a_lead, v_rel, closing) -> None:
+  controller = DPathRadarController(prefer_corner_radar=False)
+  point = Point(10, 30.0, 0.0, v_rel=v_rel, a_lead=a_lead, j_lead=0.0)
+  for index in range(20):
+    output = controller.update(
+      time_s=1.0 + index * 0.05,
+      v_ego=10.0,
+      radar_points=(point,),
+      model=model_with_lead(30.0, 0.0, 10.0 + v_rel),
+    )
+    expected_tau = 1.5 * 0.9 ** (index + 1) if closing else 1.5
+    assert output.lead_one is not None
+    assert output.lead_one["aLeadTau"] == pytest.approx(expected_tau)
+    assert output.leads_center[0]["aLeadTau"] == pytest.approx(expected_tau)
+    assert output.lead_one["aLeadK"] == pytest.approx(a_lead)
+    assert output.lead_one["jLead"] == pytest.approx(0.0)
+
+  recovered = controller.update(
+    time_s=2.0,
+    v_ego=10.0,
+    radar_points=(replace(point, v_rel=0.0),),
+    model=model_with_lead(30.0, 0.0, 10.0),
+  )
+  assert recovered.lead_one is not None
+  assert recovered.lead_one["aLeadTau"] == pytest.approx(1.5)
 
 
 def test_corner_lead_two_uses_matched_front_dynamics() -> None:
