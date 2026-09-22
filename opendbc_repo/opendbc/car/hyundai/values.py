@@ -359,6 +359,11 @@ class CAR(Platforms):
     [HyundaiCarDocs("Hyundai Staria 2023", "All", car_parts=CarParts.common([CarHarness.hyundai_k]))],
     CarSpecs(mass=2205, wheelbase=3.273, steerRatio=11.94),  # https://www.hyundai.com/content/dam/hyundai/au/en/models/staria-load/premium-pip-update-2023/spec-sheet/STARIA_Load_Spec-Table_March_2023_v3.1.pdf
   )
+  HYUNDAI_STARIA_EV = HyundaiCanFDPlatformConfig(
+    [HyundaiCarDocs("Hyundai Staria EV 2026", "All", car_parts=CarParts.common([CarHarness.hyundai_k]))],
+    CarSpecs(mass=2205, wheelbase=3.273, steerRatio=11.94),  # https://www.hyundai.com/content/dam/hyundai/au/en/models/staria-load/premium-pip-update-2023/spec-sheet/STARIA_Load_Spec-Table_March_2023_v3.1.pdf
+    flags=HyundaiFlags.EV | HyundaiFlags.ANGLE_CONTROL,
+  )
   HYUNDAI_TUCSON = HyundaiPlatformConfig(
     [
       HyundaiCarDocs("Hyundai Tucson 2021", min_enable_speed=19 * CV.MPH_TO_MS, car_parts=CarParts.common([CarHarness.hyundai_l])),
@@ -710,9 +715,18 @@ class CAR(Platforms):
     [HyundaiCarDocs("Genesis G80 (2.5T Advanced Trim, with HDA II) 2024", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))],
     CarSpecs(mass=2060, wheelbase=3.00, steerRatio=14.0),
   )
+  GENESIS_G80_2ND_GEN_FL_2025 = HyundaiCanFDPlatformConfig(
+    [HyundaiCarDocs("Genesis G80 (2.5T Advanced Trim, with HDA II) 2025", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))],
+    CarSpecs(mass=2060, wheelbase=3.00, steerRatio=14.0),
+    flags=HyundaiFlags.ANGLE_CONTROL,
+  )
   GENESIS_G90 = HyundaiPlatformConfig(
     [HyundaiCarDocs("Genesis G90 2017-20", "All", car_parts=CarParts.common([CarHarness.hyundai_c]))],
     CarSpecs(mass=2200, wheelbase=3.15, steerRatio=12.069),
+  )
+  GENESIS_G90_2ND_GEN = HyundaiCanFDPlatformConfig(
+    [HyundaiCarDocs("Genesis G90 (3.5T Advanced Trim, with HDA II) 2022", "Highway Driving Assist II", car_parts=CarParts.common([CarHarness.hyundai_p]))],
+    CarSpecs(mass=2100, wheelbase=3.18, steerRatio=16.0),
   )
   GENESIS_GV80 = HyundaiCanFDPlatformConfig(
     [HyundaiCarDocs("Genesis GV80 2023", "All", car_parts=CarParts.common([CarHarness.hyundai_m]))],
@@ -753,6 +767,11 @@ class CAR(Platforms):
     [HyundaiCarDocs("Hyundai Nexo", "All", car_parts=CarParts.common([CarHarness.hyundai_a]))],
     CarSpecs(mass=1885, wheelbase=2.79, steerRatio=15.3, tireStiffnessFactor=0.385),
     flags=HyundaiFlags.EV,
+  )
+  HYUNDAI_NEXO_FE = HyundaiCanFDPlatformConfig(
+    [HyundaiCarDocs("Hyundai NexoFE", "All", car_parts=CarParts.common([CarHarness.hyundai_a]))],
+    CarSpecs(mass=1885, wheelbase=2.79, steerRatio=15.3, tireStiffnessFactor=0.385),
+    flags=HyundaiFlags.EV | HyundaiFlags.ANGLE_CONTROL,
   )
   KIA_MOHAVE = HyundaiPlatformConfig(
     [HyundaiCarDocs("Kia Mohave 2019", "All", car_parts=CarParts.common([CarHarness.hyundai_k]))],
@@ -798,6 +817,10 @@ class CAR(Platforms):
     CarSpecs(mass=2075, wheelbase=3.15, steerRatio=14.5, tireStiffnessFactor=0.7),
     flags=HyundaiFlags.LEGACY,
   )
+  KIA_K9_2022 = HyundaiCanFDPlatformConfig(
+    [HyundaiCarDocs("Kia K9 2022-2025", "All", car_parts=CarParts.common([CarHarness.hyundai_h]))],
+    CarSpecs(mass=2075, wheelbase=3.15, steerRatio=14.5, tireStiffnessFactor=0.7),
+  )
   KIA_EV_SK3 = HyundaiPlatformConfig(
     [HyundaiCarDocs("Kia Soul EV 2019", car_parts=CarParts.common([CarHarness.hyundai_c]))],
     CarSpecs(mass=1695, wheelbase=2.6, steerRatio=13.75),
@@ -828,6 +851,13 @@ class CAR(Platforms):
     [HyundaiCarDocs("Kia Ray EV", car_parts=CarParts.common([CarHarness.hyundai_h]))],
     CarSpecs(mass=1295, wheelbase=2.520, steerRatio=14.5),
     flags=HyundaiFlags.EV | HyundaiFlags.CC_ONLY_CAR | HyundaiFlags.CHECKSUM_CRC8,
+  )
+  KIA_TASMAN = HyundaiCanFDPlatformConfig(
+    [
+      HyundaiCarDocs("Kia Tasman", car_parts=CarParts.common([CarHarness.hyundai_k])),
+    ],
+    CarSpecs(mass=2625, wheelbase=3.1, steerRatio=16.02),
+    flags=HyundaiFlags.ANGLE_CONTROL,
   )
 
 class Buttons:
