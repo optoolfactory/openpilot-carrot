@@ -128,7 +128,7 @@ def enable_cluster_hud(started, params, CP: car.CarParams) -> bool:
 procs = [
   DaemonProcess("manage_athenad", "openpilot.system.athena.manage_athenad", "AthenadPid"),
 
-  NativeProcess("loggerd", "openpilot/system/loggerd", ["./loggerd"], logging),
+  #NativeProcess("loggerd", "openpilot/system/loggerd", ["./loggerd"], logging),
   NativeProcess("encoderd", "openpilot/system/loggerd", ["./encoderd"], only_onroad),
   # Preserve generic multi-camera WebRTC for notCar users. Carrot Vision on a
   # real device is road-only and remains gated by DisableDM == 2.
