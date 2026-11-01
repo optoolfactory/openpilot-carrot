@@ -177,7 +177,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SupportedCars_vw", {PERSISTENT, STRING}},
     {"SupportedCars_tesla", {PERSISTENT, STRING}},
     {"ShowDebugUI", {PERSISTENT, INT, "0"}},
-    {"ShowDateTime", {PERSISTENT, INT, "1"}},
+    {"ShowDateTime", {PERSISTENT, INT, "0"}},
     {"ShowLaneInfo", {PERSISTENT, INT, "1"}},
     {"ShowRadarInfo", {PERSISTENT, INT, "1"}},
     {"ShowDeviceState", {PERSISTENT, INT, "1"}},
@@ -223,8 +223,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CarrotCruiseAtcDecel", {PERSISTENT, INT, "-1"}},
 
     {"AutoGasTokSpeed", {PERSISTENT, INT, "0"}},
-    {"AutoGasCancelSpeed", {PERSISTENT, INT, "30"}},
-    {"AutoGasSyncSpeed", {PERSISTENT, INT, "1"} },
+    {"AutoGasCancelSpeed", {PERSISTENT, INT, "0"}},
+    {"AutoGasSyncSpeed", {PERSISTENT, INT, "01"} },
     {"ApplyModelSpeed", {PERSISTENT, INT, "0"} },
     {"AutoEngage", {PERSISTENT, INT, "0"}},
     {"AlwaysLateral", {PERSISTENT, INT, "1"} },
@@ -260,7 +260,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AutoNaviSpeedBumpSpeed", {PERSISTENT, INT, "35"}},
     {"AutoNaviSpeedBumpEndDistance", {PERSISTENT, INT, "200"}},
     {"AutoNaviSpeedDecelRate", {PERSISTENT, INT, "120"}},
-    {"AutoNaviSpeedSafetyFactor", {PERSISTENT, INT, "105"}},
+    {"AutoNaviSpeedSafetyFactor", {PERSISTENT, INT, "100"}},
     {"AutoNaviCountDownMode", {PERSISTENT, INT, "2"}},
     {"TurnSpeedControlMode", {PERSISTENT, INT, "1"}},
 
@@ -293,7 +293,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SignalAssistMode", {PERSISTENT, INT, "0"}},
     {"LeadBrakeLights", {PERSISTENT, BOOL, "0"}},
 
-    {"SteerActuatorDelay", {PERSISTENT, INT, "0"}},
+    {"SteerActuatorDelay", {PERSISTENT, INT, "40"}},
     {"CenterToFrontRatioEnabled", {PERSISTENT, BOOL}},  // Retired: migration only
     {"CenterToFrontRatio", {PERSISTENT, INT, "0"}},
     {"LatSmoothSec", {PERSISTENT, INT, "13"}},
@@ -336,7 +336,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CanfdDebug", {PERSISTENT, INT, "0"}},
 
     {"SoundVolumeAdjust", {PERSISTENT, INT, "100"}},
-    {"SoundVolumeAdjustEngage", {PERSISTENT, INT, "10"}},
+    {"SoundVolumeAdjustEngage", {PERSISTENT, INT, "100"}},
     {"SoundLanguageSetting", {PERSISTENT, STRING, "auto"}},
 
     {"CruiseGapLevels", {PERSISTENT, INT, "4"}},
@@ -357,7 +357,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"TrafficStopDistanceAdjust", {PERSISTENT, INT, "-150"}},
 
     {"HapticFeedbackWhenSpeedCamera", {PERSISTENT, INT, "0"}},
-    {"UseLaneLineSpeed", {PERSISTENT, INT, "0"}},
+    {"UseLaneLineSpeed", {PERSISTENT, INT, "20"}},
     {"UseLaneLineCurveSpeed", {PERSISTENT, INT, "0"}},
 
     {"AdjustLaneOffset", {PERSISTENT, INT, "0"}},
@@ -394,18 +394,18 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CustomSteerDeltaUpLC", {PERSISTENT, INT, "0"}},
     {"CustomSteerDeltaDownLC", {PERSISTENT, INT, "0"}},
 
-    {"SpeedFromPCM", {PERSISTENT, INT, "2"}},
+    {"SpeedFromPCM", {PERSISTENT, INT, "1"}},
     {"MaxTimeOffroadMin", {PERSISTENT, INT, "60"}},
     {"TeslaWakeOnCAN", {PERSISTENT, BOOL, "1"}},
     {"TeslaAutoTurnSignals", {PERSISTENT, BOOL, "0"}},
 
-    {"DisableDM", {PERSISTENT, INT, "0"}},  // retired; read only for one-time streaming migration
-    {"DriverMonitoringEnabled", {PERSISTENT, BOOL, "1"}},
+    {"DisableDM", {PERSISTENT, INT, "1"}},  // retired; read only for one-time streaming migration
+    {"DriverMonitoringEnabled", {PERSISTENT, BOOL, "0"}},
     {"DriverMonitoringSessionDisabled", {CLEAR_ON_MANAGER_START | CLEAR_ON_IGNITION_ON, BOOL}},
     {"DriverMonitoringMode", {PERSISTENT, INT, "0"}},
     {"CarrotVisionEnabled", {PERSISTENT, BOOL, "0"}},
-    {"MuteDoor", {PERSISTENT, INT, "0"}},
-    {"MuteSeatbelt", {PERSISTENT, INT, "0"}},
+    {"MuteDoor", {PERSISTENT, INT, "1"}},
+    {"MuteSeatbelt", {PERSISTENT, INT, "1"}},
 
     {"CarrotException", {CLEAR_ON_MANAGER_START, STRING}},
     {"CarrotExceptionSent", {CLEAR_ON_MANAGER_START, BOOL}},
@@ -419,7 +419,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"ActivateCruiseAfterBrake", {CLEAR_ON_MANAGER_START, INT, "0"}},
 
     {"CustomSR", {PERSISTENT, INT, "0"}},
-    {"SteerRatioRate", {PERSISTENT, INT, "100"}},
+    {"SteerRatioRate", {PERSISTENT, INT, "90"}},
 
     {"SoftRestartTriggered", {CLEAR_ON_MANAGER_START, INT}},
 
