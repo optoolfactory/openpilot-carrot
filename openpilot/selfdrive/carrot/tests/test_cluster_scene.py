@@ -633,7 +633,9 @@ def test_ev_mode_indicator_draws_green_only_when_valid_and_active(valid, active,
     assert kwargs == {"anchor": "center", "cache": True}
 
 
-def test_ev_mode_indicator_fits_between_three_digit_speeds() -> None:
+def test_ev_mode_indicator_fits_between_three_digit_speeds(monkeypatch) -> None:
+  # Layout test: select the model indicator without consulting device Params.
+  monkeypatch.setattr("openpilot.selfdrive.carrot.signal_display.display_requested", lambda: False)
   renderer = object.__new__(ClusterUiRenderer)
   renderer._current_theme = lambda: LIGHT_CLUSTER_THEME
   renderer._speed_bg_texture = None
@@ -669,19 +671,22 @@ def test_ev_mode_indicator_fits_between_three_digit_speeds() -> None:
   assert cruise_left - ev_right >= 3.0
 
 
-@pytest.mark.parametrize(("active", "expected_draws"), ((False, 0), (True, 1)))
-def test_egpu_indicator_draws_only_while_active(monkeypatch, active, expected_draws) -> None:
+@pytest.mark.parametrize(('active', 'external', 'expected'), (
+  (False, '', None), (True, '', 'eGPU'), (False, 'jetSON', 'jetSON'),
+  (False, 'MAC', 'MAC'), (False, 'Jetlink', 'Jetlink'), (True, 'jetSON', 'eGPU'),
+))
+def test_egpu_indicator_draws_only_while_active(monkeypatch, active, external, expected) -> None:
   renderer = object.__new__(ClusterUiRenderer)
   texts = []
   renderer._draw_text = lambda *args, **kwargs: texts.append((args, kwargs))
   monkeypatch.setattr(cluster_renderer.rl, "draw_rectangle_rounded", lambda *_args: None)
   monkeypatch.setattr(cluster_renderer.rl, "draw_rectangle_rounded_lines_ex", lambda *_args: None)
 
-  renderer._draw_egpu_status(_cluster_state(egpu_active=active))
+  renderer._draw_egpu_status(_cluster_state(egpu_active=active, external_compute_label=external))
 
-  assert len(texts) == expected_draws
+  assert len(texts) == int(expected is not None)
   if texts:
-    assert texts[0][0][0] == "eGPU"
+    assert texts[0][0][0] == expected
     assert texts[0][0][4] == GREEN
     assert texts[0][1] == {"anchor": "center"}
 
@@ -730,6 +735,7 @@ def test_driving_mode_indicator_hides_unknown_values(mode) -> None:
 
 @pytest.mark.parametrize("traffic_state", (1, 2))
 def test_traffic_states_share_the_slot_beside_driving_mode(monkeypatch, traffic_state) -> None:
+  monkeypatch.setattr("openpilot.selfdrive.carrot.signal_display.display_requested", lambda: False)
   renderer = object.__new__(ClusterUiRenderer)
   renderer._traffic_red_texture = SimpleNamespace(width=56, height=56)
   renderer._traffic_green_texture = SimpleNamespace(width=56, height=56)

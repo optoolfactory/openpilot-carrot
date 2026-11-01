@@ -226,6 +226,51 @@ def web_dispatcher(tmp_path, monkeypatch):
   return dispatcher, device, commands
 
 
+@pytest.mark.parametrize('api', ['job', 'sync'])
+@pytest.mark.parametrize('action', ['reboot', 'reset_calib', 'rebuild_all'])
+def test_web_reboots_use_chime_helper(web_dispatcher, monkeypatch, api, action):
+  dispatcher, _, _ = web_dispatcher
+  calls = []
+  real_popen = subprocess.Popen
+
+  def popen(argv, **kwargs):
+    if argv[0] == 'bash':
+      calls.append(('command', argv))
+      return None
+    return real_popen(argv, **kwargs)
+
+  monkeypatch.setattr(dispatcher, 'spawn_reboot', lambda **kw: calls.append(('reboot', kw)))
+  monkeypatch.setattr(dispatcher, 'request_full_rebuild', lambda: calls.append(('request', None)))
+  monkeypatch.setattr(dispatcher.subprocess, 'Popen', popen)
+  monkeypatch.setattr(dispatcher.os, 'remove', lambda path: None)
+
+  async def no_sleep(delay):
+    pass
+
+  monkeypatch.setattr(dispatcher.asyncio, 'sleep', no_sleep)
+  result = dispatch(dispatcher, api, action)
+  assert result['ok']
+  delay = {'delay': 1.0} if action in ('reset_calib', 'rebuild_all') and api == 'sync' else {}
+  # Rebuild All never runs SCons from the web server; it leaves a request for
+  # the launcher and reboots.
+  assert calls == ([('request', None)] if action == 'rebuild_all' else []) + [('reboot', delay)]
+
+
+@pytest.mark.parametrize('api', ['job', 'sync'])
+def test_rebuild_all_does_not_reboot_without_request(web_dispatcher, monkeypatch, api):
+  dispatcher, _, _ = web_dispatcher
+  calls = []
+
+  def fail():
+    raise OSError('read-only file system')
+
+  monkeypatch.setattr(dispatcher, 'spawn_reboot', lambda **kw: calls.append(('reboot', kw)))
+  monkeypatch.setattr(dispatcher, 'request_full_rebuild', fail)
+  result = dispatch(dispatcher, api, 'rebuild_all')
+  assert not result['ok'] and 'read-only file system' in result['error']
+  assert calls == []
+
+
 def dispatch(dispatcher, api, action, **payload):
   if api == "job":
     job = {"id": "git-repair-test", "action": action, "payload": payload}

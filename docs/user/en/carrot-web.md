@@ -39,6 +39,8 @@ The Drive page displays live video and driving state. Its usual layout contains 
 
 ### Live video and HUD
 
+With `CarrotVisionEnabled` on, you can start the web camera view while the external HUD is enabled. Simultaneous video use may increase device load; if video stutters, stop the web camera view and compare.
+
 - Select `Start Drive Vision` to begin connecting to the camera stream.
 - The HUD may show vehicle speed, set speed, speed limit, following gap, lead vehicle, and driving alerts.
 - Enable or disable AR in `Tools > Web Settings`.
@@ -105,6 +107,25 @@ See [Understanding Settings](settings.md) for ranges, units, and a safe tuning o
 
 Tools contains management actions that can immediately change device or repository state.
 Manage `ONNX Lane and BSD Detection` in **Settings → Driving → Steering → ONNX Lane & BSD**, not through a Tools shortcut.
+
+### Jetson connection, IP and temperature
+
+After Jetson integration, the **Tools → eGPU status card** in `carrot-wip` also
+shows a connected Jetson's IP, temperature and current connection/error state,
+even without a previous eGPU connection. Open Carrot Web using the comma IP;
+the Jetson IP displayed inside the card is its management address. Expired
+temperature/address readings are not presented as current values.
+
+A healthy idle installation using the internal model without Jetson is distinct
+from active inference losing its connection, a real error or excessive heat.
+Do not suppress real faults to clear a warning. The eGPU model compilation button
+is unavailable for a Jetson-only installation.
+
+Use the [short Korean installation guide](https://github.com/ajouatom/carrot-jetson/blob/main/docs/INSTALL-WINDOWS-KO.md):
+extract the installer ZIP and run 01, then 02. Image preparation and the USB-C fix are automatic. Wi-Fi settings come from the connected
+comma, so changing its SSID/password does not require removing the SD card.
+The existing P-gear summary display remains intentional. See the guide's preview
+notice for physical validation limits of each installation path.
 
 ### Quick actions
 
@@ -207,3 +228,25 @@ If only video is missing, check whether another browser owns the stream, whether
 - [Speed and Deceleration](speed-deceleration.md)
 - [Cruise and Following Gap](cruise-gap.md)
 - [Radar Tracks and Corner Radar](radar.md)
+
+### External driving model selection (`carrot-wip`)
+
+In Tools, choose N16 Nav, Flip Flop or Light speed under **External driving model**. The choice saves automatically.
+The choice applies to both eGPU and Jetson; the internal model stays fixed at CD210.
+Saving does not switch a running model. With ignition off and internet available, reboot
+both comma and Jetson to download, verify, and apply the choice. A new Jetson model also
+needs engine preparation. The eGPU downloads the official precompiled PKL without
+recompiling the driving model itself.
+
+`NOO supported` identifies models accepting route images and navigation inputs. Currently
+N16 supports these inputs; Flip Flop and Light speed do not. This label does not establish current
+route validity or driving performance. MD v3 has been retired from the list. Flip Flop uses
+the official ONNX replaced on 2026-10-24; its hash differs from the historical MD v3 ONNX.
+
+Choose a model in the dropdown to save it for the next reboot. The list is maintained by
+the developers; user hide, delete and restore controls are not available. Catalog updates
+arrive through Git Pull. Retired choices disappear from the list and their unused files
+are cleaned up automatically while offroad. A running retired model remains protected
+until the next boot selects the default and delivery switches the installed active model.
+Jetson cleanup waits for an offroad connection and preserves an ONNX used by any available
+model. Only the selected model is loaded into GPU memory.
