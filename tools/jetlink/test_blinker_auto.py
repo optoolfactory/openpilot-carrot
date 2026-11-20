@@ -140,15 +140,18 @@ def test_only_one_touch_can_is_sent_for_a_continuing_hold(tmp_path):
 def test_native_hold_reader_clears_stale_and_preserves_unrelated_vehicles(tmp_path):
   import json
   from types import SimpleNamespace
-  from openpilot.selfdrive.carrot.bluetooth.physical import HoldReader,FINGERPRINT
+  from openpilot.selfdrive.carrot.bluetooth.physical import HoldReader
   path=tmp_path/'lease.json'
   params=SimpleNamespace(get_int=lambda _:1)
-  reader=HoldReader(FINGERPRINT,params,path)
-  path.write_text(json.dumps(dict(stamp=10.,mode=1,fingerprint=FINGERPRINT,direction='left',override=True)))
+  cp=SimpleNamespace(carFingerprint='PROTOCOL_MATCHED_CAR',
+      brand='hyundai', passive=False, openpilotLongitudinalControl=True, extFlags=1 << 19)
+  reader=HoldReader(cp,params,path)
+  path.write_text(json.dumps(dict(stamp=10.,mode=1,fingerprint=cp.carFingerprint,direction='left',override=True)))
   assert reader.read(True,10.1)==2
   assert reader.read(True,10.36)==1
   assert reader.read(False,10.2)==1
-  assert HoldReader('other',params,path).read(True,10.1)==0
+  cp.extFlags=0
+  assert HoldReader(cp,params,path).read(True,10.1)==0
   params.get_int=lambda _:0
   assert reader.read(True,10.7)==0
 
@@ -156,7 +159,7 @@ def test_native_hold_reader_clears_stale_and_preserves_unrelated_vehicles(tmp_pa
 @pytest.mark.parametrize('value',[{}, {'stamp':float('nan')}, {'stamp':12}, {'stamp':10,'fingerprint':'other','mode':1,'direction':'left'}])
 def test_invalid_native_hold_lease_never_sets_hold(value):
   from openpilot.selfdrive.carrot.bluetooth.physical import lease_value
-  assert lease_value(value,10.1)==0
+  assert lease_value(value,10.1,'PROTOCOL_MATCHED_CAR')==0
 
 
 def test_unaccepted_start_expires_without_becoming_invisible_toggle():
@@ -281,8 +284,10 @@ def test_audio_cue_schema_roundtrip():
     assert read.atcTurnStartMonoTime==11000000000 and str(read.atcTurnDirection)=='left'
 
 
-def test_actual_source_loop_starts_from_audio_cue_before_model_turn(monkeypatch):
+@pytest.mark.parametrize('stopped_speed', [0., -.003020115/3.6])
+def test_actual_source_loop_starts_from_audio_cue_before_model_turn(monkeypatch, stopped_speed):
   import blink_source as source
+  from opendbc.car.hyundai.values import HyundaiSafetyFlags
   import json
   import types
   from contextlib import nullcontext
@@ -302,7 +307,8 @@ def test_actual_source_loop_starts_from_audio_cue_before_model_turn(monkeypatch)
     sm['selfdriveState'].atcTurnDirection='left' if i else 'none'
     sm['carrotMan'].atcType='turn left' if i else 'none'
     sm['modelV2'].meta.desire='turnLeft' if i==2 else 'none'
-    sm['carState'].vEgo=0. if 3<=i<=5 else 5.
+    sm['carState'].vEgo=stopped_speed if 3<=i<=5 else 5.
+    sm['carState'].standstill=3<=i<=5
     sm['carState'].steeringAngleDeg=60. if i==6 else 0.
     sm['carControl'].latActive=not 3<=i<=5
     sm['livePose'].orientationNED.z=-.5 if i>=6 else 0.
@@ -311,7 +317,9 @@ def test_actual_source_loop_starts_from_audio_cue_before_model_turn(monkeypatch)
   fake_params.Params=lambda:NS(get=lambda _:b'cp',get_int=lambda _:1,get_bool=lambda _:True)
   fake_cereal=types.ModuleType('openpilot.cereal')
   fake_cereal.messaging=NS(SubMaster=lambda _:sm)
-  fake_cereal.car=NS(CarParams=NS(from_bytes=lambda _:nullcontext(NS(carFingerprint='HYUNDAI_IONIQ_5_PE'))))
+  fake_cereal.car=NS(CarParams=NS(from_bytes=lambda _:nullcontext(NS(carFingerprint='PROTOCOL_MATCHED_CAR',
+      brand='hyundai', passive=False, openpilotLongitudinalControl=True, extFlags=1 << 19,
+      safetyConfigs=[NS(safetyParam=HyundaiSafetyFlags.CANFD_BLINKER_KICK)]))))
   monkeypatch.setitem(sys.modules,'openpilot.common.params',fake_params)
   monkeypatch.setitem(sys.modules,'openpilot.cereal',fake_cereal)
   sock=NS(setblocking=lambda _:None,recv=lambda _:b'',send=lambda raw:sent.append(json.loads(raw)))
@@ -326,8 +334,9 @@ def test_actual_source_loop_starts_from_audio_cue_before_model_turn(monkeypatch)
   assert sent[0]['hold'] is None
   assert sent[1]['hold']['source']=='turn' and sent[1]['hold']['direction']=='left'
   assert sent[2]['hold']['id']==sent[1]['hold']['id']
-  assert all(s['hold']['id']==sent[1]['hold']['id'] for s in sent[2:11])
-  assert sent[-1]['hold'] is not None  # Only ~5m travelled; the TBT +30m anchor remains.
+  assert all(s['hold']['id']==sent[1]['hold']['id'] for s in sent[2:7])
+  # Stopped approach survives, but measured turn + wheel return ends at i=7.
+  assert all(s['hold'] is None for s in sent[7:])
 
 
 @pytest.mark.parametrize('fault', ['disabled','lat_disabled','temporary','permanent','reverse','moving_no_intent'])
@@ -478,3 +487,133 @@ def test_missing_heading_cancels_turn_without_blocking_lane_mode():
   assert a.update(12,*args,heading=None) is None
   assert a.update(13,*args,heading=0.) is None
   assert a.update(14,2,True,11.,'left','fork left','none','left',heading=None)==('lane','left')
+
+
+@pytest.mark.parametrize('kick', [False, True])
+@pytest.mark.parametrize('initial_ack', [False, True])
+@pytest.mark.parametrize('peer_after', ['driver_override', 'stale', 'error', 'guard_expired'])
+def test_tbt_source_preserves_confirmed_hold_through_receiver_override(monkeypatch, initial_ack, peer_after, kick):
+  import blink_source as source
+  from opendbc.car.hyundai.values import HyundaiSafetyFlags
+  import json
+  import types
+  from contextlib import nullcontext
+  from types import SimpleNamespace as NS
+  from test_blinker import Vehicle
+  from openpilot.selfdrive.carrot.bluetooth import model
+
+  clock, sent, leases = [10.], [], []
+  received = set()
+  sm = Vehicle(speed=5.)
+  sm['carState'].steeringPressed = False
+  sm['carState'].steeringTorque = 0.
+  sm['modelV2'] = NS(meta=NS(desire='none', autoTurnSignal='none', autoTurnSignalLaneChange=False))
+  sm['carrotMan'] = NS(atcType='none', xDistToTurn=40)
+  sm['livePose'] = NS(inputsOK=True, sensorsOK=True, posenetOK=True, orientationNED=NS(valid=True, z=0.))
+  sm.services = list(sm)
+  sm.valid = dict.fromkeys(sm, True)
+  sm.alive = dict.fromkeys(sm, True)
+
+  def tick(_):
+    index = len(sent)
+    clock[0] = 10. + index*.05
+    sm.recv_time = dict.fromkeys(sm, clock[0])
+    sm['selfdriveState'].atcTurnStartMonoTime = 10050000000 if index else 0
+    sm['selfdriveState'].atcTurnDirection = 'left' if index else 'none'
+    sm['carrotMan'].atcType = 'turn left' if index else 'none'
+    sm['carState'].leftBlinker = index >= 3
+    sm['carState'].steeringAngleDeg = 60. if 60 <= index < 70 else 20. if 70 <= index < 80 else 0.
+    sm['livePose'].orientationNED.z = -.5 if index >= 60 else 0.
+
+  def receive(_):
+    index = len(sent)
+    received.add(index)
+    if index == 100:
+      return b''
+    hold = sent[-1]['hold'] if sent else None
+    state = 'waiting' if 4 <= index < 8 and initial_ack else 'sending'
+    if index >= 8:
+      state = peer_after if peer_after != 'stale' else 'waiting'
+    return json.dumps({'stamp': 10.+index*.05 - (1. if index >= 8 and peer_after == 'stale' else 0.),
+      'state': state, 'accepted_id': hold['id'] if hold and initial_ack and 4 <= index < 8 else None}).encode()
+
+  sm.update = tick
+  monkeypatch.setitem(sys.modules, 'openpilot.common.params', NS(Params=lambda: NS(
+    get=lambda _: b'cp', get_int=lambda key: 1 if key in ('AutoBlinkerControl','AutoTurnControl') else 0,
+    get_bool=lambda key: key == 'AlwaysLateral')))
+  monkeypatch.setitem(sys.modules, 'openpilot.cereal', NS(messaging=NS(SubMaster=lambda _: sm),
+    car=NS(CarParams=NS(from_bytes=lambda _: nullcontext(NS(carFingerprint='PROTOCOL_MATCHED_CAR',
+      brand='hyundai', passive=False, openpilotLongitudinalControl=True, extFlags=1 << 19,
+      safetyConfigs=[NS(safetyParam=HyundaiSafetyFlags.CANFD_BLINKER_KICK)]))))))
+  sock = NS(setblocking=lambda _: None, recv=receive, send=lambda raw: sent.append(json.loads(raw)))
+  monkeypatch.setattr(source.socket, 'socket', lambda **kw: sock)
+  monkeypatch.setattr(source.select, 'select', lambda *args: ([sock] if len(sent) not in received else [], [], []))
+  monkeypatch.setattr(source.time, 'monotonic', lambda: clock[0])
+  monkeypatch.setattr(source.time, 'sleep', lambda _: None)
+  monkeypatch.setattr(model, 'read_json', lambda *args: {})
+  monkeypatch.setattr(model, 'config', dict)
+  monkeypatch.setattr(model, 'atomic_json', lambda path, value: leases.append(value) if path.name == 'physical-hold.json' else None)
+  source.main(0, kick=kick)
+  assert len(leases) == 100
+  assert all(not record['events'] for record in sent)
+  if initial_ack and peer_after == 'driver_override' and not kick:
+    assert all(value['direction'] == 'left' and value['override'] for value in leases[8:80])
+    assert len({record['hold']['id'] for record in sent[1:80]}) == 1
+  else:
+    assert all(value['direction'] is None for value in leases[8:])
+  assert all(value['direction'] is None for value in leases[80:])
+  assert all(record['turn_phase'] == 'approach' for record in sent[8:60])
+
+
+@pytest.mark.parametrize('fault', ['busy', 'stale', 'restart'])
+def test_voice_hold_never_rejoins_same_request(fault):
+  from types import SimpleNamespace as NS
+  from blink_voice import VoiceLaneSignal
+  source = VoiceLaneSignal()
+  cs = NS(leftBlinker=False, rightBlinker=False)
+  meta = NS(assistantLaneSignalId='', assistantLaneSignalRoute=source.route, laneChangeDirection='left', laneChangeState='preLaneChange')
+  def select(busy=False):
+    return source.select(meta, cs, allowed=True, peer_ready=True, hold=None, busy=busy)
+  assert select() is None
+  meta.assistantLaneSignalId = 'a'*43
+  assert select() == ('lane', 'left')
+  if fault == 'busy':
+    assert select(busy=True) is None
+  elif fault == 'stale':
+    assert source.select(None, cs, allowed=False, peer_ready=False, hold=None, busy=True) is None
+  else:
+    source = VoiceLaneSignal()
+  assert select() is None
+
+@pytest.mark.parametrize('direction,bit', [('left',1), ('right',2)])
+def test_b1_voice_uses_receiver_lamps_when_vehicle_port_has_none(direction, bit):
+  from types import SimpleNamespace as NS
+  from blink_voice import VoiceLaneSignal
+  source = VoiceLaneSignal()
+  cs = NS(leftBlinker=False, rightBlinker=False)
+  meta = NS(assistantLaneSignalId='', assistantLaneSignalRoute=source.route, laneChangeDirection=direction, laneChangeState='preLaneChange')
+  def select():
+    return source.select(meta, cs, allowed=True, peer_ready=True, hold=None, busy=False)
+  assert not select()
+  meta.assistantLaneSignalId = 'a'*43
+  assert select() == ('lane',direction)
+  hold = {'id':'hold:1','source':'lane','direction':direction}
+  assert source.bind(hold)
+  for lamps in (0,1,2,3):
+    assert source.confirmed(hold, hold['id'], {'accepted_id':hold['id'],'lamps':lamps}, cs) == (lamps == bit)
+  assert not source.confirmed(hold, None, {'accepted_id':None,'lamps':bit}, cs)
+  setattr(cs, ('right' if direction=='left' else 'left')+'Blinker', True)
+  assert not source.confirmed(hold, hold['id'], {'accepted_id':hold['id'],'lamps':bit}, cs)
+
+
+@pytest.mark.parametrize('fault', ['passive', 'longitudinal', 'contract', 'protocol', None])
+def test_hold_capability_is_protocol_based(fault):
+  from types import SimpleNamespace as NS
+  from openpilot.selfdrive.carrot.bluetooth.physical import native_hold_supported, lease_value
+  cp = NS(brand='other' if fault == 'protocol' else 'hyundai', passive=fault == 'passive',
+          openpilotLongitudinalControl=fault != 'longitudinal', extFlags=0 if fault == 'contract' else 1 << 19,
+          carFingerprint='ANY_MATCHING_CAR')
+  assert native_hold_supported(cp) == (fault is None)
+  record = dict(stamp=10., mode=1, fingerprint=cp.carFingerprint, direction='right', override=True)
+  assert lease_value(record, 10.1, cp.carFingerprint) == 3
+  assert lease_value(record, 10.1, 'PREVIOUS_CAR') == 0

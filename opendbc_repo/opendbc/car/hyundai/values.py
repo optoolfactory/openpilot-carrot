@@ -7,6 +7,8 @@ from opendbc.car.common.conversions import Conversions as CV
 from opendbc.car.structs import CarParams
 from opendbc.car.docs_definitions import CarFootnote, CarHarness, CarDocs, CarParts, Column
 from opendbc.car.fw_query_definitions import FwQueryConfig, Request, p16
+from opendbc.car.hyundai.pedal_interceptor import RAY_PEDAL_INTERCEPTOR_PARAMS
+from opendbc.car.pedal_interceptor import PedalInterceptorParams
 
 Ecu = CarParams.Ecu
 
@@ -85,6 +87,9 @@ class HyundaiSafetyFlags(IntFlag):
   ALT_LIMITS_2 = 512
   CANFD_CLUSTER_DIRECT_TX = 2048
   CANFD_SPAS_BLINKERS = 4096
+  PEDAL_INTERCEPTOR = 8192
+  PEDAL_INTERCEPTOR_RAY = 16384
+  CANFD_BLINKER_KICK = 32768  # Observed SPAS + stalk contract on the camera-SCC harness
 
 
 class HyundaiFlags(IntFlag):
@@ -143,6 +148,8 @@ class HyundaiFlags(IntFlag):
 
   CANFD_SPAS_BLINKERS = 2 ** 28
 
+  PEDAL_INTERCEPTOR = 2 ** 29
+
   CC_ONLY_CAR = 2 ** 31
 
 class HyundaiExtFlags(IntFlag):
@@ -159,6 +166,7 @@ class HyundaiExtFlags(IntFlag):
   EV_MODE_STATUS_230 = 2 ** 16  # ECAN 0x230/DLC32 exposes the hybrid power-flow mode used for the EV indicator
   BOSCH_RADAR = 2 ** 17  # passive Bosch MRRevo14F 0x601-0x612 receive provider (see BOSCH_MRREVO14F_CAR)
   BOSCH_RADAR_BUS1 = 2 ** 18  # Observed receive src=1; otherwise use LKAS camera CAN (src=2)
+  CANFD_INDICATOR_HOLD = 2 ** 19  # Observed camera ADRV_0x1EA/DLC32 for an external indicator hold
 
 class Footnote(Enum):
   CANFD = CarFootnote(
@@ -1104,6 +1112,24 @@ def bosch_mrrevo14f_bus(candidate, flags: int, fingerprint: dict, buses) -> int 
 
 
 DBC = CAR.create_dbc_map()
+
+# Calibration availability is separate from road-validation status. Other
+# vehicle adapters can supply their own profile without changing the protocol.
+PEDAL_INTERCEPTOR_PARAMS: dict[str, PedalInterceptorParams] = {
+  CAR.KIA_RAY_EV: RAY_PEDAL_INTERCEPTOR_PARAMS,
+}
+
+
+def get_pedal_interceptor_params(CP) -> PedalInterceptorParams | None:
+  required_flags = HyundaiFlags.CC_ONLY_CAR | HyundaiFlags.PEDAL_INTERCEPTOR
+  return PEDAL_INTERCEPTOR_PARAMS.get(CP.carFingerprint) if CP.flags & required_flags == required_flags else None
+
+
+def is_ray_pedal_control(CP) -> bool:
+  return (CP.brand == "hyundai" and CP.openpilotLongitudinalControl
+          and getattr(CP, "carFingerprint", "") == CAR.KIA_RAY_EV
+          and get_pedal_interceptor_params(CP) is not None)
+
 
 if __name__ == "__main__":
   cars = []

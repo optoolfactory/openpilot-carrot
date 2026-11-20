@@ -11,13 +11,14 @@ import numpy as np
 from openpilot.selfdrive.modeld.precompiled_artifact import compile_warp, load_warp, prepare_jit
 
 
-# Upstream 880b40e1's captured transfer API is verified against d39227 only.
+# Captured transfer API reviewed for the exact d39227 and ec91b74 runtime pairs.
 COMPILED_COPY_RUNTIME = 'cb9bf2cfa14746485f75b1dd89d8b7ab65011c10c8fc6c4aea4d41b45a47dc51'
 
 
 def use_compiled_copies(manifest):
   runtime = manifest.get('runtime')
-  return isinstance(runtime, dict) and runtime.get('sha256') == COMPILED_COPY_RUNTIME
+  from openpilot.selfdrive.modeld.egpu_usb_wait import LIGHT_SPEED_2_RUNTIME_SHA
+  return isinstance(runtime, dict) and runtime.get('sha256') in (COMPILED_COPY_RUNTIME, LIGHT_SPEED_2_RUNTIME_SHA)
 
 
 def compile_copy(tensor):
@@ -43,7 +44,7 @@ def input_view(buffer, shape, dtype, offset=0):
   return Tensor(uop).reshape(shape)
 
 
-def model_metadata(jits):
+def model_metadata(jits, *, device='AMD'):
   metadata = jits['metadata']
   specs = jits['input_specs']
   outputs = jits['output_specs']
@@ -63,11 +64,11 @@ def model_metadata(jits):
   if set(specs) != {'new_img', 'desire', 'traffic_convention', 'action_t'} | set(state_pairs) | nav:
     raise ValueError('unsupported generic model inputs')
   for name, next_name in state_pairs.items():
-    shape, dtype, device = specs[name]
+    shape, dtype, state_device = specs[name]
     out_shape, out_dtype, out_device = outputs[next_name]
-    if tuple(shape) != tuple(out_shape) or np.dtype(dtype) != np.dtype(out_dtype) or device != out_device:
+    if tuple(shape) != tuple(out_shape) or np.dtype(dtype) != np.dtype(out_dtype) or state_device != out_device:
       raise ValueError('incompatible generic model state feedback')
-  if not state_pairs or any(spec[2] != 'AMD' for spec in list(specs.values()) + list(outputs.values())):
+  if not state_pairs or any(spec[2] != device for spec in list(specs.values()) + list(outputs.values())):
     raise ValueError('unsupported generic model device/state')
   slices = pickle.loads(base64.b64decode(metadata['metadata']['output_slices']))
   count = math.prod(outputs['outputs'][0])
@@ -120,7 +121,10 @@ class GenericModelRuntime:
     for name, next_name in self.state_pairs.items():
       state = self.queues[name]
       self.outputs[next_name] = input_view(state._buffer(), state.shape, state.dtype)
-    warp_path = runtime_dir / f'warp-{self.gpu_arch}-{width}x{height}.pkl'
+    # Rebuild this runtime's host dispatch after the USB lowering backport.
+    # Old immutable caches stay on disk; other runtime pairs keep their paths.
+    warp_tag = '-usb-wrap-v1' if compiled_copies else ''
+    warp_path = runtime_dir / f'warp-{self.gpu_arch}-{width}x{height}{warp_tag}.pkl'
     if warp_path.is_file():
       self.run_warp = load_warp(warp_path)
     else:
